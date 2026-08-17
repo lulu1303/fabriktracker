@@ -263,34 +263,25 @@ const supabase = window.supabase.createClient(
     Diese werden später durch unsere
     Supabase-Datenbank ersetzt.
   */
+  let parts = [];
 
-  const parts = [
+async function loadParts() {
+  const { data, error } = await supabase
+    .from("parts")
+    .select("*")
+    .order("part_number");
 
-    {
-      number: "3001",
-      name: "Brick 2 x 4",
-      color: "Dark Bluish Gray",
-      confirmations: 8,
-      time: "vor 2 Stunden"
-    },
+  if (error) {
+    console.error("Fehler beim Laden der Teile:", error);
+    return;
+  }
 
-    {
-      number: "3023",
-      name: "Plate 1 x 2",
-      color: "White",
-      confirmations: 5,
-      time: "vor 4 Stunden"
-    },
+  parts = data;
+  displayParts(parts);
+}
 
-    {
-      number: "3010",
-      name: "Brick 1 x 4",
-      color: "Red",
-      confirmations: 3,
-      time: "gestern"
-    }
+loadParts();
 
-  ];
 
 
   function displayParts(list) {
