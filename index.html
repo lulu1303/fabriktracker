@@ -252,52 +252,69 @@
 const SUPABASE_URL = "https://nmsoppdibangfaeqtube.supabase.co";
 const SUPABASE_KEY = "sb_publishable_rcf_aY1AfeyRmumUDiNhBw_7LUWdVBD";
 
-
-const supabase = window.supabase.createClient(
+const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_KEY
 );
-  /*
-    TESTDATEN
 
-    Diese werden später durch unsere
-    Supabase-Datenbank ersetzt.
-  */
-  let parts = [];
+let parts = [];
+
+
+/* =========================
+   TEILE AUS SUPABASE LADEN
+========================= */
 
 async function loadParts() {
-  const { data, error } = await supabase
+
+  const { data, error } = await supabaseClient
     .from("parts")
     .select("*")
     .order("part_number");
 
   if (error) {
-    console.error("Fehler beim Laden der Teile:", error);
+    console.error("Supabase Fehler:", error);
+
+    document.getElementById("results").innerHTML =
+      '<div class="card empty">Fehler beim Laden der Teile.</div>';
+
     return;
   }
 
-  parts = data;
+  parts = data || [];
+
   displayParts(parts);
 }
 
-loadParts();
+
+/* =========================
+   TEILE ANZEIGEN
+========================= */
+
+function displayParts(list) {
+
+  const container = document.getElementById("results");
+
+  if (!list || list.length === 0) {
+
+    container.innerHTML =
+      '<div class="card empty">Keine Teile gefunden.</div>';
+
+    return;
+  }
 
 
+  container.innerHTML = list.map(part => {
 
-  function displayParts(list) {
+    const number = part.part_number || "";
+    const name = part.name || "";
+    const category = part.category || "";
 
-    const container = document.getElementById("results");
-
-    if (list.length === 0) {
-
-      container.innerHTML =
-        '<div class="card empty">Keine Teile gefunden.</div>';
-
-      return;
-    }
+    const date = part.created_at
+      ? new Date(part.created_at).toLocaleString("de-DE")
+      : "";
 
 
-    container.innerHTML = list.map(part => `
+    return `
 
       <div class="card">
 
@@ -306,11 +323,12 @@ loadParts();
           <div>
 
             <div class="part-number">
-              ${part.number}
+              LEGO ${number}
             </div>
 
             <div class="part-name">
-              ${part.name} · ${part.color}
+              ${name}
+              ${category ? " · " + category : ""}
             </div>
 
           </div>
@@ -326,81 +344,153 @@ loadParts();
 
           📍 LEGO Fabrik Günzburg<br>
 
-          🕐 ${part.time}<br>
-
-          👍 ${part.confirmations}
-          Bestätigungen
+          ${date ? "🕐 " + date : ""}
 
         </div>
 
 
         <button
           class="secondary confirm"
-          onclick="confirmPart('${part.number}')"
+          onclick="confirmPart('${number}')"
         >
           👍 Ich habe dieses Teil auch gesehen
         </button>
 
       </div>
 
-    `).join("");
+    `;
 
-  }
+  }).join("");
 
-
-  function searchParts() {
-
-    const query =
-      document
-        .getElementById("searchInput")
-        .value
-        .toLowerCase()
-        .trim();
+}
 
 
-    const filtered = parts.filter(part =>
+/* =========================
+   SUCHEN
+========================= */
 
-      part.number.toLowerCase().includes(query) ||
+function searchParts() {
 
-      part.name.toLowerCase().includes(query) ||
-
-      part.color.toLowerCase().includes(query)
-
-    );
-
-
-    displayParts(filtered);
-
-  }
+  const query =
+    document
+      .getElementById("searchInput")
+      .value
+      .toLowerCase()
+      .trim();
 
 
-  function confirmPart(number) {
-
-    const part = parts.find(p => p.number === number);
-
-    if (!part) return;
-
-    part.confirmations++;
-
-    alert(
-      "Danke! Deine Bestätigung wurde hinzugefügt. 👍"
-    );
+  if (!query) {
 
     displayParts(parts);
 
+    return;
+
   }
 
 
-  function reportPart() {
+  const filtered = parts.filter(part => {
 
-    alert(
-      "Das Meldeformular bauen wir als Nächstes ein. 🧱"
+    const number = String(part.part_number || "").toLowerCase();
+    const name = String(part.name || "").toLowerCase();
+    const category = String(part.category || "").toLowerCase();
+
+    return (
+      number.includes(query) ||
+      name.includes(query) ||
+      category.includes(query)
     );
 
+  });
+
+
+  displayParts(filtered);
+
+}
+
+
+/* =========================
+   TEIL BESTÄTIGEN
+========================= */
+
+function confirmPart(number) {
+
+  alert(
+    "Danke! Deine Bestätigung für Teil " +
+    number +
+    " wurde registriert. 👍"
+  );
+
+}
+
+
+/* =========================
+   TEIL MELDEN
+========================= */
+
+async function reportPart() {
+
+  const partNumber = prompt(
+    "Welche Teilenummer hast du gesehen?\n\nBeispiel: 3001"
+  );
+
+  if (!partNumber) return;
+
+
+  const name = prompt(
+    "Wie heißt das Teil?\n\nBeispiel: Brick 2 × 4"
+  );
+
+  if (!name) return;
+
+
+  const category = prompt(
+    "Welche Kategorie?\n\nBeispiel: Brick"
+  );
+
+  if (!category) return;
+
+
+  const { data, error } = await supabaseClient
+    .from("parts")
+    .insert([
+      {
+        part_number: partNumber.trim(),
+        name: name.trim(),
+        category: category.trim()
+      }
+    ])
+    .select();
+
+
+  if (error) {
+
+    console.error("Fehler beim Melden:", error);
+
+    alert(
+      "Das Teil konnte leider nicht gespeichert werden.\n\n" +
+      error.message
+    );
+
+    return;
+
   }
 
 
-  displayParts(parts);
+  alert(
+    "Danke! Das Teil wurde erfolgreich gemeldet. 🧱"
+  );
+
+
+  await loadParts();
+
+}
+
+
+/* =========================
+   START
+========================= */
+
+loadParts();
 
 </script>
 
