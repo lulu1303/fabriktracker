@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="de">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,7 +19,7 @@
     }
 
     header {
-      background: #ffffff;
+      background: white;
       border-bottom: 1px solid #ddd;
       padding: 18px 20px;
       position: sticky;
@@ -85,6 +84,7 @@
       border: 1px solid #ccc;
       border-radius: 12px;
       font-size: 16px;
+      min-width: 0;
     }
 
     button {
@@ -94,6 +94,11 @@
       font-size: 15px;
       font-weight: 700;
       cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
     }
 
     .primary {
@@ -162,9 +167,15 @@
     }
 
     .error {
-      color: #b00020;
-      border: 1px solid #ffb3b3;
+      border: 1px solid #e3a0a0;
       background: #fff5f5;
+      color: #a40000;
+    }
+
+    .error-title {
+      font-weight: 800;
+      font-size: 17px;
+      margin-bottom: 10px;
     }
 
     .report-box {
@@ -179,10 +190,16 @@
       margin-top: 0;
     }
 
+    .status {
+      font-size: 13px;
+      margin-top: 10px;
+      color: #777;
+    }
+
     .loading {
       text-align: center;
-      color: #777;
       padding: 25px;
+      color: #777;
     }
 
     @media (max-width: 600px) {
@@ -195,6 +212,10 @@
         flex-direction: column;
       }
 
+      .search button {
+        width: 100%;
+      }
+
       .part-header {
         flex-direction: column;
       }
@@ -203,11 +224,16 @@
         white-space: normal;
       }
 
+      .location {
+        display: none;
+      }
     }
   </style>
 
-</head>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+</head>
 
 <body>
 
@@ -229,6 +255,10 @@
 
 
 <main>
+
+  <!-- =========================
+       HERO
+  ========================== -->
 
   <section class="hero">
 
@@ -261,10 +291,13 @@
   </section>
 
 
+  <!-- =========================
+       GEMELDETE TEILE
+  ========================== -->
+
   <div class="section-title">
     🟢 Aktuell gemeldete Teile
   </div>
-
 
   <div id="results">
 
@@ -274,6 +307,10 @@
 
   </div>
 
+
+  <!-- =========================
+       TEIL MELDEN
+  ========================== -->
 
   <section class="report-box">
 
@@ -287,11 +324,17 @@
     </p>
 
     <button
+      id="reportButton"
       class="primary"
       onclick="reportPart()"
     >
       + Teil melden
     </button>
+
+    <div
+      id="reportStatus"
+      class="status"
+    ></div>
 
   </section>
 
@@ -300,121 +343,97 @@
 
 <script>
 
-/* =====================================================
-   SUPABASE
-===================================================== */
-
-/*
-  WICHTIG:
-
-  Hier deinen NEUEN PUBLISHABLE KEY einsetzen.
-
-  Supabase:
-  Settings
-  → API Keys
-  → Publishable key
-
-  Der Key beginnt mit:
-
-  sb_publishable_...
-*/
+/* =========================================================
+   SUPABASE KONFIGURATION
+========================================================= */
 
 const SUPABASE_URL =
   "https://nmsoppdibangfaeqtube.supabase.co";
 
 
+/*
+  HIER DEINEN PUBLISHABLE KEY AUS SUPABASE EINFÜGEN.
+
+  Supabase:
+  Settings
+  → API Keys
+  → Publishable key
+*/
+
 const SUPABASE_KEY =
   "sb_publishable_rcf_aY1AfeyRmumUDiNhBw_7LUWdVBD";
 
 
+/* =========================================================
+   SUPABASE CLIENT
+========================================================= */
+
+let supabaseClient = null;
+
 let parts = [];
 
 
-/* =====================================================
-   SUPABASE REQUEST
-===================================================== */
+try {
 
-async function supabaseRequest(url, options = {}) {
+  if (
+    typeof window.supabase === "undefined"
+  ) {
 
-  const headers = {
-
-    "apikey": SUPABASE_KEY,
-
-    "Authorization":
-      "Bearer " + SUPABASE_KEY,
-
-    "Content-Type":
-      "application/json",
-
-    ...options.headers
-
-  };
-
-
-  try {
-
-    const response = await fetch(
-      url,
-      {
-        ...options,
-        headers
-      }
+    throw new Error(
+      "Supabase JavaScript Bibliothek konnte nicht geladen werden."
     );
-
-
-    const text = await response.text();
-
-
-    let data = null;
-
-    try {
-
-      data = text
-        ? JSON.parse(text)
-        : null;
-
-    } catch {
-
-      data = text;
-
-    }
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        "HTTP " +
-        response.status +
-        ": " +
-        (
-          typeof data === "string"
-            ? data
-            : JSON.stringify(data)
-        )
-      );
-
-    }
-
-
-    return data;
-
-  } catch (error) {
-
-    console.error(
-      "Supabase Request Fehler:",
-      error
-    );
-
-    throw error;
 
   }
+
+
+  supabaseClient =
+    window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+
+} catch (error) {
+
+  console.error(
+    "Supabase Initialisierungsfehler:",
+    error
+  );
 
 }
 
 
-/* =====================================================
+/* =========================================================
+   FEHLER ANZEIGEN
+========================================================= */
+
+function showError(title, message) {
+
+  const container =
+    document.getElementById("results");
+
+  container.innerHTML = `
+
+    <div class="card error">
+
+      <div class="error-title">
+        ${title}
+      </div>
+
+      <div>
+        ${message}
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
    TEILE LADEN
-===================================================== */
+========================================================= */
 
 async function loadParts() {
 
@@ -422,27 +441,75 @@ async function loadParts() {
     document.getElementById("results");
 
 
-  container.innerHTML =
-    '<div class="card loading">Teile werden geladen...</div>';
+  container.innerHTML = `
+
+    <div class="card loading">
+      Teile werden geladen...
+    </div>
+
+  `;
+
+
+  if (!supabaseClient) {
+
+    showError(
+      "Supabase konnte nicht gestartet werden.",
+      "Die Supabase-Bibliothek wurde nicht geladen."
+    );
+
+    return;
+
+  }
 
 
   try {
 
-    const data = await supabaseRequest(
-
-      SUPABASE_URL +
-      "/rest/v1/parts?select=*&order=part_number.asc",
-
-      {
-        method: "GET"
-      }
-
+    console.log(
+      "Lade Teile aus Supabase..."
     );
 
 
-    parts = Array.isArray(data)
-      ? data
-      : [];
+    const {
+      data,
+      error
+    } = await supabaseClient
+
+      .from("parts")
+
+      .select("*")
+
+      .order(
+        "created_at",
+        {
+          ascending: false
+        }
+      );
+
+
+    if (error) {
+
+      console.error(
+        "Supabase SELECT Fehler:",
+        error
+      );
+
+      showError(
+        "Supabase-Fehler beim Laden",
+        `
+          ${error.message || "Unbekannter Fehler"}
+          <br><br>
+          <small>
+            Code: ${error.code || "unbekannt"}
+          </small>
+        `
+      );
+
+      return;
+
+    }
+
+
+    parts = data || [];
 
 
     console.log(
@@ -457,39 +524,30 @@ async function loadParts() {
   } catch (error) {
 
     console.error(
-      "Fehler beim Laden:",
+      "Netzwerkfehler:",
       error
     );
 
 
-    container.innerHTML = `
-
-      <div class="card error">
-
-        <strong>
-          Supabase konnte nicht erreicht werden.
-        </strong>
-
+    showError(
+      "Verbindung zu Supabase fehlgeschlagen",
+      `
+        ${error.message || "Load failed"}
         <br><br>
-
-        Fehler:
-
-        <br>
-
-        ${escapeHtml(error.message)}
-
-      </div>
-
-    `;
+        <small>
+          Bitte Internetverbindung prüfen.
+        </small>
+      `
+    );
 
   }
 
 }
 
 
-/* =====================================================
+/* =========================================================
    TEILE ANZEIGEN
-===================================================== */
+========================================================= */
 
 function displayParts(list) {
 
@@ -499,8 +557,13 @@ function displayParts(list) {
 
   if (!list || list.length === 0) {
 
-    container.innerHTML =
-      '<div class="card empty">Noch keine Teile gemeldet.</div>';
+    container.innerHTML = `
+
+      <div class="card empty">
+        Noch keine Teile gemeldet.
+      </div>
+
+    `;
 
     return;
 
@@ -510,20 +573,18 @@ function displayParts(list) {
   container.innerHTML = list.map(part => {
 
     const number =
-      escapeHtml(
-        String(part.part_number || "")
+      escapeHTML(
+        part.part_number || ""
       );
-
 
     const name =
-      escapeHtml(
-        String(part.name || "")
+      escapeHTML(
+        part.name || ""
       );
 
-
     const category =
-      escapeHtml(
-        String(part.category || "")
+      escapeHTML(
+        part.category || ""
       );
 
 
@@ -532,12 +593,20 @@ function displayParts(list) {
 
     if (part.created_at) {
 
-      date =
-        new Date(
-          part.created_at
-        ).toLocaleString(
-          "de-DE"
-        );
+      try {
+
+        date =
+          new Date(
+            part.created_at
+          ).toLocaleString(
+            "de-DE"
+          );
+
+      } catch {
+
+        date = "";
+
+      }
 
     }
 
@@ -551,11 +620,8 @@ function displayParts(list) {
           <div>
 
             <div class="part-number">
-
               LEGO ${number}
-
             </div>
-
 
             <div class="part-name">
 
@@ -573,9 +639,7 @@ function displayParts(list) {
 
 
           <div class="available">
-
             ● Verfügbar
-
           </div>
 
         </div>
@@ -585,11 +649,9 @@ function displayParts(list) {
 
           📍 LEGO Fabrik Günzburg
 
-          <br>
-
           ${
             date
-              ? "🕐 " + date
+              ? "<br>🕐 " + date
               : ""
           }
 
@@ -598,11 +660,9 @@ function displayParts(list) {
 
         <button
           class="secondary confirm"
-          onclick="confirmPart('${escapeAttribute(number)}')"
+          onclick="confirmPart('${escapeJS(part.part_number || "")}')"
         >
-
           👍 Ich habe dieses Teil auch gesehen
-
         </button>
 
       </div>
@@ -614,9 +674,9 @@ function displayParts(list) {
 }
 
 
-/* =====================================================
+/* =========================================================
    SUCHE
-===================================================== */
+========================================================= */
 
 function searchParts() {
 
@@ -680,28 +740,36 @@ function searchParts() {
 }
 
 
-/* =====================================================
+/* =========================================================
    TEIL BESTÄTIGEN
-===================================================== */
+========================================================= */
 
 function confirmPart(number) {
 
   alert(
-
     "Danke! Deine Bestätigung für Teil " +
     number +
     " wurde registriert. 👍"
-
   );
 
 }
 
 
-/* =====================================================
+/* =========================================================
    TEIL MELDEN
-===================================================== */
+========================================================= */
 
 async function reportPart() {
+
+  const button =
+    document.getElementById(
+      "reportButton"
+    );
+
+
+  /* -------------------------
+     TEILENUMMER
+  -------------------------- */
 
   const partNumber =
     prompt(
@@ -716,6 +784,10 @@ async function reportPart() {
   }
 
 
+  /* -------------------------
+     NAME
+  -------------------------- */
+
   const name =
     prompt(
       "Wie heißt das Teil?\n\nBeispiel: Brick 2 × 4"
@@ -728,6 +800,10 @@ async function reportPart() {
 
   }
 
+
+  /* -------------------------
+     KATEGORIE
+  -------------------------- */
 
   const category =
     prompt(
@@ -742,70 +818,113 @@ async function reportPart() {
   }
 
 
-  const button =
-    document.querySelector(
-      ".report-box button"
-    );
+  /* -------------------------
+     BUTTON DEAKTIVIEREN
+  -------------------------- */
 
+  button.disabled = true;
 
-  if (button) {
-
-    button.disabled = true;
-
-    button.textContent =
-      "Wird gespeichert...";
-
-  }
+  button.textContent =
+    "Wird gespeichert...";
 
 
   try {
 
-    const result =
-      await supabaseRequest(
+    console.log(
+      "Sende Teil an Supabase:",
+      {
+        part_number:
+          partNumber.trim(),
 
-        SUPABASE_URL +
-        "/rest/v1/parts",
+        name:
+          name.trim(),
 
-        {
+        category:
+          category.trim()
+      }
+    );
 
-          method: "POST",
 
-          headers: {
+    /* -------------------------
+       INSERT
+    -------------------------- */
 
-            "Prefer":
-              "return=representation"
+    const {
+      data,
+      error
+    } = await supabaseClient
 
-          },
+      .from("parts")
 
-          body:
-            JSON.stringify({
+      .insert({
 
-              part_number:
-                partNumber.trim(),
+        part_number:
+          partNumber.trim(),
 
-              name:
-                name.trim(),
+        name:
+          name.trim(),
 
-              category:
-                category.trim()
+        category:
+          category.trim()
 
-            })
+      })
 
-        }
+      .select()
+      .single();
+
+
+    /* -------------------------
+       SUPABASE FEHLER
+    -------------------------- */
+
+    if (error) {
+
+      console.error(
+        "Supabase INSERT Fehler:",
+        error
+      );
+
+
+      alert(
+
+        "Das Teil konnte leider nicht gespeichert werden.\n\n" +
+
+        "Supabase Fehler:\n" +
+
+        (error.message ||
+          "Unbekannter Fehler") +
+
+        "\n\nCode: " +
+
+        (error.code ||
+          "unbekannt")
 
       );
 
 
+      return;
+
+    }
+
+
     console.log(
-      "Gespeichertes Teil:",
-      result
+      "Teil erfolgreich gespeichert:",
+      data
     );
 
+
+    /* -------------------------
+       ERFOLG
+    -------------------------- */
 
     alert(
       "Danke! Das Teil wurde erfolgreich gemeldet. 🧱"
     );
 
+
+    /* -------------------------
+       LISTE NEU LADEN
+    -------------------------- */
 
     await loadParts();
 
@@ -813,7 +932,7 @@ async function reportPart() {
   } catch (error) {
 
     console.error(
-      "Speichern fehlgeschlagen:",
+      "Netzwerkfehler beim Speichern:",
       error
     );
 
@@ -822,16 +941,17 @@ async function reportPart() {
 
       "Das Teil konnte leider nicht gespeichert werden.\n\n" +
 
-      "Supabase Fehler:\n" +
+      "Verbindungsfehler:\n" +
 
-      error.message
+      (
+        error.message ||
+        "Load failed"
+      )
 
     );
 
-  }
 
-
-  if (button) {
+  } finally {
 
     button.disabled = false;
 
@@ -843,47 +963,81 @@ async function reportPart() {
 }
 
 
-/* =====================================================
-   SICHERHEIT / HTML ESCAPEN
-===================================================== */
+/* =========================================================
+   HTML SICHER MACHEN
+========================================================= */
 
-function escapeHtml(value) {
+function escapeHTML(value) {
 
   return String(value)
 
-    .replaceAll("&", "&amp;")
+    .replace(
+      /&/g,
+      "&amp;"
+    )
 
-    .replaceAll("<", "&lt;")
+    .replace(
+      /</g,
+      "&lt;"
+    )
 
-    .replaceAll(">", "&gt;")
+    .replace(
+      />/g,
+      "&gt;"
+    )
 
-    .replaceAll('"', "&quot;")
+    .replace(
+      /"/g,
+      "&quot;"
+    )
 
-    .replaceAll("'", "&#039;");
+    .replace(
+      /'/g,
+      "&#039;"
+    );
 
 }
 
 
-function escapeAttribute(value) {
+/* =========================================================
+   JAVASCRIPT STRING SICHER MACHEN
+========================================================= */
+
+function escapeJS(value) {
 
   return String(value)
 
-    .replaceAll("\\", "\\\\")
+    .replace(
+      /\\/g,
+      "\\\\"
+    )
 
-    .replaceAll("'", "\\'");
+    .replace(
+      /'/g,
+      "\\'"
+    );
 
 }
 
 
-/* =====================================================
+/* =========================================================
    START
-===================================================== */
+========================================================= */
 
-loadParts();
+window.addEventListener(
+  "load",
+  function() {
+
+    console.log(
+      "FabrikTracker gestartet."
+    );
+
+    loadParts();
+
+  }
+);
 
 </script>
 
-
 </body>
-
 </html>
