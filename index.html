@@ -122,6 +122,16 @@
       color: #222;
     }
 
+    .success {
+      background: #148a36;
+      color: white;
+    }
+
+    .danger {
+      background: #eeeeee;
+      color: #a40000;
+    }
+
     .section-title {
       font-size: 21px;
       font-weight: 800;
@@ -215,6 +225,14 @@
       border-radius: 14px;
       padding: 16px;
       margin-bottom: 10px;
+      transition:
+        opacity 0.2s,
+        filter 0.2s;
+    }
+
+    .part-card.unavailable {
+      opacity: 0.58;
+      filter: grayscale(20%);
     }
 
     .part-main {
@@ -273,6 +291,12 @@
 
     .available {
       color: #148a36;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .not-available {
+      color: #888;
       font-weight: 800;
       white-space: nowrap;
     }
@@ -345,9 +369,29 @@
       font-size: 13px;
     }
 
+    .status-line {
+      margin-top: 7px;
+      font-weight: 700;
+    }
+
+    .status-line.available-status {
+      color: #148a36;
+    }
+
+    .status-line.unavailable-status {
+      color: #888;
+    }
+
     .confirm {
       margin-top: 13px;
       width: 100%;
+    }
+
+    .unavailable-button {
+      margin-top: 8px;
+      width: 100%;
+      font-size: 13px;
+      padding: 11px;
     }
 
     /* =====================================================
@@ -355,21 +399,23 @@
     ===================================================== */
 
     .admin-delete {
-      display: block;
-      margin: 8px 0 0 auto;
-      padding: 4px 7px;
-      background: transparent;
-      color: #aaa;
-      border-radius: 6px;
+      margin-top: 10px;
+      width: 100%;
+      padding: 7px 10px;
       font-size: 11px;
-      font-weight: 500;
-      opacity: 0.55;
+      font-weight: 600;
+      background: transparent;
+      color: #999;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      opacity: 0.45;
     }
 
     .admin-delete:hover {
-      background: #f1f1f1;
-      color: #c00;
       opacity: 1;
+      background: #fff5f5;
+      color: #a40000;
+      border-color: #e3a0a0;
     }
 
     .empty {
@@ -549,7 +595,8 @@
         flex-direction: column;
       }
 
-      .available {
+      .available,
+      .not-available {
         white-space: normal;
       }
 
@@ -675,7 +722,6 @@
 
 <script>
 
-
 /* =========================================================
    SUPABASE
 ========================================================= */
@@ -683,34 +729,20 @@
 const SUPABASE_URL =
   "https://nmsoppdibanqfaeqtube.supabase.co";
 
-
 const SUPABASE_KEY =
   "sb_publishable_rcf_aY1AfeyRmumUDiNhBw_7LUWdVBD";
-
 
 const PARTS_URL =
   SUPABASE_URL +
   "/rest/v1/parts";
 
-
 const LEGO_PARTS_URL =
   SUPABASE_URL +
   "/rest/v1/lego_parts";
 
-
 const WEIGHTS_URL =
   SUPABASE_URL +
   "/rest/v1/lego_part_weights";
-
-
-/*
- * NEU:
- * Supabase RPC-Funktion für Admin-Löschen
- */
-
-const ADMIN_DELETE_URL =
-  SUPABASE_URL +
-  "/rest/v1/rpc/admin_delete_part";
 
 
 let parts = [];
@@ -881,6 +913,36 @@ function formatEuro(value) {
 
       }
     );
+
+}
+
+
+/* =========================================================
+   DATUM FORMATIEREN
+========================================================= */
+
+function formatDate(value) {
+
+  if (!value) {
+
+    return "";
+
+  }
+
+
+  try {
+
+    return new Date(
+      value
+    ).toLocaleString(
+      "de-DE"
+    );
+
+  } catch {
+
+    return "";
+
+  }
 
 }
 
@@ -1060,7 +1122,7 @@ function getCategoryInfo(
 
 
 /* =========================================================
-   BILDER AUS LEGO_PARTS LADEN
+   BILDER LADEN
 ========================================================= */
 
 async function loadImagesForParts() {
@@ -1189,12 +1251,6 @@ async function loadImagesForParts() {
           null;
 
       }
-    );
-
-
-    console.log(
-      "Rebrickable-Bilder geladen:",
-      Object.keys(imageMap).length
     );
 
 
@@ -1493,19 +1549,9 @@ async function loadParts() {
     }
 
 
-    /* =====================================================
-       REBRICKABLE BILDER
-    ===================================================== */
-
     await loadImagesForParts();
 
-
-    /* =====================================================
-       GEWICHTE
-    ===================================================== */
-
     await loadWeightsForParts();
-
 
     displayParts(
       parts
@@ -1524,154 +1570,6 @@ async function loadParts() {
 
       error.message ||
       "Unbekannter Fehler"
-
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   ADMIN: TEIL LÖSCHEN
-========================================================= */
-
-async function deletePart(
-  partId,
-  partNumber
-) {
-
-  if (
-    partId === null ||
-    partId === undefined
-  ) {
-
-    alert(
-      "Dieses Teil besitzt keine gültige ID."
-    );
-
-    return;
-
-  }
-
-
-  const confirmed =
-    confirm(
-
-      "Teil LEGO " +
-      partNumber +
-      " wirklich löschen?\n\n" +
-      "Diese Aktion kann nicht rückgängig gemacht werden."
-
-    );
-
-
-  if (!confirmed) {
-
-    return;
-
-  }
-
-
-  const password =
-    prompt(
-      "Admin-Passwort eingeben:"
-    );
-
-
-  if (
-    password === null
-  ) {
-
-    return;
-
-  }
-
-
-  if (
-    !password
-  ) {
-
-    alert(
-      "Kein Passwort eingegeben."
-    );
-
-    return;
-
-  }
-
-
-  try {
-
-    const result =
-      await supabaseRequest(
-
-        ADMIN_DELETE_URL,
-
-        {
-
-          method: "POST",
-
-          body:
-            JSON.stringify({
-
-              p_part_id:
-                Number(
-                  partId
-                ),
-
-              p_password:
-                password
-
-            })
-
-        }
-
-      );
-
-
-    /*
-     * Die Funktion gibt true zurück,
-     * wenn wirklich ein Teil gelöscht wurde.
-     */
-
-    if (
-      result === true
-    ) {
-
-      alert(
-        "Das Teil wurde gelöscht. 🗑️"
-      );
-
-
-      await loadParts();
-
-      return;
-
-    }
-
-
-    alert(
-      "Falsches Admin-Passwort oder Teil wurde nicht gefunden."
-    );
-
-
-  } catch (error) {
-
-    console.error(
-      "Admin-Löschen Fehler:",
-      error
-    );
-
-
-    alert(
-
-      "Das Teil konnte nicht gelöscht werden.\n\n" +
-
-      (
-        error.message ||
-        "Unbekannter Fehler"
-      )
 
     );
 
@@ -1743,29 +1641,20 @@ function renderPart(
   }
 
 
-  let date = "";
+  const isAvailable =
+    part.is_available !== false;
 
 
-  if (
-    part.created_at
-  ) {
+  const lastSeen =
+    part.last_seen_at ||
+    part.created_at ||
+    null;
 
-    try {
 
-      date =
-        new Date(
-          part.created_at
-        ).toLocaleString(
-          "de-DE"
-        );
-
-    } catch {
-
-      date = "";
-
-    }
-
-  }
+  const lastSeenFormatted =
+    formatDate(
+      lastSeen
+    );
 
 
   const categoryInfo =
@@ -1788,32 +1677,19 @@ function renderPart(
       : "";
 
 
-  /*
-   * ID für Admin-Löschen
-   */
-
-  const partId =
-    Number(
-      part.id
-    );
-
-
-  const safePartNumber =
-    escapeHTML(
-      part.part_number || ""
-    );
-
-
   return `
 
-    <div class="part-card">
-
+    <div
+      class="part-card ${
+        isAvailable
+          ? ""
+          : "unavailable"
+      }"
+    >
 
       <div class="part-main">
 
-
         <div class="part-image-wrapper">
-
 
           ${
             safeImageUrl
@@ -1858,21 +1734,16 @@ function renderPart(
                 </div>
 
               `
-
           }
-
 
         </div>
 
 
         <div class="part-info">
 
-
           <div class="part-header">
 
-
             <div>
-
 
               <div class="part-number">
 
@@ -1896,16 +1767,32 @@ function renderPart(
 
               </div>
 
-
             </div>
 
 
-            <div class="available">
+            ${
+              isAvailable
 
-              ● Verfügbar
+                ? `
 
-            </div>
+                  <div class="available">
 
+                    ● Verfügbar
+
+                  </div>
+
+                `
+
+                : `
+
+                  <div class="not-available">
+
+                    ● Nicht verfügbar
+
+                  </div>
+
+                `
+            }
 
           </div>
 
@@ -1929,7 +1816,6 @@ function renderPart(
 
 
           <div class="price-box">
-
 
             <div class="price-title">
 
@@ -1964,7 +1850,6 @@ function renderPart(
 
                   <div class="price-row">
 
-
                     <div class="price-normal">
 
                       Normal:
@@ -1993,7 +1878,6 @@ function renderPart(
                       </strong>
 
                     </div>
-
 
                   </div>
 
@@ -2031,30 +1915,33 @@ function renderPart(
                   </div>
 
                 `
-
             }
-
 
           </div>
 
-
         </div>
-
 
       </div>
 
 
       <div class="details">
 
-
         📍 LEGO Fabrik Günzburg
 
-
         ${
-          date
+          lastSeenFormatted
 
-            ? "<br>🕐 " +
-              date
+            ? `
+
+              <br>
+
+              🕐 Zuletzt als vorhanden gemeldet:
+
+              ${escapeHTML(
+                lastSeenFormatted
+              )}
+
+            `
 
             : ""
 
@@ -2064,52 +1951,141 @@ function renderPart(
         ${
           categoryInfo
 
-            ? "<br>📂 " +
-              escapeHTML(
+            ? `
+
+              <br>
+
+              📂 ${escapeHTML(
                 categoryInfo.name
-              )
+              )}
+
+            `
 
             : ""
 
         }
 
 
+        ${
+          !isAvailable
+
+            ? `
+
+              <div
+                class="
+                  status-line
+                  unavailable-status
+                "
+              >
+
+                ⚠️ Dieses Teil wurde zuletzt
+                als nicht verfügbar gemeldet.
+
+              </div>
+
+            `
+
+            : `
+
+              <div
+                class="
+                  status-line
+                  available-status
+                "
+              >
+
+                ✓ Dieses Teil wurde zuletzt
+                als verfügbar gemeldet.
+
+              </div>
+
+            `
+
+        }
+
       </div>
 
 
-      <button
+      ${
+        isAvailable
 
-        class="secondary confirm"
+          ? `
 
-        onclick="confirmPart('${escapeHTML(
-          part.part_number || ""
-        )}')"
+            <button
 
-      >
+              class="secondary confirm"
 
-        👍 Ich habe dieses Teil auch gesehen
+              onclick="confirmPart('${escapeHTML(
+                part.part_number || ""
+              )}', '${escapeHTML(
+                part.id || ""
+              )}')"
 
-      </button>
+            >
+
+              👍 Ich habe dieses Teil gesehen
+
+            </button>
+
+
+            <button
+
+              class="danger unavailable-button"
+
+              onclick="reportUnavailable('${escapeHTML(
+                part.id || ""
+              )}')"
+
+            >
+
+              ❌ Teil ist nicht mehr da
+
+            </button>
+
+          `
+
+          : `
+
+            <button
+
+              class="success confirm"
+
+              onclick="confirmPart('${escapeHTML(
+                part.part_number || ""
+              )}', '${escapeHTML(
+                part.id || ""
+              )}')"
+
+            >
+
+              👍 Ich habe dieses Teil gesehen
+
+            </button>
+
+          `
+
+      }
 
 
       <!-- =================================================
-           KLEINER ADMIN-BUTTON
+           ADMIN LÖSCHEN
       ================================================= -->
 
       <button
 
         class="admin-delete"
 
-        onclick="deletePart(
-          ${Number.isFinite(partId) ? partId : "null"},
-          '${safePartNumber}'
-        )"
-
-        title="Als Administrator löschen"
+        onclick="adminDeletePart('${escapeHTML(
+          part.id || ""
+        )}', '${escapeHTML(
+          part.part_number || ""
+        )}', '${escapeHTML(
+          part.name || ""
+        )}')"
 
       >
 
-        🗑️ Löschen
+        🔒 Admin
 
       </button>
 
@@ -2202,19 +2178,12 @@ function displayParts(
   const categoryOrder = [
 
     "bricks",
-
     "plates",
-
     "tiles",
-
     "slopes",
-
     "technic",
-
     "minifigs",
-
     "wheels",
-
     "other"
 
   ];
@@ -2289,7 +2258,6 @@ function displayParts(
 
             >
 
-
               <button
 
                 class="category-header"
@@ -2298,9 +2266,7 @@ function displayParts(
 
               >
 
-
                 <div class="category-left">
-
 
                   <span class="category-icon">
 
@@ -2324,7 +2290,6 @@ function displayParts(
 
                   </span>
 
-
                 </div>
 
 
@@ -2334,12 +2299,10 @@ function displayParts(
 
                 </span>
 
-
               </button>
 
 
               <div class="category-content">
-
 
                 ${
 
@@ -2356,9 +2319,7 @@ function displayParts(
 
                 }
 
-
               </div>
-
 
             </div>
 
@@ -2373,7 +2334,7 @@ function displayParts(
 
 
 /* =========================================================
-   KATEGORIE ÖFFNEN / SCHLIESSEN
+   KATEGORIE
 ========================================================= */
 
 function toggleCategory(
@@ -2519,6 +2480,426 @@ function searchParts() {
 
 
 /* =========================================================
+   NICHT VERFÜGBAR MELDEN
+========================================================= */
+
+async function reportUnavailable(
+  id
+) {
+
+  if (!id) {
+
+    alert(
+      "Dieses Teil konnte nicht eindeutig gefunden werden."
+    );
+
+    return;
+
+  }
+
+
+  const part =
+    parts.find(
+      item =>
+        String(item.id) ===
+        String(id)
+    );
+
+
+  if (!part) {
+
+    return;
+
+  }
+
+
+  const confirmed =
+    confirm(
+
+      "Bist du sicher, dass dieses Teil nicht mehr da ist?\n\n" +
+
+      "LEGO " +
+      (part.part_number || "") +
+      "\n" +
+      (part.name || "")
+
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  try {
+
+    await supabaseRequest(
+
+      PARTS_URL +
+
+      "?id=eq." +
+
+      encodeURIComponent(
+        id
+      ),
+
+      {
+
+        method: "PATCH",
+
+        headers: {
+
+          "Prefer":
+            "return=representation"
+
+        },
+
+        body:
+          JSON.stringify({
+
+            is_available:
+              false
+
+          })
+
+      }
+
+    );
+
+
+    part.is_available =
+      false;
+
+
+    displayParts(
+      parts
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Teil als nicht verfügbar melden:",
+      error
+    );
+
+
+    alert(
+
+      "Der Status konnte leider nicht geändert werden.\n\n" +
+
+      (
+        error.message ||
+        "Unbekannter Fehler"
+      )
+
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   BESTÄTIGUNG / WIEDER VERFÜGBAR
+========================================================= */
+
+async function confirmPart(
+  number,
+  id
+) {
+
+  if (!id) {
+
+    alert(
+      "Dieses Teil konnte nicht eindeutig gefunden werden."
+    );
+
+    return;
+
+  }
+
+
+  const part =
+    parts.find(
+      item =>
+        String(item.id) ===
+        String(id)
+    );
+
+
+  if (!part) {
+
+    return;
+
+  }
+
+
+  try {
+
+    const now =
+      new Date().toISOString();
+
+
+    await supabaseRequest(
+
+      PARTS_URL +
+
+      "?id=eq." +
+
+      encodeURIComponent(
+        id
+      ),
+
+      {
+
+        method: "PATCH",
+
+        headers: {
+
+          "Prefer":
+            "return=representation"
+
+        },
+
+        body:
+          JSON.stringify({
+
+            is_available:
+              true,
+
+            last_seen_at:
+              now
+
+          })
+
+      }
+
+    );
+
+
+    part.is_available =
+      true;
+
+
+    part.last_seen_at =
+      now;
+
+
+    displayParts(
+      parts
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Teil bestätigen Fehler:",
+      error
+    );
+
+
+    alert(
+
+      "Die Bestätigung konnte leider nicht gespeichert werden.\n\n" +
+
+      (
+        error.message ||
+        "Unbekannter Fehler"
+      )
+
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   ADMIN TEIL LÖSCHEN
+========================================================= */
+
+async function adminDeletePart(
+  id,
+  partNumber,
+  partName
+) {
+
+  if (!id) {
+
+    alert(
+      "Dieses Teil konnte nicht eindeutig gefunden werden."
+    );
+
+    return;
+
+  }
+
+
+  /*
+   * Admin-Passwort abfragen
+   */
+
+  const password =
+    prompt(
+      "🔒 Admin-Passwort eingeben:"
+    );
+
+
+  /*
+   * Abbrechen
+   */
+
+  if (
+    password === null
+  ) {
+
+    return;
+
+  }
+
+
+  if (
+    password.trim() === ""
+  ) {
+
+    alert(
+      "Bitte ein Passwort eingeben."
+    );
+
+    return;
+
+  }
+
+
+  /*
+   * Sicherheitsabfrage
+   */
+
+  const confirmed =
+    confirm(
+
+      "⚠️ Teil wirklich komplett löschen?\n\n" +
+
+      "LEGO " +
+      partNumber +
+      "\n" +
+      partName +
+
+      "\n\n" +
+
+      "Dieser Vorgang kann nicht rückgängig gemacht werden."
+
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  try {
+
+    /*
+     * Supabase RPC
+     *
+     * Ruft exakt die SQL-Funktion auf:
+     *
+     * public.admin_delete_part(
+     *   bigint,
+     *   text
+     * )
+     */
+
+    const result =
+      await supabaseRequest(
+
+        SUPABASE_URL +
+        "/rest/v1/rpc/admin_delete_part",
+
+        {
+
+          method: "POST",
+
+          body:
+            JSON.stringify({
+
+              p_part_id:
+                Number(id),
+
+              p_password:
+                password
+
+            })
+
+        }
+
+      );
+
+
+    /*
+     * Die SQL-Funktion gibt
+     * TRUE oder FALSE zurück.
+     */
+
+    if (
+      result !== true
+    ) {
+
+      alert(
+        "❌ Falsches Admin-Passwort oder das Teil wurde nicht gefunden."
+      );
+
+      return;
+
+    }
+
+
+    /*
+     * Erfolgreich gelöscht
+     */
+
+    alert(
+      "✅ Das Teil wurde komplett gelöscht."
+    );
+
+
+    /*
+     * Daten erneut aus Supabase laden
+     */
+
+    await loadParts();
+
+
+  } catch (error) {
+
+    console.error(
+      "Admin-Löschen Fehler:",
+      error
+    );
+
+
+    alert(
+
+      "❌ Das Teil konnte nicht gelöscht werden.\n\n" +
+
+      (
+        error.message ||
+        "Unbekannter Supabase-Fehler"
+      )
+
+    );
+
+  }
+
+}
+
+
+/* =========================================================
    MELDEFORMULAR ÖFFNEN
 ========================================================= */
 
@@ -2545,14 +2926,10 @@ function openReportForm() {
 
     <div class="report-form">
 
-
       <div class="field">
 
-
         <label>
-
           Teilenummer oder Name
-
         </label>
 
 
@@ -2586,83 +2963,54 @@ function openReportForm() {
 
 
         <div
-
           id="partSearchError"
-
           class="search-error"
-
         ></div>
-
 
       </div>
 
 
       <div class="field">
 
-
         <label>
-
           Farbe
-
         </label>
 
 
         <select
-
           id="colorSelect"
-
           disabled
-
         >
 
-
           <option value="">
-
             Erst Teil auswählen...
-
           </option>
 
         </select>
-
 
       </div>
 
 
       <div class="form-buttons">
 
-
         <button
-
           class="secondary"
-
           onclick="closeReportForm()"
-
         >
-
           Abbrechen
-
         </button>
 
 
         <button
-
           id="submitReportButton"
-
           class="primary"
-
           onclick="submitReport()"
-
           disabled
-
         >
-
           Teil melden
-
         </button>
-
 
       </div>
-
 
     </div>
 
@@ -3252,7 +3600,6 @@ async function fetchLegoPartSuggestions(
 
                 </div>
 
-
               </div>
 
             `;
@@ -3729,7 +4076,13 @@ async function submitReport() {
             color_id:
               Number(
                 colorSelect.value
-              )
+              ),
+
+            is_available:
+              true,
+
+            last_seen_at:
+              new Date().toISOString()
 
           })
 
@@ -3836,27 +4189,6 @@ function hideSuggestions() {
 
 
 /* =========================================================
-   BESTÄTIGUNG
-========================================================= */
-
-function confirmPart(
-  number
-) {
-
-  alert(
-
-    "Danke! Deine Bestätigung für Teil " +
-
-    number +
-
-    " wurde registriert. 👍"
-
-  );
-
-}
-
-
-/* =========================================================
    FEHLER
 ========================================================= */
 
@@ -3875,7 +4207,6 @@ function showError(
 
     <div class="card error">
 
-
       <div class="error-title">
 
         ${escapeHTML(
@@ -3892,7 +4223,6 @@ function showError(
         )}
 
       </div>
-
 
     </div>
 
@@ -3959,7 +4289,6 @@ document.addEventListener(
 
   }
 );
-
 
 </script>
 
