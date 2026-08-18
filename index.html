@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>FabrikTracker – LEGO Fabrik Günzburg</title>
 
   <style>
@@ -58,7 +59,7 @@
       background: white;
       border-radius: 20px;
       padding: 30px;
-      box-shadow: 0 3px 15px rgba(0,0,0,0.06);
+      box-shadow: 0 3px 15px rgba(0, 0, 0, 0.06);
       margin-bottom: 25px;
     }
 
@@ -115,7 +116,7 @@
       border-radius: 16px;
       padding: 20px;
       margin-bottom: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     }
 
     .part-header {
@@ -171,7 +172,14 @@
       margin-top: 0;
     }
 
+    .loading {
+      text-align: center;
+      color: #777;
+      padding: 25px;
+    }
+
     @media (max-width: 600px) {
+
       h1 {
         font-size: 27px;
       }
@@ -187,30 +195,52 @@
       .available {
         white-space: normal;
       }
+
     }
   </style>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+
 
 <body>
 
 <header>
+
   <div class="header-inner">
-    <div class="logo">🧱 <span>Fabrik</span>Tracker</div>
-    <div class="location">📍 Günzburg</div>
+
+    <div class="logo">
+      🧱 <span>Fabrik</span>Tracker
+    </div>
+
+    <div class="location">
+      📍 Günzburg
+    </div>
+
   </div>
+
 </header>
+
 
 <main>
 
+  <!-- =========================
+       STARTBEREICH
+  ========================== -->
+
   <section class="hero">
-    <h1>LEGO Fabrik Günzburg</h1>
+
+    <h1>
+      LEGO Fabrik Günzburg
+    </h1>
 
     <div class="subtitle">
       Welche LEGO Teile sind aktuell verfügbar?
     </div>
 
+
     <div class="search">
+
       <input
         id="searchInput"
         type="text"
@@ -218,44 +248,83 @@
         oninput="searchParts()"
       >
 
-      <button class="primary" onclick="searchParts()">
+      <button
+        class="primary"
+        onclick="searchParts()"
+      >
         Suchen
       </button>
+
     </div>
+
   </section>
 
+
+  <!-- =========================
+       TEILE
+  ========================== -->
 
   <div class="section-title">
     🟢 Aktuell gemeldete Teile
   </div>
 
-  <div id="results"></div>
 
+  <div id="results">
+
+    <div class="card loading">
+      Teile werden geladen...
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       TEIL MELDEN
+  ========================== -->
 
   <section class="report-box">
-    <h2>🧱 Teil gesehen?</h2>
+
+    <h2>
+      🧱 Teil gesehen?
+    </h2>
 
     <p>
-      Hilf anderen LEGO-Fans und melde, welche Teile du in der Fabrik
-      gefunden hast.
+      Hilf anderen LEGO-Fans und melde,
+      welche Teile du in der Fabrik gefunden hast.
     </p>
 
-    <button class="primary" onclick="reportPart()">
+    <button
+      class="primary"
+      onclick="reportPart()"
+    >
       + Teil melden
     </button>
+
   </section>
 
 </main>
 
 
 <script>
-const SUPABASE_URL = "https://nmsoppdibangfaeqtube.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tc29wcGRpYmFucWZhZXF0dWJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzgzNDQsImV4cCI6MjEwMjU1NDM0NH0.NkAP71O_TJNZpYIrBiHe-VG6lYSIOqXD11dJdwrnrKQ";
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+/* =========================
+   SUPABASE
+========================= */
+
+const SUPABASE_URL =
+  "https://nmsoppdibangfaeqtube.supabase.co";
+
+
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tc29wcGRpYmFucWZhZXF0dWJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzgzNDQsImV4cCI6MjEwMjU1NDM0NH0.NkAP71O_TJNZpYIrBiHe-VG6lYSIOqXD11dJdwrnrKQ";
+
+
+const supabaseClient =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
 
 let parts = [];
 
@@ -266,22 +335,64 @@ let parts = [];
 
 async function loadParts() {
 
-  const { data, error } = await supabaseClient
-    .from("parts")
-    .order("part_number");
+  const results =
+    document.getElementById("results");
 
-  if (error) {
-    console.error("Supabase Fehler:", error);
 
-    document.getElementById("results").innerHTML =
-      '<div class="card empty">Fehler beim Laden der Teile.</div>';
+  results.innerHTML =
+    '<div class="card loading">Teile werden geladen...</div>';
 
-    return;
+
+  try {
+
+    const { data, error } =
+      await supabaseClient
+        .from("parts")
+        .select("*")
+        .order("part_number");
+
+
+    if (error) {
+
+      console.error(
+        "Supabase Ladefehler:",
+        error
+      );
+
+
+      results.innerHTML =
+        '<div class="card empty">' +
+        'Fehler beim Laden der Teile.<br><br>' +
+        error.message +
+        '</div>';
+
+      return;
+    }
+
+
+    parts = data || [];
+
+
+    displayParts(parts);
+
   }
 
-  parts = data || [];
+  catch (err) {
 
-  displayParts(parts);
+    console.error(
+      "Unerwarteter Fehler:",
+      err
+    );
+
+
+    results.innerHTML =
+      '<div class="card empty">' +
+      'Fehler beim Laden der Teile.<br><br>' +
+      err.message +
+      '</div>';
+
+  }
+
 }
 
 
@@ -291,75 +402,131 @@ async function loadParts() {
 
 function displayParts(list) {
 
-  const container = document.getElementById("results");
+  const container =
+    document.getElementById("results");
+
 
   if (!list || list.length === 0) {
 
     container.innerHTML =
-      '<div class="card empty">Keine Teile gefunden.</div>';
+      '<div class="card empty">' +
+      'Noch keine Teile gemeldet.' +
+      '</div>';
 
     return;
   }
 
 
-  container.innerHTML = list.map(part => {
+  container.innerHTML =
+    list.map(part => {
 
-    const number = part.part_number || "";
-    const name = part.name || "";
-    const category = part.category || "";
-
-    const date = part.created_at
-      ? new Date(part.created_at).toLocaleString("de-DE")
-      : "";
+      const number =
+        String(part.part_number || "");
 
 
-    return `
+      const name =
+        String(part.name || "");
 
-      <div class="card">
 
-        <div class="part-header">
+      const category =
+        String(part.category || "");
 
-          <div>
 
-            <div class="part-number">
-              LEGO ${number}
+      const date =
+        part.created_at
+          ? new Date(
+              part.created_at
+            ).toLocaleString("de-DE")
+          : "";
+
+
+      return `
+
+        <div class="card">
+
+          <div class="part-header">
+
+            <div>
+
+              <div class="part-number">
+                LEGO ${escapeHtml(number)}
+              </div>
+
+              <div class="part-name">
+
+                ${escapeHtml(name)}
+
+                ${
+                  category
+                    ? " · " +
+                      escapeHtml(category)
+                    : ""
+                }
+
+              </div>
+
             </div>
 
-            <div class="part-name">
-              ${name}
-              ${category ? " · " + category : ""}
+
+            <div class="available">
+              ● Verfügbar
             </div>
 
           </div>
 
-          <div class="available">
-            ● Verfügbar
+
+          <div class="details">
+
+            📍 LEGO Fabrik Günzburg
+
+            <br>
+
+            ${
+              date
+                ? "🕐 " + escapeHtml(date)
+                : ""
+            }
+
           </div>
 
+
+          <button
+            class="secondary confirm"
+            onclick="confirmPart('${escapeAttribute(number)}')"
+          >
+            👍 Ich habe dieses Teil auch gesehen
+          </button>
+
         </div>
 
+      `;
 
-        <div class="details">
+    }).join("");
 
-          📍 LEGO Fabrik Günzburg<br>
-
-          ${date ? "🕐 " + date : ""}
-
-        </div>
+}
 
 
-        <button
-          class="secondary confirm"
-          onclick="confirmPart('${number}')"
-        >
-          👍 Ich habe dieses Teil auch gesehen
-        </button>
+/* =========================
+   HTML SICHER DARSTELLEN
+========================= */
 
-      </div>
+function escapeHtml(value) {
 
-    `;
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
-  }).join("");
+}
+
+
+function escapeAttribute(value) {
+
+  return String(value)
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'");
 
 }
 
@@ -383,23 +550,41 @@ function searchParts() {
     displayParts(parts);
 
     return;
-
   }
 
 
-  const filtered = parts.filter(part => {
+  const filtered =
+    parts.filter(part => {
 
-    const number = String(part.part_number || "").toLowerCase();
-    const name = String(part.name || "").toLowerCase();
-    const category = String(part.category || "").toLowerCase();
+      const number =
+        String(
+          part.part_number || ""
+        ).toLowerCase();
 
-    return (
-      number.includes(query) ||
-      name.includes(query) ||
-      category.includes(query)
-    );
 
-  });
+      const name =
+        String(
+          part.name || ""
+        ).toLowerCase();
+
+
+      const category =
+        String(
+          part.category || ""
+        ).toLowerCase();
+
+
+      return (
+
+        number.includes(query) ||
+
+        name.includes(query) ||
+
+        category.includes(query)
+
+      );
+
+    });
 
 
   displayParts(filtered);
@@ -428,63 +613,126 @@ function confirmPart(number) {
 
 async function reportPart() {
 
-  const partNumber = prompt(
-    "Welche Teilenummer hast du gesehen?\n\nBeispiel: 3001"
-  );
-
-  if (!partNumber) return;
-
-
-  const name = prompt(
-    "Wie heißt das Teil?\n\nBeispiel: Brick 2 × 4"
-  );
-
-  if (!name) return;
+  const partNumber =
+    prompt(
+      "Welche Teilenummer hast du gesehen?\n\n" +
+      "Beispiel: 3001"
+    );
 
 
-  const category = prompt(
-    "Welche Kategorie?\n\nBeispiel: Brick"
-  );
-
-  if (!category) return;
-
-  const response = await fetch(
-  SUPABASE_URL + "/rest/v1/parts",
-  {
-    method: "POST",
-    headers: {
-      "apikey": SUPABASE_KEY,
-      "Authorization": "Bearer " + SUPABASE_KEY,
-      "Content-Type": "application/json",
-      "Prefer": "return=minimal"
-    },
-    body: JSON.stringify({
-      part_number: partNumber.trim(),
-      name: name.trim(),
-      category: category.trim()
-    })
+  if (!partNumber) {
+    return;
   }
-);
-
-const responseText = await response.text();
-
-if (!response.ok) {
-  alert(
-    "Supabase Fehler:\n\n" +
-    response.status + "\n" +
-    responseText
-  );
-  return;
-}
- 
 
 
-  alert(
-    "Danke! Das Teil wurde erfolgreich gemeldet. 🧱"
-  );
+  const name =
+    prompt(
+      "Wie heißt das Teil?\n\n" +
+      "Beispiel: Brick 2 × 4"
+    );
 
 
-  await loadParts();
+  if (!name) {
+    return;
+  }
+
+
+  const category =
+    prompt(
+      "Welche Kategorie?\n\n" +
+      "Beispiel: Brick"
+    );
+
+
+  if (!category) {
+    return;
+  }
+
+
+  try {
+
+    /* =========================
+       NEUES TEIL IN SUPABASE
+    ========================== */
+
+    const { data, error } =
+      await supabaseClient
+        .from("parts")
+        .insert({
+
+          part_number:
+            partNumber.trim(),
+
+          name:
+            name.trim(),
+
+          category:
+            category.trim()
+
+        })
+        .select();
+
+
+    /* =========================
+       FEHLER
+    ========================== */
+
+    if (error) {
+
+      console.error(
+        "Fehler beim Melden:",
+        error
+      );
+
+
+      alert(
+        "Das Teil konnte leider nicht gespeichert werden.\n\n" +
+        "Supabase Fehler:\n" +
+        error.message
+      );
+
+
+      return;
+    }
+
+
+    /* =========================
+       ERFOLG
+    ========================== */
+
+    console.log(
+      "Teil erfolgreich gespeichert:",
+      data
+    );
+
+
+    alert(
+      "Danke! Das Teil wurde erfolgreich gemeldet. 🧱"
+    );
+
+
+    /* =========================
+       LISTE AKTUALISIEREN
+    ========================== */
+
+    await loadParts();
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "Unerwarteter Fehler:",
+      err
+    );
+
+
+    alert(
+      "Beim Speichern ist ein Fehler aufgetreten.\n\n" +
+      err.message
+    );
+
+  }
 
 }
 
@@ -496,6 +744,7 @@ if (!response.ok) {
 loadParts();
 
 </script>
+
 
 </body>
 </html>
