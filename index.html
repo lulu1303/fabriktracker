@@ -122,6 +122,16 @@
       color: #222;
     }
 
+    .success {
+      background: #148a36;
+      color: white;
+    }
+
+    .danger {
+      background: #eeeeee;
+      color: #a40000;
+    }
+
     .section-title {
       font-size: 21px;
       font-weight: 800;
@@ -215,6 +225,18 @@
       border-radius: 14px;
       padding: 16px;
       margin-bottom: 10px;
+      transition:
+        opacity 0.2s,
+        filter 0.2s;
+    }
+
+    /*
+     * NICHT VERFÜGBAR
+     */
+
+    .part-card.unavailable {
+      opacity: 0.58;
+      filter: grayscale(20%);
     }
 
     .part-main {
@@ -273,6 +295,12 @@
 
     .available {
       color: #148a36;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .not-available {
+      color: #888;
       font-weight: 800;
       white-space: nowrap;
     }
@@ -345,9 +373,29 @@
       font-size: 13px;
     }
 
+    .status-line {
+      margin-top: 7px;
+      font-weight: 700;
+    }
+
+    .status-line.available-status {
+      color: #148a36;
+    }
+
+    .status-line.unavailable-status {
+      color: #888;
+    }
+
     .confirm {
       margin-top: 13px;
       width: 100%;
+    }
+
+    .unavailable-button {
+      margin-top: 8px;
+      width: 100%;
+      font-size: 13px;
+      padding: 11px;
     }
 
     .empty {
@@ -527,7 +575,8 @@
         flex-direction: column;
       }
 
-      .available {
+      .available,
+      .not-available {
         white-space: normal;
       }
 
@@ -653,7 +702,6 @@
 
 <script>
 
-
 /* =========================================================
    SUPABASE
 ========================================================= */
@@ -661,20 +709,16 @@
 const SUPABASE_URL =
   "https://nmsoppdibanqfaeqtube.supabase.co";
 
-
 const SUPABASE_KEY =
   "sb_publishable_rcf_aY1AfeyRmumUDiNhBw_7LUWdVBD";
-
 
 const PARTS_URL =
   SUPABASE_URL +
   "/rest/v1/parts";
 
-
 const LEGO_PARTS_URL =
   SUPABASE_URL +
   "/rest/v1/lego_parts";
-
 
 const WEIGHTS_URL =
   SUPABASE_URL +
@@ -854,6 +898,36 @@ function formatEuro(value) {
 
 
 /* =========================================================
+   DATUM FORMATIEREN
+========================================================= */
+
+function formatDate(value) {
+
+  if (!value) {
+
+    return "";
+
+  }
+
+
+  try {
+
+    return new Date(
+      value
+    ).toLocaleString(
+      "de-DE"
+    );
+
+  } catch {
+
+    return "";
+
+  }
+
+}
+
+
+/* =========================================================
    KATEGORIE
 ========================================================= */
 
@@ -875,11 +949,6 @@ function getCategoryInfo(
       String(name || "")
     ).toLowerCase();
 
-
-  /*
-   * Rebrickable Kategorie 11
-   * = Brick
-   */
 
   if (
     categoryText === "11"
@@ -1033,7 +1102,7 @@ function getCategoryInfo(
 
 
 /* =========================================================
-   BILDER AUS LEGO_PARTS LADEN
+   BILDER LADEN
 ========================================================= */
 
 async function loadImagesForParts() {
@@ -1078,12 +1147,6 @@ async function loadImagesForParts() {
 
 
   const imageMap = {};
-
-
-  /*
-   * Wir laden die Daten in kleinen Blöcken.
-   * Dadurch wird die URL nicht unnötig lang.
-   */
 
   const batchSize = 100;
 
@@ -1154,10 +1217,6 @@ async function loadImagesForParts() {
     }
 
 
-    /*
-     * Daten an die gemeldeten Teile anhängen
-     */
-
     parts.forEach(
       part => {
 
@@ -1172,12 +1231,6 @@ async function loadImagesForParts() {
           null;
 
       }
-    );
-
-
-    console.log(
-      "Rebrickable-Bilder geladen:",
-      Object.keys(imageMap).length
     );
 
 
@@ -1476,19 +1529,9 @@ async function loadParts() {
     }
 
 
-    /* =====================================================
-       REBRICKABLE BILDER
-    ===================================================== */
-
     await loadImagesForParts();
 
-
-    /* =====================================================
-       GEWICHTE
-    ===================================================== */
-
     await loadWeightsForParts();
-
 
     displayParts(
       parts
@@ -1578,34 +1621,21 @@ function renderPart(
   }
 
 
-  let date = "";
+  const isAvailable =
+    part.is_available !== false;
 
 
-  if (
-    part.created_at
-  ) {
-
-    try {
-
-      date =
-        new Date(
-          part.created_at
-        ).toLocaleString(
-          "de-DE"
-        );
-
-    } catch {
-
-      date = "";
-
-    }
-
-  }
+  const lastSeen =
+    part.last_seen_at ||
+    part.created_at ||
+    null;
 
 
-  /*
-   * KATEGORIE NICHT MEHR ALS ZAHL ANZEIGEN
-   */
+  const lastSeenFormatted =
+    formatDate(
+      lastSeen
+    );
+
 
   const categoryInfo =
     getCategoryInfo(
@@ -1613,12 +1643,6 @@ function renderPart(
       part.name
     );
 
-
-  /*
-   * BILD AUS lego_parts.image_url
-   *
-   * KEIN BRICKLINK MEHR
-   */
 
   const imageUrl =
     part.image_url ||
@@ -1635,14 +1659,17 @@ function renderPart(
 
   return `
 
-    <div class="part-card">
-
+    <div
+      class="part-card ${
+        isAvailable
+          ? ""
+          : "unavailable"
+      }"
+    >
 
       <div class="part-main">
 
-
         <div class="part-image-wrapper">
-
 
           ${
             safeImageUrl
@@ -1687,21 +1714,16 @@ function renderPart(
                 </div>
 
               `
-
           }
-
 
         </div>
 
 
         <div class="part-info">
 
-
           <div class="part-header">
 
-
             <div>
-
 
               <div class="part-number">
 
@@ -1725,16 +1747,32 @@ function renderPart(
 
               </div>
 
-
             </div>
 
 
-            <div class="available">
+            ${
+              isAvailable
 
-              ● Verfügbar
+                ? `
 
-            </div>
+                  <div class="available">
 
+                    ● Verfügbar
+
+                  </div>
+
+                `
+
+                : `
+
+                  <div class="not-available">
+
+                    ● Nicht verfügbar
+
+                  </div>
+
+                `
+            }
 
           </div>
 
@@ -1758,7 +1796,6 @@ function renderPart(
 
 
           <div class="price-box">
-
 
             <div class="price-title">
 
@@ -1793,7 +1830,6 @@ function renderPart(
 
                   <div class="price-row">
 
-
                     <div class="price-normal">
 
                       Normal:
@@ -1822,7 +1858,6 @@ function renderPart(
                       </strong>
 
                     </div>
-
 
                   </div>
 
@@ -1860,30 +1895,33 @@ function renderPart(
                   </div>
 
                 `
-
             }
-
 
           </div>
 
-
         </div>
-
 
       </div>
 
 
       <div class="details">
 
-
         📍 LEGO Fabrik Günzburg
 
-
         ${
-          date
+          lastSeenFormatted
 
-            ? "<br>🕐 " +
-              date
+            ? `
+
+              <br>
+
+              🕐 Zuletzt als vorhanden gemeldet:
+
+              ${escapeHTML(
+                lastSeenFormatted
+              )}
+
+            `
 
             : ""
 
@@ -1893,32 +1931,120 @@ function renderPart(
         ${
           categoryInfo
 
-            ? "<br>📂 " +
-              escapeHTML(
+            ? `
+
+              <br>
+
+              📂 ${escapeHTML(
                 categoryInfo.name
-              )
+              )}
+
+            `
 
             : ""
 
         }
 
 
+        ${
+          !isAvailable
+
+            ? `
+
+              <div
+                class="
+                  status-line
+                  unavailable-status
+                "
+              >
+
+                ⚠️ Dieses Teil wurde zuletzt
+                als nicht verfügbar gemeldet.
+
+              </div>
+
+            `
+
+            : `
+
+              <div
+                class="
+                  status-line
+                  available-status
+                "
+              >
+
+                ✓ Dieses Teil wurde zuletzt
+                als verfügbar gemeldet.
+
+              </div>
+
+            `
+
+        }
+
       </div>
 
 
-      <button
+      ${
+        isAvailable
 
-        class="secondary confirm"
+          ? `
 
-        onclick="confirmPart('${escapeHTML(
-          part.part_number || ""
-        )}')"
+            <button
 
-      >
+              class="secondary confirm"
 
-        👍 Ich habe dieses Teil auch gesehen
+              onclick="confirmPart('${escapeHTML(
+                part.part_number || ""
+              )}', '${escapeHTML(
+                part.id || ""
+              )}')"
 
-      </button>
+            >
+
+              👍 Ich habe dieses Teil gesehen
+
+            </button>
+
+
+            <button
+
+              class="danger unavailable-button"
+
+              onclick="reportUnavailable('${escapeHTML(
+                part.id || ""
+              )}')"
+
+            >
+
+              ❌ Teil ist nicht mehr da
+
+            </button>
+
+          `
+
+          : `
+
+            <button
+
+              class="success confirm"
+
+              onclick="confirmPart('${escapeHTML(
+                part.part_number || ""
+              )}', '${escapeHTML(
+                part.id || ""
+              )}')"
+
+            >
+
+              👍 Ich habe dieses Teil gesehen
+
+            </button>
+
+          `
+
+      }
 
 
     </div>
@@ -2009,19 +2135,12 @@ function displayParts(
   const categoryOrder = [
 
     "bricks",
-
     "plates",
-
     "tiles",
-
     "slopes",
-
     "technic",
-
     "minifigs",
-
     "wheels",
-
     "other"
 
   ];
@@ -2096,7 +2215,6 @@ function displayParts(
 
             >
 
-
               <button
 
                 class="category-header"
@@ -2105,9 +2223,7 @@ function displayParts(
 
               >
 
-
                 <div class="category-left">
-
 
                   <span class="category-icon">
 
@@ -2131,7 +2247,6 @@ function displayParts(
 
                   </span>
 
-
                 </div>
 
 
@@ -2141,12 +2256,10 @@ function displayParts(
 
                 </span>
 
-
               </button>
 
 
               <div class="category-content">
-
 
                 ${
 
@@ -2163,9 +2276,7 @@ function displayParts(
 
                 }
 
-
               </div>
-
 
             </div>
 
@@ -2180,7 +2291,7 @@ function displayParts(
 
 
 /* =========================================================
-   KATEGORIE ÖFFNEN / SCHLIESSEN
+   KATEGORIE
 ========================================================= */
 
 function toggleCategory(
@@ -2326,6 +2437,248 @@ function searchParts() {
 
 
 /* =========================================================
+   NICHT VERFÜGBAR MELDEN
+========================================================= */
+
+async function reportUnavailable(
+  id
+) {
+
+  if (!id) {
+
+    alert(
+      "Dieses Teil konnte nicht eindeutig gefunden werden."
+    );
+
+    return;
+
+  }
+
+
+  const part =
+    parts.find(
+      item =>
+        String(item.id) ===
+        String(id)
+    );
+
+
+  if (!part) {
+
+    return;
+
+  }
+
+
+  const confirmed =
+    confirm(
+
+      "Bist du sicher, dass dieses Teil nicht mehr da ist?\n\n" +
+
+      "LEGO " +
+      (part.part_number || "") +
+      "\n" +
+      (part.name || "")
+
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  try {
+
+    await supabaseRequest(
+
+      PARTS_URL +
+
+      "?id=eq." +
+
+      encodeURIComponent(
+        id
+      ),
+
+      {
+
+        method: "PATCH",
+
+        headers: {
+
+          "Prefer":
+            "return=representation"
+
+        },
+
+        body:
+          JSON.stringify({
+
+            is_available:
+              false
+
+          })
+
+      }
+
+    );
+
+
+    /*
+     * Direkt lokal aktualisieren
+     */
+
+    part.is_available =
+      false;
+
+
+    displayParts(
+      parts
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Teil als nicht verfügbar melden:",
+      error
+    );
+
+
+    alert(
+
+      "Der Status konnte leider nicht geändert werden.\n\n" +
+
+      (
+        error.message ||
+        "Unbekannter Fehler"
+      )
+
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   BESTÄTIGUNG / WIEDER VERFÜGBAR
+========================================================= */
+
+async function confirmPart(
+  number,
+  id
+) {
+
+  if (!id) {
+
+    alert(
+      "Dieses Teil konnte nicht eindeutig gefunden werden."
+    );
+
+    return;
+
+  }
+
+
+  const part =
+    parts.find(
+      item =>
+        String(item.id) ===
+        String(id)
+    );
+
+
+  if (!part) {
+
+    return;
+
+  }
+
+
+  try {
+
+    await supabaseRequest(
+
+      PARTS_URL +
+
+      "?id=eq." +
+
+      encodeURIComponent(
+        id
+      ),
+
+      {
+
+        method: "PATCH",
+
+        headers: {
+
+          "Prefer":
+            "return=representation"
+
+        },
+
+        body:
+          JSON.stringify({
+
+            is_available:
+              true,
+
+            last_seen_at:
+              new Date().toISOString()
+
+          })
+
+      }
+
+    );
+
+
+    /*
+     * Lokalen Datensatz sofort aktualisieren
+     */
+
+    part.is_available =
+      true;
+
+
+    part.last_seen_at =
+      new Date().toISOString();
+
+
+    displayParts(
+      parts
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Teil bestätigen Fehler:",
+      error
+    );
+
+
+    alert(
+
+      "Die Bestätigung konnte leider nicht gespeichert werden.\n\n" +
+
+      (
+        error.message ||
+        "Unbekannter Fehler"
+      )
+
+    );
+
+  }
+
+}
+
+
+/* =========================================================
    MELDEFORMULAR ÖFFNEN
 ========================================================= */
 
@@ -2352,14 +2705,10 @@ function openReportForm() {
 
     <div class="report-form">
 
-
       <div class="field">
 
-
         <label>
-
           Teilenummer oder Name
-
         </label>
 
 
@@ -2393,84 +2742,54 @@ function openReportForm() {
 
 
         <div
-
           id="partSearchError"
-
           class="search-error"
-
         ></div>
-
 
       </div>
 
 
       <div class="field">
 
-
         <label>
-
           Farbe
-
         </label>
 
 
         <select
-
           id="colorSelect"
-
           disabled
-
         >
 
-
           <option value="">
-
             Erst Teil auswählen...
-
           </option>
 
-
         </select>
-
 
       </div>
 
 
       <div class="form-buttons">
 
-
         <button
-
           class="secondary"
-
           onclick="closeReportForm()"
-
         >
-
           Abbrechen
-
         </button>
 
 
         <button
-
           id="submitReportButton"
-
           class="primary"
-
           onclick="submitReport()"
-
           disabled
-
         >
-
           Teil melden
-
         </button>
-
 
       </div>
-
 
     </div>
 
@@ -2631,10 +2950,6 @@ async function fetchLegoPartSuggestions(
     let results = [];
 
 
-    /*
-     * Teilenummer
-     */
-
     if (
       /^[0-9]+$/.test(
         search
@@ -2663,10 +2978,6 @@ async function fetchLegoPartSuggestions(
 
     }
 
-
-    /*
-     * Name
-     */
 
     if (
       results.length === 0
@@ -2781,10 +3092,6 @@ async function fetchLegoPartSuggestions(
 
     }
 
-
-    /*
-     * Priorität
-     */
 
     function getPartPriority(
       part
@@ -3055,7 +3362,6 @@ async function fetchLegoPartSuggestions(
 
               >
 
-
                 <div class="suggestion-number">
 
                   LEGO ${number}
@@ -3072,7 +3378,6 @@ async function fetchLegoPartSuggestions(
                   ${category}
 
                 </div>
-
 
               </div>
 
@@ -3550,7 +3855,13 @@ async function submitReport() {
             color_id:
               Number(
                 colorSelect.value
-              )
+              ),
+
+            is_available:
+              true,
+
+            last_seen_at:
+              new Date().toISOString()
 
           })
 
@@ -3657,27 +3968,6 @@ function hideSuggestions() {
 
 
 /* =========================================================
-   BESTÄTIGUNG
-========================================================= */
-
-function confirmPart(
-  number
-) {
-
-  alert(
-
-    "Danke! Deine Bestätigung für Teil " +
-
-    number +
-
-    " wurde registriert. 👍"
-
-  );
-
-}
-
-
-/* =========================================================
    FEHLER
 ========================================================= */
 
@@ -3696,7 +3986,6 @@ function showError(
 
     <div class="card error">
 
-
       <div class="error-title">
 
         ${escapeHTML(
@@ -3713,7 +4002,6 @@ function showError(
         )}
 
       </div>
-
 
     </div>
 
@@ -3780,7 +4068,6 @@ document.addEventListener(
 
   }
 );
-
 
 </script>
 
