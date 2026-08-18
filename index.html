@@ -193,7 +193,7 @@
     .status {
       font-size: 13px;
       margin-top: 10px;
-      color: #777;
+      color: #aaa;
     }
 
     .loading {
@@ -201,6 +201,10 @@
       padding: 25px;
       color: #777;
     }
+
+    /* =========================
+       MELDEFORMULAR
+    ========================= */
 
     .report-form {
       margin-top: 20px;
@@ -211,56 +215,96 @@
     }
 
     .field {
-      margin-bottom: 15px;
+      margin-bottom: 16px;
+      position: relative;
     }
 
     .field label {
       display: block;
-      font-size: 13px;
-      font-weight: 800;
+      font-weight: 700;
+      font-size: 14px;
       margin-bottom: 7px;
     }
 
     .field input,
     .field select {
       width: 100%;
-      padding: 13px 14px;
+      padding: 14px;
       border: 1px solid #ccc;
-      border-radius: 11px;
+      border-radius: 12px;
       font-size: 16px;
       background: white;
     }
 
-    .part-info {
-      display: none;
-      margin: 10px 0 15px;
-      padding: 13px;
+    .field input:focus,
+    .field select:focus {
+      outline: none;
+      border-color: #1683ff;
+      box-shadow: 0 0 0 3px rgba(22,131,255,0.15);
+    }
+
+    .suggestions {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      margin-top: 5px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .suggestion {
+      padding: 13px 14px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    .suggestion:last-child {
+      border-bottom: none;
+    }
+
+    .suggestion:hover {
       background: #f5f5f5;
-      border-radius: 11px;
     }
 
-    .part-info strong {
-      display: block;
-      font-size: 17px;
+    .suggestion-number {
+      font-weight: 800;
     }
 
-    .part-info span {
+    .suggestion-name {
       color: #666;
       font-size: 14px;
+      margin-top: 2px;
     }
 
-    .lookup-status {
+    .selected-part {
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: #f0fff3;
+      border: 1px solid #b7e4c0;
+      border-radius: 10px;
+      color: #148a36;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .search-error {
+      color: #d71920;
       font-size: 13px;
-      color: #777;
       margin-top: 7px;
     }
 
-    .form-actions {
+    .form-buttons {
       display: flex;
       gap: 10px;
     }
 
-    .form-actions button {
+    .form-buttons button {
       flex: 1;
     }
 
@@ -290,7 +334,7 @@
         display: none;
       }
 
-      .form-actions {
+      .form-buttons {
         flex-direction: column;
       }
     }
@@ -300,7 +344,6 @@
 <body>
 
 <header>
-
   <div class="header-inner">
 
     <div class="logo">
@@ -312,7 +355,6 @@
     </div>
 
   </div>
-
 </header>
 
 
@@ -353,7 +395,6 @@
     🟢 Aktuell gemeldete Teile
   </div>
 
-
   <div id="results">
 
     <div class="card loading">
@@ -374,7 +415,6 @@
       welche Teile du in der Fabrik gefunden hast.
     </p>
 
-
     <button
       id="reportButton"
       class="primary"
@@ -383,90 +423,7 @@
       + Teil melden
     </button>
 
-
-    <div
-      id="reportForm"
-      class="report-form"
-      style="display:none;"
-    >
-
-      <div class="field">
-
-        <label for="reportPartNumber">
-          Teilenummer
-        </label>
-
-        <input
-          id="reportPartNumber"
-          type="text"
-          inputmode="text"
-          autocomplete="off"
-          placeholder="z. B. 3001"
-          oninput="lookupPart()"
-        >
-
-        <div
-          id="lookupStatus"
-          class="lookup-status"
-        ></div>
-
-      </div>
-
-
-      <div
-        id="partInfo"
-        class="part-info"
-      >
-
-        <strong id="partInfoName"></strong>
-
-        <span id="partInfoCategory"></span>
-
-      </div>
-
-
-      <div class="field">
-
-        <label for="reportColor">
-          Farbe
-        </label>
-
-        <select
-          id="reportColor"
-          disabled
-        >
-
-          <option value="">
-            Erst ein Teil auswählen
-          </option>
-
-        </select>
-
-      </div>
-
-
-      <div class="form-actions">
-
-        <button
-          class="secondary"
-          onclick="closeReportForm()"
-        >
-          Abbrechen
-        </button>
-
-        <button
-          id="saveReportButton"
-          class="primary"
-          onclick="saveReportedPart()"
-          disabled
-        >
-          Teil melden
-        </button>
-
-      </div>
-
-    </div>
-
+    <div id="reportArea"></div>
 
     <div
       id="reportStatus"
@@ -487,82 +444,57 @@
 const SUPABASE_URL =
   "https://nmsoppdibanqfaeqtube.supabase.co";
 
-
 const SUPABASE_KEY =
   "sb_publishable_rcf_aY1AfeyRmumUDiNhBw_7LUWdVBD";
 
-
 const PARTS_URL =
-  SUPABASE_URL +
-  "/rest/v1/parts";
-
+  SUPABASE_URL + "/rest/v1/parts";
 
 const LEGO_PARTS_URL =
-  SUPABASE_URL +
-  "/rest/v1/lego_parts";
+  SUPABASE_URL + "/rest/v1/lego_parts";
 
-
-const LEGO_COLORS_URL =
-  SUPABASE_URL +
-  "/rest/v1/lego_colors";
-
-
-const LEGO_PART_COLORS_URL =
-  SUPABASE_URL +
-  "/rest/v1/lego_part_colors";
+const COLORS_URL =
+  SUPABASE_URL + "/rest/v1/colors";
 
 
 let parts = [];
-
-let currentLegoPart = null;
-
-let lookupTimer = null;
+let selectedPart = null;
+let searchTimer = null;
 
 
 /* =========================================================
-   SUPABASE REST REQUEST
+   SUPABASE REQUEST
 ========================================================= */
 
-async function supabaseRequest(
-  url,
-  options = {}
-) {
+async function supabaseRequest(url, options = {}) {
 
-  const response =
-    await fetch(
-      url,
-      {
+  const response = await fetch(url, {
 
-        ...options,
+    ...options,
 
-        headers: {
+    headers: {
 
-          "apikey":
-            SUPABASE_KEY,
+      "apikey": SUPABASE_KEY,
 
-          "Content-Type":
-            "application/json",
+      "Authorization":
+        "Bearer " + SUPABASE_KEY,
 
-          ...(options.headers || {})
+      "Content-Type":
+        "application/json",
 
-        }
+      ...(options.headers || {})
 
-      }
-    );
+    }
+
+  });
 
 
   let data = null;
 
-
   try {
-
-    data =
-      await response.json();
-
+    data = await response.json();
   } catch {
-
     data = null;
-
   }
 
 
@@ -571,79 +503,53 @@ async function supabaseRequest(
     const message =
       data?.message ||
       data?.error ||
-      (
-        "HTTP Fehler " +
-        response.status
-      );
+      ("HTTP Fehler " + response.status);
 
-
-    const error =
-      new Error(message);
-
+    const error = new Error(message);
 
     error.code =
       data?.code ||
       String(response.status);
 
-
     throw error;
-
   }
 
 
   return data;
-
 }
 
 
 /* =========================================================
-   FEHLER
+   HTML ESCAPEN
 ========================================================= */
 
-function showError(
-  title,
-  message
-) {
+function escapeHTML(value) {
 
-  document.getElementById(
-    "results"
-  ).innerHTML = `
+  return String(value)
 
-    <div class="card error">
-
-      <div class="error-title">
-        ${title}
-      </div>
-
-      <div>
-        ${message}
-      </div>
-
-    </div>
-
-  `;
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
 }
 
 
 /* =========================================================
-   GEMELDETE TEILE LADEN
+   TEILE LADEN
 ========================================================= */
 
 async function loadParts() {
 
   const container =
-    document.getElementById(
-      "results"
-    );
+    document.getElementById("results");
 
 
   container.innerHTML = `
-
     <div class="card loading">
       Teile werden geladen...
     </div>
-
   `;
 
 
@@ -651,49 +557,23 @@ async function loadParts() {
 
     const data =
       await supabaseRequest(
-
         PARTS_URL +
         "?select=*&order=created_at.desc"
-
       );
 
 
-    parts =
-      data || [];
-
+    parts = data || [];
 
     displayParts(parts);
 
 
   } catch (error) {
 
-    console.error(
-      "Supabase SELECT Fehler:",
-      error
-    );
-
+    console.error(error);
 
     showError(
-
       "Supabase-Fehler beim Laden",
-
-      `
-        ${escapeHTML(
-          error.message ||
-          "Unbekannter Fehler"
-        )}
-
-        <br><br>
-
-        <small>
-          Code:
-          ${escapeHTML(
-            error.code ||
-            "unbekannt"
-          )}
-        </small>
-      `
-
+      error.message || "Unbekannter Fehler"
     );
 
   }
@@ -702,32 +582,24 @@ async function loadParts() {
 
 
 /* =========================================================
-   GEMELDETE TEILE ANZEIGEN
+   TEILE ANZEIGEN
 ========================================================= */
 
 function displayParts(list) {
 
   const container =
-    document.getElementById(
-      "results"
-    );
+    document.getElementById("results");
 
 
-  if (
-    !list ||
-    list.length === 0
-  ) {
+  if (!list || list.length === 0) {
 
     container.innerHTML = `
-
       <div class="card empty">
         Noch keine Teile gemeldet.
       </div>
-
     `;
 
     return;
-
   }
 
 
@@ -739,22 +611,14 @@ function displayParts(list) {
           part.part_number || ""
         );
 
-
       const name =
         escapeHTML(
           part.name || ""
         );
 
-
       const category =
         escapeHTML(
           part.category || ""
-        );
-
-
-      const color =
-        escapeHTML(
-          part.color || ""
         );
 
 
@@ -793,7 +657,6 @@ function displayParts(list) {
                 LEGO ${number}
               </div>
 
-
               <div class="part-name">
 
                 ${name}
@@ -821,12 +684,6 @@ function displayParts(list) {
             📍 LEGO Fabrik Günzburg
 
             ${
-              color
-                ? "<br>🎨 Farbe: " + color
-                : ""
-            }
-
-            ${
               date
                 ? "<br>🕐 " + date
                 : ""
@@ -837,9 +694,7 @@ function displayParts(list) {
 
           <button
             class="secondary confirm"
-            onclick="confirmPart('${escapeJS(
-              part.part_number || ""
-            )}')"
+            onclick="confirmPart('${escapeHTML(part.part_number || "")}')"
           >
             👍 Ich habe dieses Teil auch gesehen
           </button>
@@ -854,18 +709,21 @@ function displayParts(list) {
 
 
 /* =========================================================
-   SUCHE
+   HAUPTSUCHE
 ========================================================= */
 
 function searchParts() {
 
-  const query =
+  const input =
     document.getElementById(
       "searchInput"
-    )
-    .value
-    .toLowerCase()
-    .trim();
+    );
+
+
+  const query =
+    input.value
+      .toLowerCase()
+      .trim();
 
 
   if (!query) {
@@ -883,29 +741,17 @@ function searchParts() {
       const number =
         String(
           part.part_number || ""
-        )
-        .toLowerCase();
-
+        ).toLowerCase();
 
       const name =
         String(
           part.name || ""
-        )
-        .toLowerCase();
-
+        ).toLowerCase();
 
       const category =
         String(
           part.category || ""
-        )
-        .toLowerCase();
-
-
-      const color =
-        String(
-          part.color || ""
-        )
-        .toLowerCase();
+        ).toLowerCase();
 
 
       return (
@@ -914,9 +760,7 @@ function searchParts() {
 
         name.includes(query) ||
 
-        category.includes(query) ||
-
-        color.includes(query)
+        category.includes(query)
 
       );
 
@@ -929,323 +773,553 @@ function searchParts() {
 
 
 /* =========================================================
-   BESTÄTIGEN
-========================================================= */
-
-function confirmPart(number) {
-
-  alert(
-
-    "Danke! Deine Bestätigung für Teil " +
-
-    number +
-
-    " wurde registriert. 👍"
-
-  );
-
-}
-
-
-/* =========================================================
    MELDEFORMULAR ÖFFNEN
 ========================================================= */
 
 function openReportForm() {
 
-  document.getElementById(
-    "reportButton"
-  ).style.display =
-    "none";
-
-
-  document.getElementById(
-    "reportForm"
-  ).style.display =
-    "block";
-
-
-  document.getElementById(
-    "reportPartNumber"
-  ).focus();
-
-}
-
-
-/* =========================================================
-   MELDEFORMULAR SCHLIESSEN
-========================================================= */
-
-function closeReportForm() {
-
-  document.getElementById(
-    "reportForm"
-  ).style.display =
-    "none";
-
-
-  document.getElementById(
-    "reportButton"
-  ).style.display =
-    "inline-block";
-
-
-  document.getElementById(
-    "reportPartNumber"
-  ).value =
-    "";
-
-
-  document.getElementById(
-    "lookupStatus"
-  ).textContent =
-    "";
-
-
-  document.getElementById(
-    "partInfo"
-  ).style.display =
-    "none";
-
-
-  const color =
+  const area =
     document.getElementById(
-      "reportColor"
+      "reportArea"
     );
 
 
-  color.innerHTML = `
+  if (area.innerHTML) {
 
-    <option value="">
-      Erst ein Teil auswählen
-    </option>
-
-  `;
-
-
-  color.disabled =
-    true;
-
-
-  currentLegoPart =
-    null;
-
-
-  document.getElementById(
-    "saveReportButton"
-  ).disabled =
-    true;
-
-}
-
-
-/* =========================================================
-   TEIL SUCHEN
-========================================================= */
-
-function lookupPart() {
-
-  clearTimeout(
-    lookupTimer
-  );
-
-
-  const input =
-    document.getElementById(
-      "reportPartNumber"
-    );
-
-
-  const partNumber =
-    input.value.trim();
-
-
-  currentLegoPart =
-    null;
-
-
-  document.getElementById(
-    "partInfo"
-  ).style.display =
-    "none";
-
-
-  document.getElementById(
-    "saveReportButton"
-  ).disabled =
-    true;
-
-
-  const color =
-    document.getElementById(
-      "reportColor"
-    );
-
-
-  color.innerHTML = `
-
-    <option value="">
-      Teil wird gesucht...
-    </option>
-
-  `;
-
-
-  color.disabled =
-    true;
-
-
-  if (!partNumber) {
-
-    document.getElementById(
-      "lookupStatus"
-    ).textContent =
-      "";
-
-
-    color.innerHTML = `
-
-      <option value="">
-        Erst ein Teil auswählen
-      </option>
-
-    `;
-
+    area.innerHTML = "";
 
     return;
 
   }
 
 
-  document.getElementById(
-    "lookupStatus"
-  ).textContent =
-    "🔎 Suche...";
+  area.innerHTML = `
+
+    <div class="report-form">
+
+      <div class="field">
+
+        <label>
+          Teilenummer oder Name
+        </label>
+
+        <input
+          id="partSearchInput"
+          type="text"
+          autocomplete="off"
+          placeholder="z.B. 3001 oder Brick 2 x 4"
+          oninput="searchLegoParts()"
+        >
+
+        <div
+          id="partSuggestions"
+          class="suggestions"
+          style="display:none;"
+        ></div>
+
+        <div
+          id="selectedPart"
+        ></div>
+
+        <div
+          id="partSearchError"
+          class="search-error"
+        ></div>
+
+      </div>
 
 
-  lookupTimer =
+      <div class="field">
+
+        <label>
+          Farbe
+        </label>
+
+        <select
+          id="colorSelect"
+          disabled
+        >
+
+          <option value="">
+            Erst Teil auswählen...
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-buttons">
+
+        <button
+          class="secondary"
+          onclick="closeReportForm()"
+        >
+          Abbrechen
+        </button>
+
+        <button
+          id="submitReportButton"
+          class="primary"
+          onclick="submitReport()"
+          disabled
+        >
+          Teil melden
+        </button>
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
+   TEILESUCHE IN LEGO_PARTS
+========================================================= */
+
+function searchLegoParts() {
+
+  clearTimeout(searchTimer);
+
+
+  const input =
+    document.getElementById(
+      "partSearchInput"
+    );
+
+
+  const query =
+    input.value
+      .trim();
+
+
+  selectedPart = null;
+
+
+  const selected =
+    document.getElementById(
+      "selectedPart"
+    );
+
+
+  const colorSelect =
+    document.getElementById(
+      "colorSelect"
+    );
+
+
+  const submitButton =
+    document.getElementById(
+      "submitReportButton"
+    );
+
+
+  if (selected) {
+    selected.innerHTML = "";
+  }
+
+
+  if (colorSelect) {
+    colorSelect.disabled = true;
+  }
+
+
+  if (submitButton) {
+    submitButton.disabled = true;
+  }
+
+
+  if (query.length < 2) {
+
+    hideSuggestions();
+
+    return;
+
+  }
+
+
+  searchTimer =
     setTimeout(
-
-      () =>
-        findLegoPart(
-          partNumber
-        ),
-
-      350
-
+      () => fetchLegoPartSuggestions(query),
+      300
     );
 
 }
 
 
 /* =========================================================
-   LEGO TEIL AUS DATENBANK HOLEN
+   SUCHVARIANTEN
 ========================================================= */
 
-async function findLegoPart(
-  partNumber
-) {
+function createSearchVariants(query) {
+
+  const variants = new Set();
+
+  const clean =
+    query
+      .trim()
+      .toLowerCase();
+
+
+  if (!clean) {
+    return [];
+  }
+
+
+  variants.add(clean);
+
+
+  /*
+    Aus "2x4" wird zusätzlich "2 x 4"
+  */
+
+  variants.add(
+    clean.replace(
+      /(\d)\s*x\s*(\d)/gi,
+      "$1 x $2"
+    )
+  );
+
+
+  /*
+    Aus "2 x 4" wird zusätzlich "2x4"
+  */
+
+  variants.add(
+    clean.replace(
+      /(\d)\s*x\s*(\d)/gi,
+      "$1x$2"
+    )
+  );
+
+
+  /*
+    Mehrfache Leerzeichen entfernen
+  */
+
+  variants.add(
+    clean.replace(
+      /\s+/g,
+      " "
+    )
+  );
+
+
+  return [...variants];
+
+}
+
+
+/* =========================================================
+   LEGO TEILE AUS SUPABASE SUCHEN
+========================================================= */
+
+async function fetchLegoPartSuggestions(query) {
+
+  const suggestions =
+    document.getElementById(
+      "partSuggestions"
+    );
+
+
+  const errorBox =
+    document.getElementById(
+      "partSearchError"
+    );
+
+
+  if (!suggestions) {
+    return;
+  }
+
+
+  suggestions.style.display =
+    "block";
+
+
+  suggestions.innerHTML = `
+    <div class="suggestion">
+      🔎 Suche Teile...
+    </div>
+  `;
+
+
+  if (errorBox) {
+    errorBox.textContent = "";
+  }
+
 
   try {
 
-    const encoded =
-      encodeURIComponent(
-        partNumber
-      );
+    const variants =
+      createSearchVariants(query);
 
 
-    const found =
-      await supabaseRequest(
-
-        LEGO_PARTS_URL +
-
-        "?select=part_num,name,category" +
-
-        "&part_num=eq." +
-
-        encoded +
-
-        "&limit=1"
-
-      );
+    const searches = [];
 
 
-    if (
-      !found ||
-      found.length === 0
+    for (
+      const variant
+      of variants
     ) {
 
-      document.getElementById(
-        "lookupStatus"
-      ).textContent =
-        "❌ Teil nicht gefunden.";
+      const encoded =
+        encodeURIComponent(
+          "%" + variant + "%"
+        );
 
+
+      searches.push(
+
+        LEGO_PARTS_URL +
+        "?or=" +
+        encodeURIComponent(
+          "(part_num.ilike." +
+          encoded +
+          ",name.ilike." +
+          encoded +
+          ")"
+        ) +
+        "&select=part_num,name,category" +
+        "&limit=20"
+
+      );
+
+    }
+
+
+    /*
+      Mehrere Suchvarianten parallel
+    */
+
+    const responses =
+      await Promise.all(
+        searches.map(
+          url =>
+            supabaseRequest(url)
+        )
+      );
+
+
+    const combined = [];
+
+
+    responses.forEach(
+      result => {
+
+        (result || []).forEach(
+          part => {
+
+            const key =
+              String(
+                part.part_num || ""
+              ) +
+              "|" +
+              String(
+                part.name || ""
+              );
+
+
+            if (
+              !combined.some(
+                existing =>
+                  existing._key === key
+              )
+            ) {
+
+              combined.push({
+                ...part,
+                _key: key
+              });
+
+            }
+
+          }
+        );
+
+      }
+    );
+
+
+    /*
+      Maximal 20 Vorschläge
+    */
+
+    const result =
+      combined.slice(0, 20);
+
+
+    if (result.length === 0) {
+
+      suggestions.innerHTML = `
+        <div class="suggestion">
+          ❌ Kein passendes LEGO Teil gefunden.
+        </div>
+      `;
 
       return;
 
     }
 
 
-    currentLegoPart =
-      found[0];
+    suggestions.innerHTML =
+      result.map(part => {
+
+        const number =
+          escapeHTML(
+            part.part_num || ""
+          );
+
+        const name =
+          escapeHTML(
+            part.name || ""
+          );
+
+        const category =
+          escapeHTML(
+            part.category || ""
+          );
 
 
-    document.getElementById(
-      "partInfoName"
-    ).textContent =
-      currentLegoPart.name ||
-      currentLegoPart.part_num;
+        return `
 
+          <div
+            class="suggestion"
+            onclick='selectLegoPart(${JSON.stringify({
+              part_num:
+                part.part_num || "",
 
-    document.getElementById(
-      "partInfoCategory"
-    ).textContent =
+              name:
+                part.name || "",
 
-      currentLegoPart.category
+              category:
+                part.category || ""
+            })})'
+          >
 
-        ? "Kategorie: " +
-          currentLegoPart.category
+            <div class="suggestion-number">
+              LEGO ${number}
+            </div>
 
-        : "Kategorie nicht hinterlegt";
+            <div class="suggestion-name">
+              ${name}
 
+              ${
+                category
+                  ? " · " + category
+                  : ""
+              }
 
-    document.getElementById(
-      "partInfo"
-    ).style.display =
-      "block";
+            </div>
 
+          </div>
 
-    document.getElementById(
-      "lookupStatus"
-    ).textContent =
-      "✅ Teil gefunden.";
+        `;
 
-
-    await loadColorsForPart(
-      currentLegoPart.part_num
-    );
+      }).join("");
 
 
   } catch (error) {
 
     console.error(
-      "LEGO-Teil Suche Fehler:",
+      "LEGO-Teilesuche Fehler:",
       error
     );
 
 
-    document.getElementById(
-      "lookupStatus"
-    ).textContent =
+    suggestions.innerHTML = "";
 
-      "❌ Fehler bei der Teilesuche: " +
 
-      (
-        error.message ||
-        "Unbekannter Fehler"
-      );
+    if (errorBox) {
+
+      errorBox.textContent =
+        "❌ Fehler bei der Teilesuche: " +
+        (
+          error.message ||
+          "Unbekannter Fehler"
+        );
+
+    }
 
   }
+
+}
+
+
+/* =========================================================
+   TEIL AUS SUCHERGEBNIS AUSWÄHLEN
+========================================================= */
+
+async function selectLegoPart(part) {
+
+  selectedPart = part;
+
+
+  const input =
+    document.getElementById(
+      "partSearchInput"
+    );
+
+
+  const suggestions =
+    document.getElementById(
+      "partSuggestions"
+    );
+
+
+  const selected =
+    document.getElementById(
+      "selectedPart"
+    );
+
+
+  if (input) {
+
+    input.value =
+      part.part_num +
+      " – " +
+      part.name;
+
+  }
+
+
+  if (suggestions) {
+
+    suggestions.style.display =
+      "none";
+
+  }
+
+
+  if (selected) {
+
+    selected.innerHTML = `
+
+      <div class="selected-part">
+
+        ✅ LEGO ${escapeHTML(
+          part.part_num
+        )}
+
+        – 
+
+        ${escapeHTML(
+          part.name
+        )}
+
+      </div>
+
+    `;
+
+  }
+
+
+  await loadColorsForPart(
+    part.part_num
+  );
 
 }
 
@@ -1254,14 +1328,23 @@ async function findLegoPart(
    FARBEN FÜR TEIL LADEN
 ========================================================= */
 
-async function loadColorsForPart(
-  partNumber
-) {
+async function loadColorsForPart(partNumber) {
 
   const colorSelect =
     document.getElementById(
-      "reportColor"
+      "colorSelect"
     );
+
+
+  const submitButton =
+    document.getElementById(
+      "submitReportButton"
+    );
+
+
+  if (!colorSelect) {
+    return;
+  }
 
 
   colorSelect.disabled =
@@ -1269,133 +1352,111 @@ async function loadColorsForPart(
 
 
   colorSelect.innerHTML = `
-
     <option value="">
       Farben werden geladen...
     </option>
-
   `;
 
 
   try {
 
-    const relations =
-      await supabaseRequest(
+    /*
+      Verknüpfung über lego_part_colors
 
-        LEGO_PART_COLORS_URL +
+      Erwartete Spalten:
+      part_num
+      color_id
+    */
 
-        "?select=color_id" +
 
-        "&part_num=eq." +
+    const url =
+      SUPABASE_URL +
+      "/rest/v1/lego_part_colors" +
 
-        encodeURIComponent(
-          partNumber
-        )
+      "?select=color_id,colors(id,name)" +
 
+      "&part_num=eq." +
+      encodeURIComponent(
+        partNumber
       );
 
 
-    if (
-      !relations ||
-      relations.length === 0
-    ) {
-
-      colorSelect.innerHTML = `
-
-        <option value="">
-          Keine Farben gefunden
-        </option>
-
-      `;
+    const data =
+      await supabaseRequest(url);
 
 
-      return;
+    colorSelect.innerHTML = `
+      <option value="">
+        Farbe auswählen...
+      </option>
+    `;
 
-    }
+
+    const seen =
+      new Set();
 
 
-    const ids =
-      relations
+    (data || []).forEach(row => {
 
-        .map(
-          row =>
-            row.color_id
-        )
+      const color =
+        row.colors;
 
-        .filter(
-          id =>
-            Number.isInteger(
-              Number(id)
-            )
+
+      if (
+        !color ||
+        seen.has(color.id)
+      ) {
+
+        return;
+
+      }
+
+
+      seen.add(color.id);
+
+
+      const option =
+        document.createElement(
+          "option"
         );
 
 
-    const colors =
-      await supabaseRequest(
+      option.value =
+        color.id;
 
-        LEGO_COLORS_URL +
 
-        "?select=id,name,rgb,is_trans" +
+      option.textContent =
+        color.name;
 
-        "&id=in.(" +
 
-        ids.join(",") +
-
-        ")"
-
+      colorSelect.appendChild(
+        option
       );
+
+    });
 
 
     if (
-      !colors ||
-      colors.length === 0
+      colorSelect.options.length <= 1
     ) {
 
       colorSelect.innerHTML = `
-
         <option value="">
           Keine Farben gefunden
         </option>
-
       `;
 
+      colorSelect.disabled =
+        true;
+
+      if (submitButton) {
+        submitButton.disabled =
+          true;
+      }
 
       return;
 
     }
-
-
-    colors.sort(
-
-      (a, b) =>
-        String(a.name)
-          .localeCompare(
-            String(b.name),
-            "de"
-          )
-
-    );
-
-
-    colorSelect.innerHTML =
-
-      `<option value="">
-        Farbe auswählen...
-      </option>` +
-
-      colors.map(color => `
-
-        <option value="${escapeHTML(
-          String(color.id)
-        )}">
-
-          ${escapeHTML(
-            color.name
-          )}
-
-        </option>
-
-      `).join("");
 
 
     colorSelect.disabled =
@@ -1405,10 +1466,12 @@ async function loadColorsForPart(
     colorSelect.onchange =
       function() {
 
-        document.getElementById(
-          "saveReportButton"
-        ).disabled =
-          !this.value;
+        if (submitButton) {
+
+          submitButton.disabled =
+            !this.value;
+
+        }
 
       };
 
@@ -1422,12 +1485,20 @@ async function loadColorsForPart(
 
 
     colorSelect.innerHTML = `
-
       <option value="">
         Fehler beim Laden der Farben
       </option>
-
     `;
+
+
+    colorSelect.disabled =
+      true;
+
+
+    if (submitButton) {
+      submitButton.disabled =
+        true;
+    }
 
   }
 
@@ -1435,45 +1506,42 @@ async function loadColorsForPart(
 
 
 /* =========================================================
-   TEIL SPEICHERN
+   TEIL MELDEN
 ========================================================= */
 
-async function saveReportedPart() {
+async function submitReport() {
 
   const button =
     document.getElementById(
-      "saveReportButton"
+      "submitReportButton"
     );
-
-
-  const partNumber =
-    document.getElementById(
-      "reportPartNumber"
-    )
-    .value
-    .trim();
 
 
   const colorSelect =
     document.getElementById(
-      "reportColor"
+      "colorSelect"
     );
 
 
-  const colorId =
-    colorSelect.value;
+  if (!selectedPart) {
+
+    alert(
+      "Bitte zuerst ein LEGO Teil auswählen."
+    );
+
+    return;
+
+  }
 
 
   if (
-    !currentLegoPart ||
-    !partNumber ||
-    !colorId
+    !colorSelect ||
+    !colorSelect.value
   ) {
 
     alert(
-      "Bitte zuerst ein gültiges Teil und eine Farbe auswählen."
+      "Bitte zuerst eine Farbe auswählen."
     );
-
 
     return;
 
@@ -1483,23 +1551,21 @@ async function saveReportedPart() {
   button.disabled =
     true;
 
-
   button.textContent =
     "Wird gespeichert...";
 
 
   try {
 
-    const selectedOption =
-      colorSelect.options[
-        colorSelect.selectedIndex
-      ];
+    /*
+      Wir speichern die Meldung
+      in der parts-Tabelle.
 
-
-    const colorName =
-      selectedOption
-        ? selectedOption.textContent.trim()
-        : "";
+      Falls deine parts-Tabelle
+      andere Spalten hat, passen
+      wir diesen Block anschließend
+      gezielt an.
+    */
 
 
     await supabaseRequest(
@@ -1508,8 +1574,7 @@ async function saveReportedPart() {
 
       {
 
-        method:
-          "POST",
+        method: "POST",
 
         headers: {
 
@@ -1522,19 +1587,13 @@ async function saveReportedPart() {
           JSON.stringify({
 
             part_number:
-              currentLegoPart.part_num,
+              selectedPart.part_num,
 
             name:
-              currentLegoPart.name,
+              selectedPart.name,
 
             category:
-              currentLegoPart.category,
-
-            color_id:
-              Number(colorId),
-
-            color:
-              colorName
+              selectedPart.category || ""
 
           })
 
@@ -1549,7 +1608,6 @@ async function saveReportedPart() {
 
 
     closeReportForm();
-
 
     await loadParts();
 
@@ -1583,9 +1641,10 @@ async function saveReportedPart() {
     );
 
 
+  } finally {
+
     button.disabled =
       false;
-
 
     button.textContent =
       "Teil melden";
@@ -1596,58 +1655,90 @@ async function saveReportedPart() {
 
 
 /* =========================================================
-   HTML SICHER MACHEN
+   MELDEFORMULAR SCHLIESSEN
 ========================================================= */
 
-function escapeHTML(value) {
+function closeReportForm() {
 
-  return String(value)
-
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-
-    .replace(
-      /</g,
-      "&lt;"
-    )
-
-    .replace(
-      />/g,
-      "&gt;"
-    )
-
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-
-    .replace(
-      /'/g,
-      "&#039;"
+  const area =
+    document.getElementById(
+      "reportArea"
     );
+
+
+  area.innerHTML = "";
+
+
+  selectedPart =
+    null;
 
 }
 
 
 /* =========================================================
-   JAVASCRIPT STRING SICHER MACHEN
+   SUCHVORSCHLÄGE SCHLIESSEN
 ========================================================= */
 
-function escapeJS(value) {
+function hideSuggestions() {
 
-  return String(value)
-
-    .replace(
-      /\\/g,
-      "\\\\"
-    )
-
-    .replace(
-      /'/g,
-      "\\'"
+  const suggestions =
+    document.getElementById(
+      "partSuggestions"
     );
+
+
+  if (suggestions) {
+
+    suggestions.style.display =
+      "none";
+
+  }
+
+}
+
+
+/* =========================================================
+   BESTÄTIGUNG
+========================================================= */
+
+function confirmPart(number) {
+
+  alert(
+    "Danke! Deine Bestätigung für Teil " +
+    number +
+    " wurde registriert. 👍"
+  );
+
+}
+
+
+/* =========================================================
+   FEHLER
+========================================================= */
+
+function showError(title, message) {
+
+  const container =
+    document.getElementById(
+      "results"
+    );
+
+
+  container.innerHTML = `
+
+    <div class="card error">
+
+      <div class="error-title">
+        ${escapeHTML(title)}
+      </div>
+
+      <div>
+        ${escapeHTML(message)}
+      </div>
+
+    </div>
+
+  `;
 
 }
 
@@ -1664,8 +1755,42 @@ window.addEventListener(
       "FabrikTracker gestartet."
     );
 
-
     loadParts();
+
+  }
+);
+
+
+/* =========================================================
+   KLICK AUSSERHALB DER VORSCHLÄGE
+========================================================= */
+
+document.addEventListener(
+  "click",
+  function(event) {
+
+    const field =
+      document.querySelector(
+        ".field"
+      );
+
+
+    const suggestions =
+      document.getElementById(
+        "partSuggestions"
+      );
+
+
+    if (
+      field &&
+      suggestions &&
+      !field.contains(event.target)
+    ) {
+
+      suggestions.style.display =
+        "none";
+
+    }
 
   }
 );
