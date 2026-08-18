@@ -1700,10 +1700,6 @@ async function selectLegoPart(part) {
    FARBEN FÜR TEIL LADEN
 ========================================================= */
 
-/* =========================================================
-   FARBEN FÜR TEIL LADEN
-========================================================= */
-
 async function loadColorsForPart(partNumber) {
 
   const colorSelect =
@@ -1716,18 +1712,11 @@ async function loadColorsForPart(partNumber) {
       "submitReportButton"
     );
 
-
   if (!colorSelect) {
     return;
   }
 
-
   colorSelect.disabled = true;
-
-  if (submitButton) {
-    submitButton.disabled = true;
-  }
-
 
   colorSelect.innerHTML = `
     <option value="">
@@ -1735,51 +1724,48 @@ async function loadColorsForPart(partNumber) {
     </option>
   `;
 
+  if (submitButton) {
+    submitButton.disabled = true;
+  }
 
   try {
 
-    console.log(
-      "Lade Farben für Teil:",
-      partNumber
-    );
-
-
     /*
-     * =====================================================
-     * 1. VERKNÜPFUNGEN AUS lego_part_colors LADEN
-     * =====================================================
+     * ==========================================
+     * 1. VERFÜGBARE FARBEN FÜR DAS TEIL HOLEN
+     * ==========================================
+     *
+     * Beispiel:
+     *
+     * 3001 → 0
+     * 3001 → 1
+     * 3001 → 2
+     *
      */
 
-    const relationUrl =
+    const partColorUrl =
       SUPABASE_URL +
       "/rest/v1/lego_part_colors" +
 
-      "?part_num=eq." +
-      encodeURIComponent(partNumber) +
+      "?select=color_id" +
 
-      "&select=color_id";
+      "&part_num=eq." +
+      encodeURIComponent(partNumber);
 
-
-    const relations =
+    const partColors =
       await supabaseRequest(
-        relationUrl
+        partColorUrl
       );
 
 
-    console.log(
-      "Gefundene Farbverknüpfungen:",
-      relations
-    );
-
-
     if (
-      !relations ||
-      relations.length === 0
+      !partColors ||
+      partColors.length === 0
     ) {
 
       colorSelect.innerHTML = `
         <option value="">
-          Keine Farben für dieses Teil gefunden
+          Keine Farben gefunden
         </option>
       `;
 
@@ -1788,15 +1774,15 @@ async function loadColorsForPart(partNumber) {
 
 
     /*
-     * =====================================================
-     * 2. COLOR IDs SAMMELN
-     * =====================================================
+     * ==========================================
+     * 2. COLOR IDS SAMMELN
+     * ==========================================
      */
 
     const colorIds =
       [
         ...new Set(
-          relations
+          partColors
             .map(row => row.color_id)
             .filter(
               id =>
@@ -1820,28 +1806,26 @@ async function loadColorsForPart(partNumber) {
 
 
     /*
-     * =====================================================
-     * 3. FARBEN AUS colors LADEN
-     * =====================================================
+     * ==========================================
+     * 3. NAMEN AUS lego_colors HOLEN
+     * ==========================================
      */
 
-    const colorFilter =
+    const idList =
       colorIds.join(",");
 
 
     const colorsUrl =
       SUPABASE_URL +
-      "/rest/v1/colors" +
+      "/rest/v1/lego_colors" +
 
       "?id=in.(" +
-      encodeURIComponent(
-        colorFilter
-      ) +
+      encodeURIComponent(idList) +
       ")" +
 
       "&select=id,name" +
 
-      "&order=name.asc";
+      "&order=id.asc";
 
 
     const colors =
@@ -1850,17 +1834,18 @@ async function loadColorsForPart(partNumber) {
       );
 
 
-    console.log(
-      "Geladene Farben:",
-      colors
-    );
-
-
     /*
-     * =====================================================
-     * 4. KEINE FARBEN
-     * =====================================================
+     * ==========================================
+     * 4. DROPDOWN AUFBAUEN
+     * ==========================================
      */
+
+    colorSelect.innerHTML = `
+      <option value="">
+        Farbe auswählen...
+      </option>
+    `;
+
 
     if (
       !colors ||
@@ -1878,47 +1863,35 @@ async function loadColorsForPart(partNumber) {
 
 
     /*
-     * =====================================================
-     * 5. DROPDOWN AUFBAUEN
-     * =====================================================
+     * ==========================================
+     * FARBEN EINTRAGEN
+     * ==========================================
      */
 
-    colorSelect.innerHTML = `
-      <option value="">
-        Farbe auswählen...
-      </option>
-    `;
+    colors.forEach(color => {
 
-
-    colors.forEach(
-      color => {
-
-        const option =
-          document.createElement(
-            "option"
-          );
-
-
-        option.value =
-          color.id;
-
-
-        option.textContent =
-          color.name;
-
-
-        colorSelect.appendChild(
-          option
+      const option =
+        document.createElement(
+          "option"
         );
 
-      }
-    );
+      option.value =
+        color.id;
+
+      option.textContent =
+        color.name;
+
+      colorSelect.appendChild(
+        option
+      );
+
+    });
 
 
     /*
-     * =====================================================
-     * 6. DROPDOWN AKTIVIEREN
-     * =====================================================
+     * ==========================================
+     * DROPDOWN AKTIVIEREN
+     * ==========================================
      */
 
     colorSelect.disabled =
@@ -1958,33 +1931,8 @@ async function loadColorsForPart(partNumber) {
 
 
     if (submitButton) {
-
       submitButton.disabled =
         true;
-
-    }
-
-
-    /*
-     * Zusätzlich den tatsächlichen
-     * Supabase-Fehler anzeigen
-     */
-
-    const errorBox =
-      document.getElementById(
-        "partSearchError"
-      );
-
-
-    if (errorBox) {
-
-      errorBox.textContent =
-        "❌ Fehler beim Laden der Farben: " +
-        (
-          error.message ||
-          "Unbekannter Fehler"
-        );
-
     }
 
   }
