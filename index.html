@@ -1147,6 +1147,9 @@ function getCategoryInfo(
 /* =========================================================
    BILDER LADEN
 ========================================================= */
+/* =========================================================
+   BILDER PRO TEIL + FARBE LADEN
+========================================================= */
 
 async function loadImagesForParts() {
 
@@ -1160,28 +1163,75 @@ async function loadImagesForParts() {
   }
 
 
-  const numbers = [
+  /*
+   * Wir brauchen nicht nur die Teilenummer,
+   * sondern die Kombination aus:
+   *
+   * part_number + color_id
+   *
+   * Beispiel:
+   *
+   * 3001 + Rot
+   * 3001 + Blau
+   * 3001 + Weiß
+   *
+   * Jede Kombination bekommt ihr eigenes Bild.
+   */
 
-    ...new Set(
+
+  const combinations = [
+
+    ...new Map(
 
       parts
 
-        .map(
+        .filter(
           part =>
-            String(
-              part.part_number || ""
-            )
+            part.part_number &&
+            part.color_id !== null &&
+            part.color_id !== undefined
         )
 
-        .filter(Boolean)
+        .map(
+          part => {
 
-    )
+            const key =
+              String(
+                part.part_number
+              ) +
+              "_" +
+              String(
+                part.color_id
+              );
+
+
+            return [
+              key,
+              {
+
+                part_num:
+                  String(
+                    part.part_number
+                  ),
+
+                color_id:
+                  Number(
+                    part.color_id
+                  )
+
+              }
+            ];
+
+          }
+        )
+
+    ).values()
 
   ];
 
 
   if (
-    numbers.length === 0
+    combinations.length === 0
   ) {
 
     return;
@@ -1191,19 +1241,44 @@ async function loadImagesForParts() {
 
   const imageMap = {};
 
+
   const batchSize = 100;
 
 
   try {
 
+    /*
+     * Supabase kann mehrere Teilenummern
+     * gleichzeitig abfragen.
+     *
+     * Wir holen die Bilder aus:
+     *
+     * lego_part_colors
+     */
+
+
+    const partNumbers = [
+
+      ...new Set(
+
+        combinations.map(
+          item =>
+            item.part_num
+        )
+
+      )
+
+    ];
+
+
     for (
       let i = 0;
-      i < numbers.length;
+      i < partNumbers.length;
       i += batchSize
     ) {
 
       const batch =
-        numbers.slice(
+        partNumbers.slice(
           i,
           i + batchSize
         );
@@ -1211,18 +1286,25 @@ async function loadImagesForParts() {
 
       const encodedNumbers =
         batch
+
           .map(
             number =>
-              `"${number.replace(
+              `"${String(
+                number
+              ).replace(
                 /"/g,
                 '\\"'
               )}"`
           )
+
           .join(",");
 
 
       const url =
-        LEGO_PARTS_URL +
+
+        SUPABASE_URL +
+
+        "/rest/v1/lego_part_colors" +
 
         "?part_num=in.(" +
 
@@ -1230,28 +1312,35 @@ async function loadImagesForParts() {
 
         ")" +
 
-        "&select=part_num,image_url,name,category";
+        "&select=part_num,color_id,image_url";
 
 
-      const legoParts =
+      const rows =
         await supabaseRequest(
           url
         );
 
 
       (
-        legoParts || []
+        rows || []
       ).forEach(
-        legoPart => {
+        row => {
 
-          const number =
+          const key =
+
             String(
-              legoPart.part_num || ""
+              row.part_num
+            ) +
+
+            "_" +
+
+            String(
+              row.color_id
             );
 
 
-          imageMap[number] =
-            legoPart.image_url ||
+          imageMap[key] =
+            row.image_url ||
             null;
 
         }
@@ -1260,17 +1349,33 @@ async function loadImagesForParts() {
     }
 
 
+    /*
+     * Bild der jeweiligen Teil/Farbe-Kombination
+     * direkt am Part speichern.
+     *
+     * renderPart() kann dadurch weiterhin
+     * einfach part.image_url verwenden.
+     */
+
+
     parts.forEach(
       part => {
 
-        const number =
+        const key =
+
           String(
             part.part_number || ""
+          ) +
+
+          "_" +
+
+          String(
+            part.color_id ?? ""
           );
 
 
         part.image_url =
-          imageMap[number] ||
+          imageMap[key] ||
           null;
 
       }
@@ -1280,7 +1385,7 @@ async function loadImagesForParts() {
   } catch (error) {
 
     console.warn(
-      "Rebrickable-Bilder konnten nicht geladen werden:",
+      "Farbabhängige LEGO-Bilder konnten nicht geladen werden:",
       error
     );
 
