@@ -564,7 +564,50 @@ async function loadParts() {
 
     parts = data || [];
 
-    displayParts(parts);
+/* Farbnamen laden */
+if (parts.length > 0) {
+
+  const colorIds = [
+    ...new Set(
+      parts
+        .map(part => part.color_id)
+        .filter(
+          id =>
+            id !== null &&
+            id !== undefined
+        )
+    )
+  ];
+
+  if (colorIds.length > 0) {
+
+    const colorsUrl =
+      SUPABASE_URL +
+      "/rest/v1/lego_colors" +
+      "?id=in.(" +
+      colorIds.join(",") +
+      ")" +
+      "&select=id,name";
+
+    const colors =
+      await supabaseRequest(colorsUrl);
+
+    const colorMap = {};
+
+    (colors || []).forEach(color => {
+      colorMap[color.id] = color.name;
+    });
+
+    parts.forEach(part => {
+      part.color_name =
+        colorMap[part.color_id] || "";
+    });
+
+  }
+
+}
+
+displayParts(parts);
 
 
   } catch (error) {
@@ -619,6 +662,10 @@ function displayParts(list) {
       const category =
         escapeHTML(
           part.category || ""
+        );
+      const color =
+        escapeHTML(
+          part.color_name || ""
         );
 
 
