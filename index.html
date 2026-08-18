@@ -235,6 +235,7 @@
       font-size: 12px;
       text-align: center;
       padding: 10px;
+      line-height: 1.4;
     }
 
     .part-info {
@@ -1207,16 +1208,27 @@ function renderPart(part) {
 
 
   /*
+   * =====================================================
    * BILD
    *
-   * Es wird ausschließlich das Bild aus
-   * Supabase verwendet.
+   * Wir verwenden ausschließlich image_url
+   * aus der Supabase-Tabelle "parts".
    *
-   * Kein BrickLink-Fallback.
+   * KEIN BrickLink-Fallback.
+   * =====================================================
    */
 
+  const rawImageUrl =
+    part.image_url !== null &&
+    part.image_url !== undefined
+      ? String(part.image_url).trim()
+      : "";
+
+
   const imageUrl =
-    part.image_url || "";
+    rawImageUrl.length > 0
+      ? rawImageUrl
+      : null;
 
 
   const categoryInfo =
@@ -1242,19 +1254,30 @@ function renderPart(part) {
                   src="${escapeHTML(imageUrl)}"
                   alt="LEGO ${number}"
                   loading="lazy"
-                  onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+                  onerror="
+                    this.style.display='none';
+                    this.nextElementSibling.style.display='block';
+                  "
                 >
-              `
-              : ""
-          }
 
-          <div
-            class="part-image-fallback"
-            style="display:${imageUrl ? "none" : "block"};"
-          >
-            🧱<br>
-            Kein Bild verfügbar
-          </div>
+                <div
+                  class="part-image-fallback"
+                  style="display:none;"
+                >
+                  🧱<br>
+                  Kein Bild verfügbar
+                </div>
+              `
+              : `
+                <div
+                  class="part-image-fallback"
+                  style="display:block;"
+                >
+                  🧱<br>
+                  Kein Bild verfügbar
+                </div>
+              `
+          }
 
         </div>
 
@@ -1314,6 +1337,7 @@ function renderPart(part) {
                 ? `
                   <div class="price-per-piece">
                     ${formatEuro(discountPrice)}
+
                     <span style="
                       font-size:12px;
                       color:#777;
@@ -1322,6 +1346,7 @@ function renderPart(part) {
                       mit 20 % Rabatt
                     </span>
                   </div>
+
 
                   <div class="price-row">
 
@@ -1332,6 +1357,7 @@ function renderPart(part) {
                       </strong>
                     </div>
 
+
                     <div class="price-discount">
                       −20 %:
                       <strong>
@@ -1340,6 +1366,7 @@ function renderPart(part) {
                     </div>
 
                   </div>
+
 
                   <div class="weight">
                     ⚖️ ${weight.toLocaleString(
