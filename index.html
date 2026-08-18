@@ -617,176 +617,68 @@ function confirmPart(number) {
 
 async function reportPart() {
 
-  /* ---------------------------------------------
-     TEILENUMMER
-  --------------------------------------------- */
+  const partNumber = prompt(
+    "Welche Teilenummer hast du gesehen?\n\nBeispiel: 3001"
+  );
 
-  const partNumber =
-    prompt(
-      "Welche Teilenummer hast du gesehen?\n\n" +
-      "Beispiel: 3001"
-    );
-
-
-  if (!partNumber) {
+  if (!partNumber || !partNumber.trim()) {
     return;
   }
 
+  const name = prompt(
+    "Wie heißt das Teil?\n\nBeispiel: Brick 2 × 4"
+  );
 
-  /* ---------------------------------------------
-     NAME
-  --------------------------------------------- */
-
-  const name =
-    prompt(
-      "Wie heißt das Teil?\n\n" +
-      "Beispiel: Brick 2 × 4"
-    );
-
-
-  if (!name) {
+  if (!name || !name.trim()) {
     return;
   }
 
+  const category = prompt(
+    "Welche Kategorie?\n\nBeispiel: Brick"
+  );
 
-  /* ---------------------------------------------
-     KATEGORIE
-  --------------------------------------------- */
-
-  const category =
-    prompt(
-      "Welche Kategorie?\n\n" +
-      "Beispiel: Brick"
-    );
-
-
-  if (!category) {
+  if (!category || !category.trim()) {
     return;
   }
 
+  console.log("Sende Teil an Supabase:", {
+    part_number: partNumber.trim(),
+    name: name.trim(),
+    category: category.trim()
+  });
 
-  /* ---------------------------------------------
-     EINGABEN BEREINIGEN
-  --------------------------------------------- */
-
-  const cleanPartNumber =
-    partNumber.trim();
-
-  const cleanName =
-    name.trim();
-
-  const cleanCategory =
-    category.trim();
-
-
-  if (
-    !cleanPartNumber ||
-    !cleanName ||
-    !cleanCategory
-  ) {
-
-    alert(
-      "Bitte alle Felder ausfüllen."
-    );
-
-    return;
-  }
-
-
-  /* ---------------------------------------------
-     SPEICHERN
-  --------------------------------------------- */
-
-  try {
-
-    console.log(
-      "Speichere Teil:",
+  const { data, error } = await supabaseClient
+    .from("parts")
+    .insert([
       {
-        part_number: cleanPartNumber,
-        name: cleanName,
-        category: cleanCategory
+        part_number: partNumber.trim(),
+        name: name.trim(),
+        category: category.trim()
       }
-    );
+    ])
+    .select();
 
+  console.log("Supabase Antwort:", data);
+  console.log("Supabase Fehler:", error);
 
-    const {
-      data,
-      error
-    } = await supabaseClient
-      .from("parts")
-      .insert({
-        part_number: cleanPartNumber,
-        name: cleanName,
-        category: cleanCategory
-      })
-      .select();
-
-
-    /* ---------------------------------------------
-       SUPABASE FEHLER
-    --------------------------------------------- */
-
-    if (error) {
-
-      console.error(
-        "Supabase Insert Fehler:",
-        error
-      );
-
-
-      alert(
-        "Das Teil konnte leider nicht gespeichert werden.\n\n" +
-        "Supabase Fehler:\n" +
-        error.message +
-        "\n\nCode: " +
-        error.code
-      );
-
-      return;
-    }
-
-
-    /* ---------------------------------------------
-       ERFOLGREICH
-    --------------------------------------------- */
-
-    console.log(
-      "Teil erfolgreich gespeichert:",
-      data
-    );
-
+  if (error) {
 
     alert(
-      "Danke! Das Teil wurde erfolgreich gemeldet. 🧱"
+      "Supabase Fehler:\n\n" +
+      error.message +
+      "\n\nCode: " +
+      (error.code || "unbekannt")
     );
 
-
-    /* ---------------------------------------------
-       LISTE NEU LADEN
-    --------------------------------------------- */
-
-    await loadParts();
-
+    return;
   }
 
-  catch (error) {
+  alert(
+    "Danke! Das Teil wurde erfolgreich gemeldet. 🧱"
+  );
 
-    console.error(
-      "Unerwarteter Fehler:",
-      error
-    );
-
-
-    alert(
-      "Beim Speichern ist ein unerwarteter Fehler aufgetreten.\n\n" +
-      error.message
-    );
-
-  }
-
+  await loadParts();
 }
-
-
 /* =====================================================
    START
 ===================================================== */
