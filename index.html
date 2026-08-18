@@ -59,7 +59,7 @@
       background: white;
       border-radius: 20px;
       padding: 30px;
-      box-shadow: 0 3px 15px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 3px 15px rgba(0,0,0,0.06);
       margin-bottom: 25px;
     }
 
@@ -116,7 +116,7 @@
       border-radius: 16px;
       padding: 20px;
       margin-bottom: 12px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
 
     .part-header {
@@ -160,6 +160,12 @@
       padding: 25px;
     }
 
+    .error {
+      color: #b00020;
+      background: #fff0f0;
+      border: 1px solid #ffcccc;
+    }
+
     .report-box {
       background: #171717;
       color: white;
@@ -170,12 +176,6 @@
 
     .report-box h2 {
       margin-top: 0;
-    }
-
-    .loading {
-      text-align: center;
-      color: #777;
-      padding: 25px;
     }
 
     @media (max-width: 600px) {
@@ -195,18 +195,17 @@
       .available {
         white-space: normal;
       }
-
     }
   </style>
 
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
 
+</head>
 
 <body>
 
 <header>
-
   <div class="header-inner">
 
     <div class="logo">
@@ -218,14 +217,13 @@
     </div>
 
   </div>
-
 </header>
 
 
 <main>
 
   <!-- =========================
-       STARTBEREICH
+       SUCHBEREICH
   ========================== -->
 
   <section class="hero">
@@ -237,7 +235,6 @@
     <div class="subtitle">
       Welche LEGO Teile sind aktuell verfügbar?
     </div>
-
 
     <div class="search">
 
@@ -261,20 +258,17 @@
 
 
   <!-- =========================
-       TEILE
+       ERGEBNISSE
   ========================== -->
 
   <div class="section-title">
     🟢 Aktuell gemeldete Teile
   </div>
 
-
   <div id="results">
-
-    <div class="card loading">
+    <div class="card empty">
       Teile werden geladen...
     </div>
-
   </div>
 
 
@@ -307,17 +301,20 @@
 
 <script>
 
-/* =========================
-   SUPABASE
-========================= */
+/* =====================================================
+   SUPABASE EINSTELLUNGEN
+===================================================== */
 
 const SUPABASE_URL =
   "https://nmsoppdibangfaeqtube.supabase.co";
 
-
 const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tc29wcGRpYmFucWZhZXF0dWJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzgzNDQsImV4cCI6MjEwMjU1NDM0NH0.NkAP71O_TJNZpYIrBiHe-VG6lYSIOqXD11dJdwrnrKQ";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tc29wcGRpYmFuZ2ZhZXF0dHViZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzg2OTc4MzQ0LCJleHAiOjIxMDI1NTQzNDR9.NkAP71O_TJNZpYIrBiHe-VG6lYSIOqXD11dJdwrnrKQ";
 
+
+/* =====================================================
+   SUPABASE CLIENT
+===================================================== */
 
 const supabaseClient =
   window.supabase.createClient(
@@ -326,79 +323,93 @@ const supabaseClient =
   );
 
 
+/* =====================================================
+   LOKALE TEILELISTE
+===================================================== */
+
 let parts = [];
 
 
-/* =========================
+/* =====================================================
    TEILE AUS SUPABASE LADEN
-========================= */
+===================================================== */
 
 async function loadParts() {
 
-  const results =
+  const container =
     document.getElementById("results");
 
-
-  results.innerHTML =
-    '<div class="card loading">Teile werden geladen...</div>';
+  container.innerHTML =
+    '<div class="card empty">Teile werden geladen...</div>';
 
 
   try {
 
-    const { data, error } =
-      await supabaseClient
-        .from("parts")
-        .select("*")
-        .order("part_number");
+    const {
+      data,
+      error
+    } = await supabaseClient
+      .from("parts")
+      .select("*")
+      .order("part_number");
 
+
+    /* ---------------------------------------------
+       SUPABASE FEHLER
+    --------------------------------------------- */
 
     if (error) {
 
       console.error(
-        "Supabase Ladefehler:",
+        "Supabase Fehler beim Laden:",
         error
       );
 
-
-      results.innerHTML =
-        '<div class="card empty">' +
-        'Fehler beim Laden der Teile.<br><br>' +
+      container.innerHTML =
+        '<div class="card empty error">' +
+        "Fehler beim Laden der Teile.<br><br>" +
         error.message +
-        '</div>';
+        "</div>";
 
       return;
     }
 
 
+    /* ---------------------------------------------
+       DATEN SPEICHERN
+    --------------------------------------------- */
+
     parts = data || [];
 
+
+    /* ---------------------------------------------
+       TEILE ANZEIGEN
+    --------------------------------------------- */
 
     displayParts(parts);
 
   }
 
-  catch (err) {
+  catch (error) {
 
     console.error(
-      "Unerwarteter Fehler:",
-      err
+      "Netzwerkfehler:",
+      error
     );
 
-
-    results.innerHTML =
-      '<div class="card empty">' +
-      'Fehler beim Laden der Teile.<br><br>' +
-      err.message +
-      '</div>';
-
+    container.innerHTML =
+      '<div class="card empty error">' +
+      "Verbindung zu Supabase fehlgeschlagen.<br><br>" +
+      error.message +
+      "</div>";
   }
 
 }
 
 
-/* =========================
+/* =====================================================
    TEILE ANZEIGEN
-========================= */
+===================================================== */
 
 function displayParts(list) {
 
@@ -410,8 +421,8 @@ function displayParts(list) {
 
     container.innerHTML =
       '<div class="card empty">' +
-      'Noch keine Teile gemeldet.' +
-      '</div>';
+      "Noch keine Teile gemeldet." +
+      "</div>";
 
     return;
   }
@@ -421,15 +432,13 @@ function displayParts(list) {
     list.map(part => {
 
       const number =
-        String(part.part_number || "");
-
+        part.part_number || "";
 
       const name =
-        String(part.name || "");
-
+        part.name || "";
 
       const category =
-        String(part.category || "");
+        part.category || "";
 
 
       const date =
@@ -449,24 +458,17 @@ function displayParts(list) {
             <div>
 
               <div class="part-number">
-                LEGO ${escapeHtml(number)}
+                LEGO ${escapeHTML(number)}
               </div>
 
               <div class="part-name">
-
-                ${escapeHtml(name)}
-
-                ${
-                  category
-                    ? " · " +
-                      escapeHtml(category)
-                    : ""
-                }
-
+                ${escapeHTML(name)}
+                ${category
+                  ? " · " + escapeHTML(category)
+                  : ""}
               </div>
 
             </div>
-
 
             <div class="available">
               ● Verfügbar
@@ -483,7 +485,7 @@ function displayParts(list) {
 
             ${
               date
-                ? "🕐 " + escapeHtml(date)
+                ? "🕐 " + date
                 : ""
             }
 
@@ -506,11 +508,11 @@ function displayParts(list) {
 }
 
 
-/* =========================
-   HTML SICHER DARSTELLEN
-========================= */
+/* =====================================================
+   SICHERHEIT
+===================================================== */
 
-function escapeHtml(value) {
+function escapeHTML(value) {
 
   return String(value)
     .replace(/&/g, "&amp;")
@@ -531,9 +533,9 @@ function escapeAttribute(value) {
 }
 
 
-/* =========================
+/* =====================================================
    SUCHEN
-========================= */
+===================================================== */
 
 function searchParts() {
 
@@ -545,6 +547,10 @@ function searchParts() {
       .trim();
 
 
+  /* ---------------------------------------------
+     KEINE SUCHE
+  --------------------------------------------- */
+
   if (!query) {
 
     displayParts(parts);
@@ -552,6 +558,10 @@ function searchParts() {
     return;
   }
 
+
+  /* ---------------------------------------------
+     SUCHEN
+  --------------------------------------------- */
 
   const filtered =
     parts.filter(part => {
@@ -561,12 +571,10 @@ function searchParts() {
           part.part_number || ""
         ).toLowerCase();
 
-
       const name =
         String(
           part.name || ""
         ).toLowerCase();
-
 
       const category =
         String(
@@ -575,13 +583,9 @@ function searchParts() {
 
 
       return (
-
         number.includes(query) ||
-
         name.includes(query) ||
-
         category.includes(query)
-
       );
 
     });
@@ -592,9 +596,9 @@ function searchParts() {
 }
 
 
-/* =========================
+/* =====================================================
    TEIL BESTÄTIGEN
-========================= */
+===================================================== */
 
 function confirmPart(number) {
 
@@ -607,11 +611,15 @@ function confirmPart(number) {
 }
 
 
-/* =========================
+/* =====================================================
    TEIL MELDEN
-========================= */
+===================================================== */
 
 async function reportPart() {
+
+  /* ---------------------------------------------
+     TEILENUMMER
+  --------------------------------------------- */
 
   const partNumber =
     prompt(
@@ -625,6 +633,10 @@ async function reportPart() {
   }
 
 
+  /* ---------------------------------------------
+     NAME
+  --------------------------------------------- */
+
   const name =
     prompt(
       "Wie heißt das Teil?\n\n" +
@@ -636,6 +648,10 @@ async function reportPart() {
     return;
   }
 
+
+  /* ---------------------------------------------
+     KATEGORIE
+  --------------------------------------------- */
 
   const category =
     prompt(
@@ -649,38 +665,71 @@ async function reportPart() {
   }
 
 
+  /* ---------------------------------------------
+     EINGABEN BEREINIGEN
+  --------------------------------------------- */
+
+  const cleanPartNumber =
+    partNumber.trim();
+
+  const cleanName =
+    name.trim();
+
+  const cleanCategory =
+    category.trim();
+
+
+  if (
+    !cleanPartNumber ||
+    !cleanName ||
+    !cleanCategory
+  ) {
+
+    alert(
+      "Bitte alle Felder ausfüllen."
+    );
+
+    return;
+  }
+
+
+  /* ---------------------------------------------
+     SPEICHERN
+  --------------------------------------------- */
+
   try {
 
-    /* =========================
-       NEUES TEIL IN SUPABASE
-    ========================== */
-
-    const { data, error } =
-      await supabaseClient
-        .from("parts")
-        .insert({
-
-          part_number:
-            partNumber.trim(),
-
-          name:
-            name.trim(),
-
-          category:
-            category.trim()
-
-        })
-        .select();
+    console.log(
+      "Speichere Teil:",
+      {
+        part_number: cleanPartNumber,
+        name: cleanName,
+        category: cleanCategory
+      }
+    );
 
 
-    /* =========================
-       FEHLER
-    ========================== */
+    const {
+      data,
+      error
+    } = await supabaseClient
+      .from("parts")
+      .insert({
+        part_number: cleanPartNumber,
+        name: cleanName,
+        category: cleanCategory
+      })
+      .select();
+
+
+    /* ---------------------------------------------
+       SUPABASE FEHLER
+    --------------------------------------------- */
 
     if (error) {
 
       console.error(
-        "Fehler beim Melden:",
+        "Supabase Insert Fehler:",
         error
       );
 
@@ -688,17 +737,18 @@ async function reportPart() {
       alert(
         "Das Teil konnte leider nicht gespeichert werden.\n\n" +
         "Supabase Fehler:\n" +
-        error.message
+        error.message +
+        "\n\nCode: " +
+        error.code
       );
-
 
       return;
     }
 
 
-    /* =========================
-       ERFOLG
-    ========================== */
+    /* ---------------------------------------------
+       ERFOLGREICH
+    --------------------------------------------- */
 
     console.log(
       "Teil erfolgreich gespeichert:",
@@ -711,25 +761,25 @@ async function reportPart() {
     );
 
 
-    /* =========================
-       LISTE AKTUALISIEREN
-    ========================== */
+    /* ---------------------------------------------
+       LISTE NEU LADEN
+    --------------------------------------------- */
 
     await loadParts();
 
   }
 
-  catch (err) {
+  catch (error) {
 
     console.error(
       "Unerwarteter Fehler:",
-      err
+      error
     );
 
 
     alert(
-      "Beim Speichern ist ein Fehler aufgetreten.\n\n" +
-      err.message
+      "Beim Speichern ist ein unerwarteter Fehler aufgetreten.\n\n" +
+      error.message
     );
 
   }
@@ -737,14 +787,13 @@ async function reportPart() {
 }
 
 
-/* =========================
+/* =====================================================
    START
-========================= */
+===================================================== */
 
 loadParts();
 
 </script>
-
 
 </body>
 </html>
