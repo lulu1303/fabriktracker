@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -162,8 +163,8 @@
 
     .error {
       color: #b00020;
-      background: #fff0f0;
-      border: 1px solid #ffcccc;
+      border: 1px solid #ffb3b3;
+      background: #fff5f5;
     }
 
     .report-box {
@@ -176,6 +177,12 @@
 
     .report-box h2 {
       margin-top: 0;
+    }
+
+    .loading {
+      text-align: center;
+      color: #777;
+      padding: 25px;
     }
 
     @media (max-width: 600px) {
@@ -195,17 +202,17 @@
       .available {
         white-space: normal;
       }
+
     }
   </style>
 
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 </head>
+
 
 <body>
 
 <header>
+
   <div class="header-inner">
 
     <div class="logo">
@@ -217,14 +224,11 @@
     </div>
 
   </div>
+
 </header>
 
 
 <main>
-
-  <!-- =========================
-       SUCHBEREICH
-  ========================== -->
 
   <section class="hero">
 
@@ -257,24 +261,19 @@
   </section>
 
 
-  <!-- =========================
-       ERGEBNISSE
-  ========================== -->
-
   <div class="section-title">
     🟢 Aktuell gemeldete Teile
   </div>
 
+
   <div id="results">
-    <div class="card empty">
+
+    <div class="card loading">
       Teile werden geladen...
     </div>
+
   </div>
 
-
-  <!-- =========================
-       TEIL MELDEN
-  ========================== -->
 
   <section class="report-box">
 
@@ -302,36 +301,119 @@
 <script>
 
 /* =====================================================
-   SUPABASE EINSTELLUNGEN
+   SUPABASE
 ===================================================== */
+
+/*
+  WICHTIG:
+
+  Hier deinen NEUEN PUBLISHABLE KEY einsetzen.
+
+  Supabase:
+  Settings
+  → API Keys
+  → Publishable key
+
+  Der Key beginnt mit:
+
+  sb_publishable_...
+*/
 
 const SUPABASE_URL =
   "https://nmsoppdibangfaeqtube.supabase.co";
 
+
 const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tc29wcGRpYmFuZ2ZhZXF0dHViZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzg2OTc4MzQ0LCJleHAiOjIxMDI1NTQzNDR9.NkAP71O_TJNZpYIrBiHe-VG6lYSIOqXD11dJdwrnrKQ";
+  "sb_publishable_rcf_aY1AfeyRmumUDiNhBw_7LUWdVBD";
 
-
-/* =====================================================
-   SUPABASE CLIENT
-===================================================== */
-
-const supabaseClient =
-  window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
-
-
-/* =====================================================
-   LOKALE TEILELISTE
-===================================================== */
 
 let parts = [];
 
 
 /* =====================================================
-   TEILE AUS SUPABASE LADEN
+   SUPABASE REQUEST
+===================================================== */
+
+async function supabaseRequest(url, options = {}) {
+
+  const headers = {
+
+    "apikey": SUPABASE_KEY,
+
+    "Authorization":
+      "Bearer " + SUPABASE_KEY,
+
+    "Content-Type":
+      "application/json",
+
+    ...options.headers
+
+  };
+
+
+  try {
+
+    const response = await fetch(
+      url,
+      {
+        ...options,
+        headers
+      }
+    );
+
+
+    const text = await response.text();
+
+
+    let data = null;
+
+    try {
+
+      data = text
+        ? JSON.parse(text)
+        : null;
+
+    } catch {
+
+      data = text;
+
+    }
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        "HTTP " +
+        response.status +
+        ": " +
+        (
+          typeof data === "string"
+            ? data
+            : JSON.stringify(data)
+        )
+      );
+
+    }
+
+
+    return data;
+
+  } catch (error) {
+
+    console.error(
+      "Supabase Request Fehler:",
+      error
+    );
+
+    throw error;
+
+  }
+
+}
+
+
+/* =====================================================
+   TEILE LADEN
 ===================================================== */
 
 async function loadParts() {
@@ -339,69 +421,67 @@ async function loadParts() {
   const container =
     document.getElementById("results");
 
+
   container.innerHTML =
-    '<div class="card empty">Teile werden geladen...</div>';
+    '<div class="card loading">Teile werden geladen...</div>';
 
 
   try {
 
-    const {
-      data,
-      error
-    } = await supabaseClient
-      .from("parts")
-      .select("*")
-      .order("part_number");
+    const data = await supabaseRequest(
+
+      SUPABASE_URL +
+      "/rest/v1/parts?select=*&order=part_number.asc",
+
+      {
+        method: "GET"
+      }
+
+    );
 
 
-    /* ---------------------------------------------
-       SUPABASE FEHLER
-    --------------------------------------------- */
-
-    if (error) {
-
-      console.error(
-        "Supabase Fehler beim Laden:",
-        error
-      );
-
-      container.innerHTML =
-        '<div class="card empty error">' +
-        "Fehler beim Laden der Teile.<br><br>" +
-        error.message +
-        "</div>";
-
-      return;
-    }
+    parts = Array.isArray(data)
+      ? data
+      : [];
 
 
-    /* ---------------------------------------------
-       DATEN SPEICHERN
-    --------------------------------------------- */
+    console.log(
+      "Geladene Teile:",
+      parts
+    );
 
-    parts = data || [];
-
-
-    /* ---------------------------------------------
-       TEILE ANZEIGEN
-    --------------------------------------------- */
 
     displayParts(parts);
 
-  }
 
-  catch (error) {
+  } catch (error) {
 
     console.error(
-      "Netzwerkfehler:",
+      "Fehler beim Laden:",
       error
     );
 
-    container.innerHTML =
-      '<div class="card empty error">' +
-      "Verbindung zu Supabase fehlgeschlagen.<br><br>" +
-      error.message +
-      "</div>";
+
+    container.innerHTML = `
+
+      <div class="card error">
+
+        <strong>
+          Supabase konnte nicht erreicht werden.
+        </strong>
+
+        <br><br>
+
+        Fehler:
+
+        <br>
+
+        ${escapeHtml(error.message)}
+
+      </div>
+
+    `;
+
   }
 
 }
@@ -420,148 +500,146 @@ function displayParts(list) {
   if (!list || list.length === 0) {
 
     container.innerHTML =
-      '<div class="card empty">' +
-      "Noch keine Teile gemeldet." +
-      "</div>";
+      '<div class="card empty">Noch keine Teile gemeldet.</div>';
 
     return;
+
   }
 
 
-  container.innerHTML =
-    list.map(part => {
+  container.innerHTML = list.map(part => {
 
-      const number =
-        part.part_number || "";
-
-      const name =
-        part.name || "";
-
-      const category =
-        part.category || "";
+    const number =
+      escapeHtml(
+        String(part.part_number || "")
+      );
 
 
-      const date =
-        part.created_at
-          ? new Date(
-              part.created_at
-            ).toLocaleString("de-DE")
-          : "";
+    const name =
+      escapeHtml(
+        String(part.name || "")
+      );
 
 
-      return `
+    const category =
+      escapeHtml(
+        String(part.category || "")
+      );
 
-        <div class="card">
 
-          <div class="part-header">
+    let date = "";
 
-            <div>
 
-              <div class="part-number">
-                LEGO ${escapeHTML(number)}
-              </div>
+    if (part.created_at) {
 
-              <div class="part-name">
-                ${escapeHTML(name)}
-                ${category
-                  ? " · " + escapeHTML(category)
-                  : ""}
-              </div>
+      date =
+        new Date(
+          part.created_at
+        ).toLocaleString(
+          "de-DE"
+        );
+
+    }
+
+
+    return `
+
+      <div class="card">
+
+        <div class="part-header">
+
+          <div>
+
+            <div class="part-number">
+
+              LEGO ${number}
 
             </div>
 
-            <div class="available">
-              ● Verfügbar
+
+            <div class="part-name">
+
+              ${name}
+
+              ${
+                category
+                  ? " · " + category
+                  : ""
+              }
+
             </div>
 
           </div>
 
 
-          <div class="details">
+          <div class="available">
 
-            📍 LEGO Fabrik Günzburg
-
-            <br>
-
-            ${
-              date
-                ? "🕐 " + date
-                : ""
-            }
+            ● Verfügbar
 
           </div>
-
-
-          <button
-            class="secondary confirm"
-            onclick="confirmPart('${escapeAttribute(number)}')"
-          >
-            👍 Ich habe dieses Teil auch gesehen
-          </button>
 
         </div>
 
-      `;
 
-    }).join("");
+        <div class="details">
+
+          📍 LEGO Fabrik Günzburg
+
+          <br>
+
+          ${
+            date
+              ? "🕐 " + date
+              : ""
+          }
+
+        </div>
+
+
+        <button
+          class="secondary confirm"
+          onclick="confirmPart('${escapeAttribute(number)}')"
+        >
+
+          👍 Ich habe dieses Teil auch gesehen
+
+        </button>
+
+      </div>
+
+    `;
+
+  }).join("");
 
 }
 
 
 /* =====================================================
-   SICHERHEIT
-===================================================== */
-
-function escapeHTML(value) {
-
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-
-}
-
-
-function escapeAttribute(value) {
-
-  return String(value)
-    .replace(/\\/g, "\\\\")
-    .replace(/'/g, "\\'");
-
-}
-
-
-/* =====================================================
-   SUCHEN
+   SUCHE
 ===================================================== */
 
 function searchParts() {
 
+  const input =
+    document.getElementById(
+      "searchInput"
+    );
+
+
   const query =
-    document
-      .getElementById("searchInput")
-      .value
+    input.value
       .toLowerCase()
       .trim();
 
-
-  /* ---------------------------------------------
-     KEINE SUCHE
-  --------------------------------------------- */
 
   if (!query) {
 
     displayParts(parts);
 
     return;
+
   }
 
-
-  /* ---------------------------------------------
-     SUCHEN
-  --------------------------------------------- */
 
   const filtered =
     parts.filter(part => {
@@ -571,10 +649,12 @@ function searchParts() {
           part.part_number || ""
         ).toLowerCase();
 
+
       const name =
         String(
           part.name || ""
         ).toLowerCase();
+
 
       const category =
         String(
@@ -583,9 +663,13 @@ function searchParts() {
 
 
       return (
+
         number.includes(query) ||
+
         name.includes(query) ||
+
         category.includes(query)
+
       );
 
     });
@@ -603,9 +687,11 @@ function searchParts() {
 function confirmPart(number) {
 
   alert(
+
     "Danke! Deine Bestätigung für Teil " +
     number +
     " wurde registriert. 👍"
+
   );
 
 }
@@ -617,68 +703,178 @@ function confirmPart(number) {
 
 async function reportPart() {
 
-  const partNumber = prompt(
-    "Welche Teilenummer hast du gesehen?\n\nBeispiel: 3001"
-  );
-
-  if (!partNumber || !partNumber.trim()) {
-    return;
-  }
-
-  const name = prompt(
-    "Wie heißt das Teil?\n\nBeispiel: Brick 2 × 4"
-  );
-
-  if (!name || !name.trim()) {
-    return;
-  }
-
-  const category = prompt(
-    "Welche Kategorie?\n\nBeispiel: Brick"
-  );
-
-  if (!category || !category.trim()) {
-    return;
-  }
-
-  console.log("Sende Teil an Supabase:", {
-    part_number: partNumber.trim(),
-    name: name.trim(),
-    category: category.trim()
-  });
-
-  const { data, error } = await supabaseClient
-    .from("parts")
-    .insert([
-      {
-        part_number: partNumber.trim(),
-        name: name.trim(),
-        category: category.trim()
-      }
-    ])
-    .select();
-
-  console.log("Supabase Antwort:", data);
-  console.log("Supabase Fehler:", error);
-
-  if (error) {
-
-    alert(
-      "Supabase Fehler:\n\n" +
-      error.message +
-      "\n\nCode: " +
-      (error.code || "unbekannt")
+  const partNumber =
+    prompt(
+      "Welche Teilenummer hast du gesehen?\n\nBeispiel: 3001"
     );
 
+
+  if (!partNumber) {
+
     return;
+
   }
 
-  alert(
-    "Danke! Das Teil wurde erfolgreich gemeldet. 🧱"
-  );
 
-  await loadParts();
+  const name =
+    prompt(
+      "Wie heißt das Teil?\n\nBeispiel: Brick 2 × 4"
+    );
+
+
+  if (!name) {
+
+    return;
+
+  }
+
+
+  const category =
+    prompt(
+      "Welche Kategorie?\n\nBeispiel: Brick"
+    );
+
+
+  if (!category) {
+
+    return;
+
+  }
+
+
+  const button =
+    document.querySelector(
+      ".report-box button"
+    );
+
+
+  if (button) {
+
+    button.disabled = true;
+
+    button.textContent =
+      "Wird gespeichert...";
+
+  }
+
+
+  try {
+
+    const result =
+      await supabaseRequest(
+
+        SUPABASE_URL +
+        "/rest/v1/parts",
+
+        {
+
+          method: "POST",
+
+          headers: {
+
+            "Prefer":
+              "return=representation"
+
+          },
+
+          body:
+            JSON.stringify({
+
+              part_number:
+                partNumber.trim(),
+
+              name:
+                name.trim(),
+
+              category:
+                category.trim()
+
+            })
+
+        }
+
+      );
+
+
+    console.log(
+      "Gespeichertes Teil:",
+      result
+    );
+
+
+    alert(
+      "Danke! Das Teil wurde erfolgreich gemeldet. 🧱"
+    );
+
+
+    await loadParts();
+
+
+  } catch (error) {
+
+    console.error(
+      "Speichern fehlgeschlagen:",
+      error
+    );
+
+
+    alert(
+
+      "Das Teil konnte leider nicht gespeichert werden.\n\n" +
+
+      "Supabase Fehler:\n" +
+
+      error.message
+
+    );
+
+  }
+
+
+  if (button) {
+
+    button.disabled = false;
+
+    button.textContent =
+      "+ Teil melden";
+
+  }
+
 }
+
+
+/* =====================================================
+   SICHERHEIT / HTML ESCAPEN
+===================================================== */
+
+function escapeHtml(value) {
+
+  return String(value)
+
+    .replaceAll("&", "&amp;")
+
+    .replaceAll("<", "&lt;")
+
+    .replaceAll(">", "&gt;")
+
+    .replaceAll('"', "&quot;")
+
+    .replaceAll("'", "&#039;");
+
+}
+
+
+function escapeAttribute(value) {
+
+  return String(value)
+
+    .replaceAll("\\", "\\\\")
+
+    .replaceAll("'", "\\'");
+
+}
+
+
 /* =====================================================
    START
 ===================================================== */
@@ -687,5 +883,7 @@ loadParts();
 
 </script>
 
+
 </body>
+
 </html>
