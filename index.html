@@ -2017,18 +2017,21 @@ async function submitReport() {
         },
 
         body:
-          JSON.stringify({
+  JSON.stringify({
 
-            part_number:
-              selectedPart.part_num,
+    part_number:
+      selectedPart.part_num,
 
-            name:
-              selectedPart.name,
+    name:
+      selectedPart.name,
 
-            category:
-              selectedPart.category || ""
+    category:
+      selectedPart.category || "",
 
-          })
+    color_id:
+      Number(colorSelect.value)
+
+  })
 
       }
 
