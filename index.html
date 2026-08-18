@@ -1020,25 +1020,16 @@ function createSearchVariants(query) {
 async function fetchLegoPartSuggestions(query) {
 
   const suggestions =
-    document.getElementById(
-      "partSuggestions"
-    );
-
+    document.getElementById("partSuggestions");
 
   const errorBox =
-    document.getElementById(
-      "partSearchError"
-    );
-
+    document.getElementById("partSearchError");
 
   if (!suggestions) {
     return;
   }
 
-
-  suggestions.style.display =
-    "block";
-
+  suggestions.style.display = "block";
 
   suggestions.innerHTML = `
     <div class="suggestion">
@@ -1046,113 +1037,137 @@ async function fetchLegoPartSuggestions(query) {
     </div>
   `;
 
-
   if (errorBox) {
     errorBox.textContent = "";
   }
 
-
   try {
 
-    const variants =
-      createSearchVariants(query);
+    const search =
+      query
+        .trim()
+        .toLowerCase();
 
+    if (search.length < 2) {
+      hideSuggestions();
+      return;
+    }
 
-    const searches = [];
+    let results = [];
 
+    /*
+     * ==========================================
+     * 1. TEILENUMMER
+     * ==========================================
+     *
+     * Beispiel:
+     * 3001
+     */
 
-    for (
-      const variant
-      of variants
-    ) {
+    if (/^[0-9]+$/.test(search)) {
 
-      const encoded =
-        encodeURIComponent(
-          "%" + variant + "%"
-        );
-
-
-      searches.push(
-
+      const url =
         LEGO_PARTS_URL +
-        "?or=" +
+        "?part_num=eq." +
+        encodeURIComponent(search) +
+        "&select=part_num,name,category" +
+        "&limit=20";
+
+      const data =
+        await supabaseRequest(url);
+
+      results = data || [];
+    }
+
+
+    /*
+     * ==========================================
+     * 2. NAME
+     * ==========================================
+     *
+     * Beispiel:
+     * Brick 2 x 4
+     * Brick 2x4
+     */
+
+    if (results.length === 0) {
+
+      /*
+       * Suchtext normalisieren
+       */
+
+      const normalized =
+        search
+          .replace(/\s*x\s*/gi, " x ")
+          .replace(/\s+/g, " ")
+          .trim();
+
+
+      /*
+       * Normale Namenssuche
+       */
+
+      const nameUrl =
+        LEGO_PARTS_URL +
+        "?name=ilike." +
         encodeURIComponent(
-          "(part_num.ilike." +
-          encoded +
-          ",name.ilike." +
-          encoded +
-          ")"
+          "%" + normalized + "%"
         ) +
         "&select=part_num,name,category" +
-        "&limit=20"
+        "&limit=20";
 
-      );
+
+      results =
+        await supabaseRequest(nameUrl);
+
+
+      /*
+       * Falls "2 x 4" nichts findet,
+       * zusätzlich "2x4" probieren.
+       */
+
+      if (
+        (!results || results.length === 0) &&
+        normalized.includes(" x ")
+      ) {
+
+        const compact =
+          normalized.replace(
+            /\s*x\s*/gi,
+            "x"
+          );
+
+
+        const compactUrl =
+          LEGO_PARTS_URL +
+          "?name=ilike." +
+          encodeURIComponent(
+            "%" + compact + "%"
+          ) +
+          "&select=part_num,name,category" +
+          "&limit=20";
+
+
+        results =
+          await supabaseRequest(
+            compactUrl
+          );
+
+      }
 
     }
 
 
     /*
-      Mehrere Suchvarianten parallel
-    */
+     * ==========================================
+     * KEINE ERGEBNISSE
+     * ==========================================
+     */
 
-    const responses =
-      await Promise.all(
-        searches.map(
-          url =>
-            supabaseRequest(url)
-        )
-      );
-
-
-    const combined = [];
-
-
-    responses.forEach(
-      result => {
-
-        (result || []).forEach(
-          part => {
-
-            const key =
-              String(
-                part.part_num || ""
-              ) +
-              "|" +
-              String(
-                part.name || ""
-              );
-
-
-            if (
-              !combined.some(
-                existing =>
-                  existing._key === key
-              )
-            ) {
-
-              combined.push({
-                ...part,
-                _key: key
-              });
-
-            }
-
-          }
-        );
-
-      }
-    );
-
-
-    /*
-      Maximal 20 Vorschläge
-    */
-
-    const result =
-      combined.slice(0, 20);
-
-
-    if (result.length === 0) {
+    if (
+      !results ||
+      results.length === 0
+    ) {
 
       suggestions.innerHTML = `
         <div class="suggestion">
@@ -1161,65 +1176,72 @@ async function fetchLegoPartSuggestions(query) {
       `;
 
       return;
-
     }
 
 
+    /*
+     * ==========================================
+     * ERGEBNISSE ANZEIGEN
+     * ==========================================
+     */
+
     suggestions.innerHTML =
-      result.map(part => {
+      results
+        .slice(0, 20)
+        .map(part => {
 
-        const number =
-          escapeHTML(
-            part.part_num || ""
-          );
+          const number =
+            escapeHTML(
+              part.part_num || ""
+            );
 
-        const name =
-          escapeHTML(
-            part.name || ""
-          );
+          const name =
+            escapeHTML(
+              part.name || ""
+            );
 
-        const category =
-          escapeHTML(
-            part.category || ""
-          );
+          const category =
+            escapeHTML(
+              part.category || ""
+            );
 
 
-        return `
+          return `
 
-          <div
-            class="suggestion"
-            onclick='selectLegoPart(${JSON.stringify({
-              part_num:
-                part.part_num || "",
+            <div
+              class="suggestion"
+              onclick='selectLegoPart(${JSON.stringify({
+                part_num:
+                  part.part_num || "",
 
-              name:
-                part.name || "",
+                name:
+                  part.name || "",
 
-              category:
-                part.category || ""
-            })})'
-          >
+                category:
+                  part.category || ""
+              })})'
+            >
 
-            <div class="suggestion-number">
-              LEGO ${number}
+              <div class="suggestion-number">
+                LEGO ${number}
+              </div>
+
+              <div class="suggestion-name">
+                ${name}
+
+                ${
+                  category
+                    ? " · " + category
+                    : ""
+                }
+              </div>
+
             </div>
 
-            <div class="suggestion-name">
-              ${name}
+          `;
 
-              ${
-                category
-                  ? " · " + category
-                  : ""
-              }
-
-            </div>
-
-          </div>
-
-        `;
-
-      }).join("");
+        })
+        .join("");
 
 
   } catch (error) {
@@ -1247,8 +1269,6 @@ async function fetchLegoPartSuggestions(query) {
   }
 
 }
-
-
 /* =========================================================
    TEIL AUS SUCHERGEBNIS AUSWÄHLEN
 ========================================================= */
