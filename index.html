@@ -229,10 +229,6 @@
       }
     }
   </style>
-
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 </head>
 
 <body>
@@ -255,10 +251,6 @@
 
 
 <main>
-
-  <!-- =========================
-       HERO
-  ========================== -->
 
   <section class="hero">
 
@@ -291,10 +283,6 @@
   </section>
 
 
-  <!-- =========================
-       GEMELDETE TEILE
-  ========================== -->
-
   <div class="section-title">
     🟢 Aktuell gemeldete Teile
   </div>
@@ -307,10 +295,6 @@
 
   </div>
 
-
-  <!-- =========================
-       TEIL MELDEN
-  ========================== -->
 
   <section class="report-box">
 
@@ -344,61 +328,88 @@
 <script>
 
 /* =========================================================
-   SUPABASE KONFIGURATION
+   SUPABASE REST API
 ========================================================= */
 
 const SUPABASE_URL =
-  "https://nmsoppdibangfaeqtube.supabase.co";
-
-
-/*
-  HIER DEINEN PUBLISHABLE KEY AUS SUPABASE EINFÜGEN.
-
-  Supabase:
-  Settings
-  → API Keys
-  → Publishable key
-*/
+  "https://nmsoppdibanqfaeqtube.supabase.co";
 
 const SUPABASE_KEY =
   "sb_publishable_rcf_aY1AfeyRmumUDiNhBw_7LUWdVBD";
 
-
-/* =========================================================
-   SUPABASE CLIENT
-========================================================= */
-
-let supabaseClient = null;
+const PARTS_URL =
+  SUPABASE_URL +
+  "/rest/v1/parts";
 
 let parts = [];
 
 
-try {
+/* =========================================================
+   SUPABASE REST REQUEST
+========================================================= */
 
-  if (
-    typeof window.supabase === "undefined"
-  ) {
+async function supabaseRequest(url, options = {}) {
 
-    throw new Error(
-      "Supabase JavaScript Bibliothek konnte nicht geladen werden."
-    );
+  const response =
+    await fetch(url, {
+
+      ...options,
+
+      headers: {
+
+        "apikey":
+          SUPABASE_KEY,
+
+        "Content-Type":
+          "application/json",
+
+        ...(options.headers || {})
+
+      }
+
+    });
+
+
+  let data = null;
+
+  try {
+
+    data =
+      await response.json();
+
+  } catch {
+
+    data = null;
 
   }
 
 
-  supabaseClient =
-    window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_KEY
-    );
+  if (!response.ok) {
+
+    const message =
+      data?.message ||
+      data?.error ||
+      (
+        "HTTP Fehler " +
+        response.status
+      );
 
 
-} catch (error) {
+    const error =
+      new Error(message);
 
-  console.error(
-    "Supabase Initialisierungsfehler:",
-    error
-  );
+
+    error.code =
+      data?.code ||
+      String(response.status);
+
+
+    throw error;
+
+  }
+
+
+  return data;
 
 }
 
@@ -450,66 +461,24 @@ async function loadParts() {
   `;
 
 
-  if (!supabaseClient) {
-
-    showError(
-      "Supabase konnte nicht gestartet werden.",
-      "Die Supabase-Bibliothek wurde nicht geladen."
-    );
-
-    return;
-
-  }
-
-
   try {
 
     console.log(
-      "Lade Teile aus Supabase..."
+      "Lade Teile aus Supabase REST API..."
     );
 
 
-    const {
-      data,
-      error
-    } = await supabaseClient
+    const data =
+      await supabaseRequest(
 
-      .from("parts")
+        PARTS_URL +
+        "?select=*&order=created_at.desc"
 
-      .select("*")
-
-      .order(
-        "created_at",
-        {
-          ascending: false
-        }
       );
 
 
-    if (error) {
-
-      console.error(
-        "Supabase SELECT Fehler:",
-        error
-      );
-
-      showError(
-        "Supabase-Fehler beim Laden",
-        `
-          ${error.message || "Unbekannter Fehler"}
-          <br><br>
-          <small>
-            Code: ${error.code || "unbekannt"}
-          </small>
-        `
-      );
-
-      return;
-
-    }
-
-
-    parts = data || [];
+    parts =
+      data || [];
 
 
     console.log(
@@ -524,20 +493,32 @@ async function loadParts() {
   } catch (error) {
 
     console.error(
-      "Netzwerkfehler:",
+      "Supabase SELECT Fehler:",
       error
     );
 
 
     showError(
-      "Verbindung zu Supabase fehlgeschlagen",
+
+      "Supabase-Fehler beim Laden",
+
       `
-        ${error.message || "Load failed"}
+        ${escapeHTML(
+          error.message ||
+          "Unbekannter Fehler"
+        )}
+
         <br><br>
+
         <small>
-          Bitte Internetverbindung prüfen.
+          Code:
+          ${escapeHTML(
+            error.code ||
+            "unbekannt"
+          )}
         </small>
       `
+
     );
 
   }
@@ -767,10 +748,6 @@ async function reportPart() {
     );
 
 
-  /* -------------------------
-     TEILENUMMER
-  -------------------------- */
-
   const partNumber =
     prompt(
       "Welche Teilenummer hast du gesehen?\n\nBeispiel: 3001"
@@ -783,10 +760,6 @@ async function reportPart() {
 
   }
 
-
-  /* -------------------------
-     NAME
-  -------------------------- */
 
   const name =
     prompt(
@@ -801,10 +774,6 @@ async function reportPart() {
   }
 
 
-  /* -------------------------
-     KATEGORIE
-  -------------------------- */
-
   const category =
     prompt(
       "Welche Kategorie?\n\nBeispiel: Brick"
@@ -818,10 +787,6 @@ async function reportPart() {
   }
 
 
-  /* -------------------------
-     BUTTON DEAKTIVIEREN
-  -------------------------- */
-
   button.disabled = true;
 
   button.textContent =
@@ -831,7 +796,7 @@ async function reportPart() {
   try {
 
     console.log(
-      "Sende Teil an Supabase:",
+      "Sende Teil an Supabase REST API:",
       {
         part_number:
           partNumber.trim(),
@@ -845,86 +810,45 @@ async function reportPart() {
     );
 
 
-    /* -------------------------
-       INSERT
-    -------------------------- */
+    await supabaseRequest(
 
-    const {
-      data,
-      error
-    } = await supabaseClient
+      PARTS_URL,
 
-      .from("parts")
+      {
 
-      .insert({
+        method:
+          "POST",
 
-        part_number:
-          partNumber.trim(),
+        headers: {
 
-        name:
-          name.trim(),
+          "Prefer":
+            "return=representation"
 
-        category:
-          category.trim()
+        },
 
-      })
+        body:
+          JSON.stringify({
 
-      .select()
-      .single();
+            part_number:
+              partNumber.trim(),
 
+            name:
+              name.trim(),
 
-    /* -------------------------
-       SUPABASE FEHLER
-    -------------------------- */
+            category:
+              category.trim()
 
-    if (error) {
+          })
 
-      console.error(
-        "Supabase INSERT Fehler:",
-        error
-      );
+      }
 
-
-      alert(
-
-        "Das Teil konnte leider nicht gespeichert werden.\n\n" +
-
-        "Supabase Fehler:\n" +
-
-        (error.message ||
-          "Unbekannter Fehler") +
-
-        "\n\nCode: " +
-
-        (error.code ||
-          "unbekannt")
-
-      );
-
-
-      return;
-
-    }
-
-
-    console.log(
-      "Teil erfolgreich gespeichert:",
-      data
     );
 
-
-    /* -------------------------
-       ERFOLG
-    -------------------------- */
 
     alert(
       "Danke! Das Teil wurde erfolgreich gemeldet. 🧱"
     );
 
-
-    /* -------------------------
-       LISTE NEU LADEN
-    -------------------------- */
 
     await loadParts();
 
@@ -932,7 +856,7 @@ async function reportPart() {
   } catch (error) {
 
     console.error(
-      "Netzwerkfehler beim Speichern:",
+      "Supabase INSERT Fehler:",
       error
     );
 
@@ -941,11 +865,18 @@ async function reportPart() {
 
       "Das Teil konnte leider nicht gespeichert werden.\n\n" +
 
-      "Verbindungsfehler:\n" +
+      "Supabase Fehler:\n" +
 
       (
         error.message ||
-        "Load failed"
+        "Unbekannter Fehler"
+      ) +
+
+      "\n\nCode: " +
+
+      (
+        error.code ||
+        "unbekannt"
       )
 
     );
