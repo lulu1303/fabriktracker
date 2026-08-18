@@ -701,9 +701,13 @@ async function supabaseRequest(url, options = {}) {
   let data = null;
 
   try {
+
     data = await response.json();
+
   } catch {
+
     data = null;
+
   }
 
 
@@ -1202,12 +1206,17 @@ function renderPart(part) {
   }
 
 
+  /*
+   * BILD
+   *
+   * Es wird ausschließlich das Bild aus
+   * Supabase verwendet.
+   *
+   * Kein BrickLink-Fallback.
+   */
+
   const imageUrl =
-    "https://img.bricklink.com/ItemImage/PN/" +
-    encodeURIComponent(
-      part.part_number || ""
-    ) +
-    ".png";
+    part.image_url || "";
 
 
   const categoryInfo =
@@ -1225,17 +1234,23 @@ function renderPart(part) {
 
         <div class="part-image-wrapper">
 
-          <img
-            class="part-image"
-            src="${imageUrl}"
-            alt="LEGO ${number}"
-            loading="lazy"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
-          >
+          ${
+            imageUrl
+              ? `
+                <img
+                  class="part-image"
+                  src="${escapeHTML(imageUrl)}"
+                  alt="LEGO ${number}"
+                  loading="lazy"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+                >
+              `
+              : ""
+          }
 
           <div
             class="part-image-fallback"
-            style="display:none;"
+            style="display:${imageUrl ? "none" : "block"};"
           >
             🧱<br>
             Kein Bild verfügbar
@@ -1344,7 +1359,6 @@ function renderPart(part) {
                     ⚖️ Gewicht noch nicht hinterlegt
                   </div>
                 `
-
             }
 
           </div>
@@ -1492,11 +1506,6 @@ function displayParts(list) {
 
         const group =
           groups[key];
-
-
-        const categoryId =
-          "category_" +
-          key;
 
 
         return `
