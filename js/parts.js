@@ -596,80 +596,34 @@ function displayParts(
   let groups = [];
 
 
-  if (
-    typeof groupPartsByRebrickableCategory ===
-    "function"
-  ) {
+  /* =====================================================
+   REBRICKABLE-KATEGORIEN
+===================================================== */
 
-    groups =
-      groupPartsByRebrickableCategory(
-        list
-      );
+if (
+  typeof groupPartsByRebrickableCategory ===
+  "function"
+) {
 
-  } else {
-
-    /*
-     * Fallback, falls categories.js
-     * noch nicht geladen wurde.
-     */
-
-    const map =
-      new Map();
-
-
-    list.forEach(
-      part => {
-
-        const key =
-          part.category_id ??
-          null;
-
-
-        if (
-          !map.has(
-            key
-          )
-        ) {
-
-          map.set(
-            key,
-            {
-
-              id:
-                key,
-
-              name:
-                "Sonstige",
-
-              parts:
-                []
-
-            }
-          );
-
-        }
-
-
-        map
-          .get(
-            key
-          )
-          .parts
-          .push(
-            part
-          );
-
-      }
+  groups =
+    groupPartsByRebrickableCategory(
+      list
     );
 
+} else {
 
-    groups =
-      Array.from(
-        map.values()
-      );
+  console.error(
+    "categories.js wurde nicht geladen. " +
+    "Rebrickable-Kategorien sind nicht verfügbar."
+  );
 
-  }
+  /*
+   * Kein falsches "Sonstige" mehr erzeugen.
+   */
 
+  groups = [];
+
+}
 
   container.innerHTML =
 
