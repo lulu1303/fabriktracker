@@ -3,165 +3,438 @@
    FabrikTracker
 ========================================================= */
 
-/*
- * Die Kategorien kommen direkt aus unserer
- * Supabase-Tabelle:
- *
- *     part_categories
- *
- * Diese Tabelle basiert auf den Rebrickable
- * part_categories.
- *
- * Wir verwenden:
- *
- *     id
- *     name
- *
- * Keine eigene Kategorie-Erkennung anhand
- * von Teilnamen.
- */
-
 
 /* =========================================================
-   KONFIGURATION
+   REBRICKABLE KATEGORIEN
 ========================================================= */
 
-const PART_CATEGORIES_URL =
-  SUPABASE_URL +
-  "/rest/v1/part_categories";
+/*
+ * Echte Rebrickable part_categories.
+ *
+ * Die IDs entsprechen den category_id-Werten
+ * in unserer parts-Tabelle.
+ *
+ * Dadurch ist die Anzeige unabhängig davon,
+ * ob die Tabelle "part_categories" in Supabase
+ * gerade geladen werden kann.
+ */
+
+const REBRICKABLE_CATEGORIES = [
+
+  {
+    id: 1,
+    name: "Baseplates"
+  },
+
+  {
+    id: 3,
+    name: "Bricks Sloped"
+  },
+
+  {
+    id: 4,
+    name: "Duplo, Quatro and Primo"
+  },
+
+  {
+    id: 5,
+    name: "Bricks Special"
+  },
+
+  {
+    id: 6,
+    name: "Bricks Wedged"
+  },
+
+  {
+    id: 7,
+    name: "Containers"
+  },
+
+  {
+    id: 8,
+    name: "Technic Bricks"
+  },
+
+  {
+    id: 9,
+    name: "Plates Special"
+  },
+
+  {
+    id: 11,
+    name: "Bricks"
+  },
+
+  {
+    id: 12,
+    name: "Technic Connectors"
+  },
+
+  {
+    id: 13,
+    name: "Minifigs"
+  },
+
+  {
+    id: 14,
+    name: "Plates"
+  },
+
+  {
+    id: 15,
+    name: "Tiles Special"
+  },
+
+  {
+    id: 16,
+    name: "Windows and Doors"
+  },
+
+  {
+    id: 17,
+    name: "Gear Parts"
+  },
+
+  {
+    id: 18,
+    name: "Hinges, Arms and Turntables"
+  },
+
+  {
+    id: 19,
+    name: "Tiles"
+  },
+
+  {
+    id: 20,
+    name: "Bricks Round and Cones"
+  },
+
+  {
+    id: 21,
+    name: "Plates Round Curved and Dishes"
+  },
+
+  {
+    id: 22,
+    name: "Pneumatics"
+  },
+
+  {
+    id: 23,
+    name: "Panels"
+  },
+
+  {
+    id: 24,
+    name: "Other"
+  },
+
+  {
+    id: 25,
+    name: "Technic Steering, Suspension and Engine"
+  },
+
+  {
+    id: 26,
+    name: "Technic Special"
+  },
+
+  {
+    id: 27,
+    name: "Minifig Accessories"
+  },
+
+  {
+    id: 28,
+    name: "Animals / Creatures"
+  },
+
+  {
+    id: 29,
+    name: "Wheels and Tyres"
+  },
+
+  {
+    id: 30,
+    name: "Tubes and Hoses"
+  },
+
+  {
+    id: 31,
+    name: "String, Bands and Reels"
+  },
+
+  {
+    id: 32,
+    name: "Bars, Ladders and Fences"
+  },
+
+  {
+    id: 33,
+    name: "Rock"
+  },
+
+  {
+    id: 34,
+    name: "Supports, Girders and Cranes"
+  },
+
+  {
+    id: 35,
+    name: "Transportation - Sea and Air"
+  },
+
+  {
+    id: 36,
+    name: "Transportation - Land"
+  },
+
+  {
+    id: 37,
+    name: "Bricks Curved"
+  },
+
+  {
+    id: 38,
+    name: "Flags, Banners and Signs"
+  },
+
+  {
+    id: 39,
+    name: "Magnets and Holders"
+  },
+
+  {
+    id: 40,
+    name: "Technic Panels"
+  },
+
+  {
+    id: 41,
+    name: "Large Buildable Figures"
+  },
+
+  {
+    id: 42,
+    name: "Belville, Scala and Fabuland"
+  },
+
+  {
+    id: 43,
+    name: "Znap"
+  },
+
+  {
+    id: 44,
+    name: "Mechanical"
+  },
+
+  {
+    id: 45,
+    name: "Electronics"
+  },
+
+  {
+    id: 46,
+    name: "Technic Axles"
+  },
+
+  {
+    id: 47,
+    name: "Windscreens and Fuselage"
+  },
+
+  {
+    id: 48,
+    name: "Clikits"
+  },
+
+  {
+    id: 49,
+    name: "Plates Wedged"
+  },
+
+  {
+    id: 50,
+    name: "HO Scale"
+  },
+
+  {
+    id: 51,
+    name: "Technic Beams"
+  },
+
+  {
+    id: 52,
+    name: "Technic Gears"
+  },
+
+  {
+    id: 53,
+    name: "Technic Pins"
+  },
+
+  {
+    id: 54,
+    name: "Technic Bushes"
+  },
+
+  {
+    id: 55,
+    name: "Technic Beams Special"
+  },
+
+  {
+    id: 56,
+    name: "Tools"
+  },
+
+  {
+    id: 57,
+    name: "Non-Buildable Figures (Duplo, Fabuland, etc)"
+  },
+
+  {
+    id: 58,
+    name: "Stickers"
+  },
+
+  {
+    id: 59,
+    name: "Minifig Heads"
+  },
+
+  {
+    id: 60,
+    name: "Minifig Upper Body"
+  },
+
+  {
+    id: 61,
+    name: "Minifig Lower Body"
+  },
+
+  {
+    id: 62,
+    name: "Minidoll Heads"
+  },
+
+  {
+    id: 63,
+    name: "Minidoll Upper Body"
+  },
+
+  {
+    id: 64,
+    name: "Minidoll Lower Body"
+  },
+
+  {
+    id: 65,
+    name: "Minifig Headwear"
+  },
+
+  {
+    id: 66,
+    name: "Modulex"
+  },
+
+  {
+    id: 67,
+    name: "Tiles Round and Curved"
+  },
+
+  {
+    id: 68,
+    name: "Projectiles / Launchers"
+  },
+
+  {
+    id: 69,
+    name: "Energy Effects"
+  },
+
+  {
+    id: 70,
+    name: "Minifig Hipwear"
+  },
+
+  {
+    id: 71,
+    name: "Minifig Neckwear"
+  },
+
+  {
+    id: 72,
+    name: "Minifig Headwear Accessories"
+  },
+
+  {
+    id: 73,
+    name: "Minifig Shields, Weapons, & Tools"
+  },
+
+  {
+    id: 74,
+    name: "Animal / Creature Accessories"
+  },
+
+  {
+    id: 75,
+    name: "Animal / Creature Body Parts"
+  },
+
+  {
+    id: 76,
+    name: "Plants & Trees"
+  },
+
+  {
+    id: 77,
+    name: "Non-System Parts"
+  },
+
+  {
+    id: 78,
+    name: "Pen & Watch"
+  }
+
+];
 
 
 /* =========================================================
    CACHE
 ========================================================= */
 
-let rebrickableCategories = [];
+/*
+ * Wir verwenden die eingebauten Rebrickable-Daten
+ * direkt als Cache.
+ */
 
-let categoriesLoaded = false;
+let rebrickableCategories = [
+  ...REBRICKABLE_CATEGORIES
+];
+
+let categoriesLoaded = true;
 
 
 /* =========================================================
    KATEGORIEN LADEN
 ========================================================= */
 
+/*
+ * Diese Funktion bleibt bestehen, damit der
+ * restliche Code unverändert funktionieren kann.
+ *
+ * Die Kategorien sind bereits vorhanden und
+ * müssen nicht extra aus Supabase geladen werden.
+ */
+
 async function loadPartCategories() {
 
-  if (
-    categoriesLoaded &&
-    Array.isArray(
-      rebrickableCategories
-    )
-  ) {
-
-    return rebrickableCategories;
-
-  }
-
-
-  try {
-
-    const url =
-      PART_CATEGORIES_URL +
-      "?select=id,name" +
-      "&order=id.asc";
-
-
-    const result =
-      await supabaseRequest(
-        url
-      );
-
-
-    if (
-      !Array.isArray(
-        result
-      )
-    ) {
-
-      throw new Error(
-        "Ungültige Rebrickable-Kategorien."
-      );
-
-    }
-
-
-    /*
-     * Nur gültige Kategorien übernehmen.
-     */
-
-    rebrickableCategories =
-      result
-        .filter(
-          category =>
-            category &&
-            category.id !== null &&
-            category.id !== undefined &&
-            category.name
-        )
-        .map(
-          category => ({
-
-            id:
-              Number(
-                category.id
-              ),
-
-            name:
-              String(
-                category.name
-              )
-
-          })
-        )
-        .filter(
-          category =>
-            Number.isFinite(
-              category.id
-            )
-        );
-
-
-    /*
-     * Rebrickable-Reihenfolge:
-     * Kategorie-ID aufsteigend.
-     */
-
-    rebrickableCategories.sort(
-      (
-        a,
-        b
-      ) =>
-        a.id -
-        b.id
-    );
-
-
-    categoriesLoaded =
-      true;
-
-
-    return rebrickableCategories;
-
-  } catch (
-    error
-  ) {
-
-    console.error(
-      "Fehler beim Laden der Rebrickable-Kategorien:",
-      error
-    );
-
-
-    rebrickableCategories =
-      [];
-
-    categoriesLoaded =
-      false;
-
-
-    return [];
-
-  }
+  return rebrickableCategories;
 
 }
 
@@ -185,7 +458,7 @@ function getCategoryById(
   }
 
 
-  const id =
+  const numericId =
     Number(
       categoryId
     );
@@ -193,7 +466,7 @@ function getCategoryById(
 
   if (
     !Number.isFinite(
-      id
+      numericId
     )
   ) {
 
@@ -207,7 +480,7 @@ function getCategoryById(
       category =>
         Number(
           category.id
-        ) === id
+        ) === numericId
     ) ||
     null
   );
@@ -231,7 +504,8 @@ function getCategoryName(
 
 
   if (
-    category
+    category &&
+    category.name
   ) {
 
     return category.name;
@@ -265,7 +539,9 @@ function getRebrickableCategoryInfo(
     return {
 
       id:
-        category.id,
+        Number(
+          category.id
+        ),
 
       name:
         category.name
@@ -289,7 +565,7 @@ function getRebrickableCategoryInfo(
 
 
 /* =========================================================
-   TEILE NACH REBRICKABLE-KATEGORIE SORTIEREN
+   KATEGORIEN SORTIEREN
 ========================================================= */
 
 function sortByRebrickableCategory(
@@ -327,6 +603,11 @@ function sortByRebrickableCategory(
         );
 
 
+      /*
+       * Teile ohne Kategorie
+       * kommen ans Ende.
+       */
+
       const validA =
         Number.isFinite(
           categoryA
@@ -338,11 +619,6 @@ function sortByRebrickableCategory(
           categoryB
         );
 
-
-      /*
-       * Teile ohne Kategorie kommen
-       * ganz nach hinten.
-       */
 
       if (
         !validA &&
@@ -384,12 +660,16 @@ function sortByRebrickableCategory(
 
 
 /* =========================================================
-   TEILE IN REBRICKABLE-KATEGORIEN GRUPPIEREN
+   KATEGORIEN GRUPPIEREN
 ========================================================= */
 
 function groupPartsByRebrickableCategory(
   parts
 ) {
+
+  const groups =
+    new Map();
+
 
   if (
     !Array.isArray(
@@ -402,10 +682,6 @@ function groupPartsByRebrickableCategory(
   }
 
 
-  const groups =
-    new Map();
-
-
   parts.forEach(
     part => {
 
@@ -415,14 +691,15 @@ function groupPartsByRebrickableCategory(
         );
 
 
-      const validCategory =
-        Number.isFinite(
-          categoryId
-        );
-
+      /*
+       * Gültige Rebrickable-Kategorie
+       * verwenden.
+       */
 
       const key =
-        validCategory
+        Number.isFinite(
+          categoryId
+        )
           ? categoryId
           : null;
 
@@ -434,9 +711,9 @@ function groupPartsByRebrickableCategory(
       ) {
 
         const category =
-          validCategory
+          key !== null
             ? getCategoryById(
-                categoryId
+                key
               )
             : null;
 
@@ -446,9 +723,7 @@ function groupPartsByRebrickableCategory(
           {
 
             id:
-              validCategory
-                ? categoryId
-                : null,
+              key,
 
             name:
               category
@@ -478,13 +753,20 @@ function groupPartsByRebrickableCategory(
 
 
   /*
-   * Kategorien exakt nach ihrer
-   * Rebrickable-ID sortieren.
+   * Exakt nach der Rebrickable-ID
+   * sortieren.
+   *
+   * Dadurch kommt z.B.:
+   *
+   * 14 = Plates
+   * 19 = Tiles
+   * 76 = Plants & Trees
    */
 
   return Array.from(
     groups.values()
-  ).sort(
+  )
+  .sort(
     (
       a,
       b
@@ -535,7 +817,23 @@ function groupPartsByRebrickableCategory(
 
 async function initializeCategories() {
 
-  return await loadPartCategories();
+  /*
+   * Kategorien sind bereits geladen.
+   *
+   * Die Funktion bleibt async, damit parts.js
+   * unverändert bleiben kann.
+   */
+
+  rebrickableCategories =
+    [
+      ...REBRICKABLE_CATEGORIES
+    ];
+
+  categoriesLoaded =
+    true;
+
+
+  return rebrickableCategories;
 
 }
 
