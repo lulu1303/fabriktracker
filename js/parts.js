@@ -1,122 +1,14 @@
 /* =========================================================
    PARTS
+   FabrikTracker
 ========================================================= */
 
-function relevance(p, q) {
 
-  q = norm(q);
+/* =========================================================
+   DATEN
+========================================================= */
 
-  let n =
-    norm(p.name);
-
-  let num =
-    norm(
-      p.part_num ||
-      p.part_number
-    );
-
-  let c =
-    norm(p.category);
-
-  let s = 0;
-
-
-  if (dimensionQuery(q)) {
-
-    if (!exactDims(p, q))
-      return 1e9;
-
-    s -= 5000;
-
-
-    if (/\bplate\b/.test(q))
-      s +=
-        n.includes("plate")
-          ? -500
-          : 100;
-
-
-    if (/\btile\b/.test(q))
-      s +=
-        n.includes("tile")
-          ? -500
-          : 100;
-
-
-    if (/\bbrick\b/.test(q))
-      s +=
-        n.includes("brick")
-          ? -500
-          : 100;
-
-  } else {
-
-    if (num === q)
-      s -= 10000;
-
-    else if (num.startsWith(q))
-      s -= 5000;
-
-    else if (num.includes(q))
-      s -= 3000;
-
-
-    if (n === q)
-      s -= 2000;
-
-    else if (n.startsWith(q))
-      s -= 800;
-
-    else if (n.includes(q))
-      s -= 300;
-
-  }
-
-
-  if (
-    n.includes("duplo") ||
-    c.includes("duplo")
-  )
-    s += 3000;
-
-
-  if (
-    n.includes("education") ||
-    c.includes("education")
-  )
-    s += 2000;
-
-
-  if (
-    /printed|print|pattern|decorated|decoration/.test(n)
-  )
-    s += 1000;
-
-
-  if (
-    n.includes("modified") ||
-    n.includes("assembly")
-  )
-    s += 500;
-
-
-  if (
-    n.includes("brick") ||
-    c === "11"
-  )
-    s -= 80;
-
-
-  if (n.includes("plate"))
-    s -= 70;
-
-
-  if (n.includes("tile"))
-    s -= 60;
-
-
-  return s;
-}
+let parts = [];
 
 
 /* =========================================================
@@ -125,187 +17,227 @@ function relevance(p, q) {
 
 async function loadParts() {
 
-  let box =
+  const container =
     document.getElementById(
       "results"
     );
 
 
-  box.innerHTML =
-    '<div class="card loading">Teile werden geladen...</div>';
+  if (
+    container
+  ) {
+
+    container.innerHTML = `
+      <div class="card loading">
+        Teile werden geladen...
+      </div>
+    `;
+
+  }
 
 
   try {
 
-    parts =
-      await req(
+    /*
+     * Alle vorhandenen gemeldeten Teile laden.
+     *
+     * category_id wird automatisch mitgeladen,
+     * weil wir select=* verwenden.
+     */
+    const data =
+      await supabaseRequest(
+
         PARTS_URL +
-        "?select=*&order=created_at.desc"
-      ) || [];
+        "?select=*" +
+        "&order=created_at.desc"
+
+      );
 
 
-    let ids =
-      [
+    parts =
+      Array.isArray(
+        data
+      )
+        ? data
+        : [];
+
+
+    /*
+     * =====================================================
+     * FARBEN LADEN
+     * =====================================================
+     */
+
+    if (
+      parts.length > 0
+    ) {
+
+      const colorIds = [
+
         ...new Set(
+
           parts
+
             .map(
-              p => p.color_id
+              part =>
+                part.color_id
             )
+
             .filter(
-              x => x != null
+              id =>
+                id !== null &&
+                id !== undefined
             )
+
         )
+
       ];
 
 
-    if (ids.length) {
+      if (
+        colorIds.length > 0
+      ) {
 
-      let colors =
-           await req(
-             SUPABASE_URL +
-             "/rest/v1/lego_colors?id=in.(" +  
-             ids.join(",") +
-             ")" +
-             "&select=id,name"
-           ) || [];
+        const colorsUrl =
 
+          SUPABASE_URL +
+          "/rest/v1/lego_colors" +
 
-      let map = {};
+          "?id=in.(" +
+          colorIds.join(",") +
+          ")" +
 
-
-      colors.forEach(
-        c =>
-          map[c.id] =
-            c.name
-      );
+          "&select=id,name";
 
 
-      parts.forEach(
-        p =>
-          p.color_name =
-            Number(
-              p.color_id
-            ) === 9999
-              ? "Not Applicable"
-              : map[p.color_id] || ""
-      );
-
-    }
+        const colors =
+          await supabaseRequest(
+            colorsUrl
+          );
 
 
-    await loadImages();
-
-    await loadWeights();
-
-    displayParts(parts);
+        const colorMap = {};
 
 
-  } catch (e) {
+        (
+          colors || []
+        ).forEach(
+          color => {
 
-    box.innerHTML =
-      '<div class="card error"><b>Supabase-Fehler beim Laden</b><br>' +
-      esc(e.message) +
-      '</div>';
+            colorMap[
+              color.id
+            ] =
+              color.name;
 
-  }
-
-}
-
-
-/* =========================================================
-   BILDER LADEN
-========================================================= */
-
-async function loadImages() {
-
-  if (!parts.length)
-    return;
-
-
-  let nums =
-    [
-      ...new Set(
-        parts
-          .map(
-            p =>
-              String(
-                p.part_number || ""
-              )
-          )
-          .filter(Boolean)
-      )
-    ];
-
-
-  let map = {};
-
-
-  try {
-
-    for (
-      let i = 0;
-      i < nums.length;
-      i += 100
-    ) {
-
-      let b =
-        nums.slice(
-          i,
-          i + 100
+          }
         );
 
 
-      let q =
-        b
-          .map(
-            x =>
-              `"${x.replace(
-                /"/g,
-                '\\"'
-              )}"`
-          )
-          .join(",");
+        parts.forEach(
+          part => {
 
+            if (
+              Number(
+                part.color_id
+              ) === 9999
+            ) {
 
-      let rows =
-        await req(
-          SUPABASE_URL +
-          "/rest/v1/lego_part_colors?part_num=in.(" +
-          q +
-          ")&select=part_num,color_id,image_url"
-        ) || [];
+              part.color_name =
+                "Not Applicable";
 
+            } else {
 
-      rows.forEach(
-        r =>
-          map[
-            r.part_num +
-            "_" +
-            r.color_id
-          ] =
-            r.image_url
-      );
+              part.color_name =
+                colorMap[
+                  part.color_id
+                ] || "";
+
+            }
+
+          }
+        );
+
+      }
 
     }
 
 
-    parts.forEach(
-      p =>
-        p.image_url =
-          map[
-            p.part_number +
-            "_" +
-            p.color_id
-          ] || null
+    /*
+     * =====================================================
+     * BILDER
+     * =====================================================
+     */
+
+    if (
+      typeof loadImagesForParts ===
+      "function"
+    ) {
+
+      await loadImagesForParts();
+
+    }
+
+
+    /*
+     * =====================================================
+     * GEWICHTE
+     * =====================================================
+     */
+
+    if (
+      typeof loadWeightsForParts ===
+      "function"
+    ) {
+
+      await loadWeightsForParts();
+
+    }
+
+
+    /*
+     * =====================================================
+     * KATEGORIEN
+     * =====================================================
+     *
+     * Sicherstellen, dass die Rebrickable-Kategorien
+     * geladen wurden.
+     */
+
+    if (
+      typeof initializeCategories ===
+      "function"
+    ) {
+
+      await initializeCategories();
+
+    }
+
+
+    /*
+     * =====================================================
+     * ANZEIGE
+     * =====================================================
+     */
+
+    displayParts(
+      parts
     );
 
 
-  } catch {
+  } catch (
+    error
+  ) {
 
-    parts.forEach(
-      p =>
-        p.image_url =
-          null
+    console.error(
+      "Teile laden Fehler:",
+      error
+    );
+
+
+    showError(
+      "Supabase-Fehler beim Laden",
+      error.message ||
+      "Unbekannter Fehler"
     );
 
   }
@@ -314,80 +246,233 @@ async function loadImages() {
 
 
 /* =========================================================
-   GEWICHTE LADEN
+   TEILE ANZEIGEN
 ========================================================= */
 
-async function loadWeights() {
+function displayParts(
+  list
+) {
 
-  if (!parts.length)
+  const container =
+    document.getElementById(
+      "results"
+    );
+
+
+  if (
+    !container
+  ) {
+
     return;
 
-
-  let nums =
-    [
-      ...new Set(
-        parts
-          .map(
-            p =>
-              String(
-                p.part_number || ""
-              )
-          )
-          .filter(Boolean)
-      )
-    ];
+  }
 
 
-  try {
+  if (
+    !Array.isArray(
+      list
+    ) ||
+    list.length === 0
+  ) {
 
-    let q =
-      nums
-        .map(
-          x =>
-            `"${x.replace(
-              /"/g,
-              '\\"'
-            )}"`
-        )
-        .join(",");
+    container.innerHTML = `
 
+      <div class="card">
 
-    let rows =
-      await req(
-        WEIGHTS_URL +
-        "?part_num=in.(" +
-        q +
-        ")" +
-        "&select=part_num,weight_grams"
-      ) || [];
+        <div class="empty">
 
+          Keine Teile gefunden.
 
-    let m = {};
+        </div>
 
+      </div>
 
-    rows.forEach(
-      r =>
-        m[r.part_num] =
-          +r.weight_grams
-    );
+    `;
 
-
-    parts.forEach(
-      p =>
-        p.weight_grams =
-          m[p.part_number] ?? null
-    );
-
-
-  } catch {
-
-    parts.forEach(
-      p =>
-        p.weight_grams =
-          null
-    );
+    return;
 
   }
+
+
+  /*
+   * Teile nach Rebrickable-Kategorie gruppieren.
+   */
+  let groups = [];
+
+
+  if (
+    typeof groupPartsByRebrickableCategory ===
+    "function"
+  ) {
+
+    groups =
+      groupPartsByRebrickableCategory(
+        list
+      );
+
+  } else {
+
+    /*
+     * Fallback, falls categories.js
+     * noch nicht geladen wurde.
+     */
+
+    const map =
+      new Map();
+
+
+    list.forEach(
+      part => {
+
+        const key =
+          part.category_id ??
+          null;
+
+
+        if (
+          !map.has(
+            key
+          )
+        ) {
+
+          map.set(
+            key,
+            {
+
+              id:
+                key,
+
+              name:
+                "Sonstige",
+
+              parts:
+                []
+
+            }
+          );
+
+        }
+
+
+        map
+          .get(
+            key
+          )
+          .parts
+          .push(
+            part
+          );
+
+      }
+    );
+
+
+    groups =
+      Array.from(
+        map.values()
+      );
+
+  }
+
+
+  container.innerHTML =
+
+    groups
+
+      .map(
+        group => {
+
+          const categoryName =
+            escapeHTML(
+              group.name ||
+              "Sonstige"
+            );
+
+
+          /*
+           * Rebrickable-ID als
+           * eindeutige Kategorie-ID.
+           */
+          const categoryId =
+            group.id !== null &&
+            group.id !== undefined
+
+              ? String(
+                  group.id
+                )
+
+              : "other";
+
+
+          return `
+
+            <div
+              class="category-folder"
+              data-category-id="${escapeHTML(
+                categoryId
+              )}"
+            >
+
+              <button
+                class="category-header"
+                onclick="toggleCategory(this)"
+              >
+
+                <div class="category-left">
+
+                  <span class="category-icon">
+                    🧱
+                  </span>
+
+
+                  <span class="category-name">
+
+                    ${categoryName}
+
+                  </span>
+
+
+                  <span class="category-count">
+
+                    ${group.parts.length}
+
+                  </span>
+
+                </div>
+
+
+                <span class="category-arrow">
+
+                  ▶
+
+                </span>
+
+              </button>
+
+
+              <div class="category-content">
+
+                ${
+                  group.parts
+                    .map(
+                      part =>
+                        renderPart(
+                          part
+                        )
+                    )
+                    .join("")
+                }
+
+              </div>
+
+            </div>
+
+          `;
+
+        }
+      )
+
+      .join("");
 
 }
 
@@ -396,89 +481,311 @@ async function loadWeights() {
    TEIL RENDERN
 ========================================================= */
 
-function render(p) {
+function renderPart(
+  part
+) {
 
-  let n =
-    esc(p.part_number);
-
-  let name =
-    esc(p.name);
-
-  let color =
-    esc(
-      Number(p.color_id) === 9999
-        ? "Not Applicable"
-        : p.color_name || ""
+  const number =
+    escapeHTML(
+      part.part_number ||
+      ""
     );
 
-  let w =
-    +p.weight_grams;
 
-  let has =
-    w > 0;
-
-  let normal =
-    has
-      ? w * PRICE_PER_GRAM
-      : null;
-
-  let disc =
-    has
-      ? normal * (1 - DISCOUNT)
-      : null;
-
-  let available =
-    p.is_available !== false;
-
-  let ci =
-    cat(
-      p.category,
-      p.name
+  const name =
+    escapeHTML(
+      part.name ||
+      ""
     );
 
-  let img =
-    p.image_url
-      ? esc(p.image_url)
+
+  const color =
+    escapeHTML(
+      part.color_name ||
+      ""
+    );
+
+
+  /*
+   * =====================================================
+   * KATEGORIE
+   * =====================================================
+   */
+
+  let categoryName =
+    "Sonstige";
+
+
+  if (
+    typeof getCategoryName ===
+    "function"
+  ) {
+
+    categoryName =
+      getCategoryName(
+        part.category_id,
+        "Sonstige"
+      );
+
+  }
+
+
+  /*
+   * =====================================================
+   * GEWICHT
+   * =====================================================
+   */
+
+  const weight =
+    Number(
+      part.weight_grams
+    );
+
+
+  const hasWeight =
+    Number.isFinite(
+      weight
+    ) &&
+    weight > 0;
+
+
+  let normalPrice =
+    null;
+
+
+  let discountPrice =
+    null;
+
+
+  if (
+    hasWeight &&
+    typeof PRICE_PER_GRAM !==
+    "undefined"
+  ) {
+
+    normalPrice =
+      weight *
+      PRICE_PER_GRAM;
+
+
+    if (
+      typeof DISCOUNT !==
+      "undefined"
+    ) {
+
+      discountPrice =
+        normalPrice *
+        (
+          1 -
+          DISCOUNT
+        );
+
+    }
+
+  }
+
+
+  /*
+   * =====================================================
+   * VERFÜGBARKEIT
+   * =====================================================
+   */
+
+  const isAvailable =
+    part.is_available !== false;
+
+
+  const lastSeen =
+    part.last_seen_at ||
+    part.created_at ||
+    null;
+
+
+  const lastSeenFormatted =
+    typeof formatDate ===
+    "function"
+
+      ? formatDate(
+          lastSeen
+        )
+
       : "";
 
-  let last =
-    date(
-      p.last_seen_at ||
-      p.created_at
-    );
 
+  /*
+   * =====================================================
+   * BILD
+   * =====================================================
+   */
+
+  const imageUrl =
+    part.image_url ||
+    "";
+
+
+  const safeImageUrl =
+    imageUrl
+
+      ? escapeHTML(
+          imageUrl
+        )
+
+      : "";
+
+
+  /*
+   * =====================================================
+   * PREIS
+   * =====================================================
+   */
+
+  let priceHTML =
+    "";
+
+
+  if (
+    hasWeight &&
+    normalPrice !== null
+  ) {
+
+    priceHTML = `
+
+      <div class="part-price">
+
+        ${
+          discountPrice !== null
+
+            ? `
+
+              <span class="price-normal">
+
+                ${normalPrice.toFixed(2)} €
+
+              </span>
+
+              <span class="price-discount">
+
+                ${discountPrice.toFixed(2)} €
+
+              </span>
+
+            `
+
+            : `
+
+              <span>
+
+                ${normalPrice.toFixed(2)} €
+
+              </span>
+
+            `
+        }
+
+      </div>
+
+    `;
+
+  }
+
+
+  /*
+   * =====================================================
+   * ADMIN
+   * =====================================================
+   */
+
+  let adminHTML =
+    "";
+
+
+  if (
+    typeof adminAuthenticated !==
+    "undefined" &&
+    adminAuthenticated
+  ) {
+
+    adminHTML = `
+
+      <div class="part-admin-actions">
+
+        <button
+          class="admin-delete-button"
+          onclick="adminDeletePart(
+            '${escapeHTML(
+              String(
+                part.id
+              )
+            )}',
+            '${escapeHTML(
+              String(
+                part.part_number ||
+                ""
+              )
+            )}',
+            '${escapeHTML(
+              String(
+                part.name ||
+                ""
+              )
+            )}'
+          )"
+        >
+
+          🗑️ Löschen
+
+        </button>
+
+      </div>
+
+    `;
+
+  }
+
+
+  /*
+   * =====================================================
+   * HTML
+   * =====================================================
+   */
 
   return `
-    <div class="part-card ${available ? "" : "unavailable"}">
+
+    <div
+      class="part-card ${
+        isAvailable
+          ? ""
+          : "unavailable"
+      }"
+    >
 
       <div class="part-main">
+
 
         <div class="part-image-wrapper">
 
           ${
-            img
+            safeImageUrl
+
               ? `
+
                 <img
                   class="part-image"
-                  src="${img}"
-                  alt="LEGO ${n}"
+                  src="${safeImageUrl}"
+                  alt="LEGO ${number}"
                   loading="lazy"
-                  onerror="this.style.display='none';this.nextElementSibling.style.display='block'"
                 >
 
-                <div
-                  class="part-image-fallback"
-                  style="display:none"
-                >
-                  🧱<br>
-                  Kein Bild verfügbar
-                </div>
               `
+
               : `
-                <div class="part-image-fallback">
-                  🧱<br>
-                  Kein Bild verfügbar
+
+                <div class="part-image-placeholder">
+
+                  🧱
+
                 </div>
+
               `
           }
 
@@ -487,327 +794,295 @@ function render(p) {
 
         <div class="part-info">
 
-          <div class="part-header">
 
-            <div>
+          <div class="part-number">
 
-              <div class="part-number">
-                LEGO ${n}
-              </div>
+            LEGO ${number}
 
-              <div class="part-name">
-                ${name} · ${esc(ci.name)}
-              </div>
-
-            </div>
+          </div>
 
 
-            <div
-              class="${available ? "available" : "not-available"}"
-            >
-              ● ${available ? "Verfügbar" : "Nicht verfügbar"}
-            </div>
+          <div class="part-name">
+
+            ${name}
 
           </div>
 
 
           ${
             color
+
               ? `
+
                 <div class="part-color">
-                  🎨 ${color}
+
+                  ${color}
+
                 </div>
+
               `
+
               : ""
+
           }
 
 
-          <div class="price-box">
+          <div class="part-category">
 
-            <div class="price-title">
-              Preis pro Stein
-            </div>
-
-
-            ${
-              has
-                ? `
-                  <div class="price-per-piece">
-
-                    ${euro(disc)}
-
-                    <span
-                      style="
-                        font-size:12px;
-                        color:#777
-                      "
-                    >
-                      mit 20 % Rabatt
-                    </span>
-
-                  </div>
-
-
-                  <div class="price-row">
-
-                    <div>
-                      Normal:
-                      <strong>
-                        ${euro(normal)}
-                      </strong>
-                    </div>
-
-
-                    <div class="price-discount">
-                      −20 %:
-                      <strong>
-                        ${euro(disc)}
-                      </strong>
-                    </div>
-
-                  </div>
-
-
-                  <div class="weight">
-
-                    ⚖️
-                    ${w.toLocaleString(
-                      "de-DE",
-                      {
-                        maximumFractionDigits: 3
-                      }
-                    )}
-                    g · 11 €/100 g
-
-                  </div>
-                `
-                : `
-                  <div style="color:#999">
-                    ⚖️ Gewicht noch nicht hinterlegt
-                  </div>
-                `
-            }
+            ${escapeHTML(
+              categoryName
+            )}
 
           </div>
 
+
+          ${
+            hasWeight
+
+              ? `
+
+                <div class="part-weight">
+
+                  ${weight.toFixed(2)} g
+
+                </div>
+
+              `
+
+              : ""
+
+          }
+
+
+          ${
+            lastSeenFormatted
+
+              ? `
+
+                <div class="part-last-seen">
+
+                  Zuletzt gesehen:
+                  ${escapeHTML(
+                    lastSeenFormatted
+                  )}
+
+                </div>
+
+              `
+
+              : ""
+
+          }
+
+
+          ${priceHTML}
+
+
         </div>
+
 
       </div>
 
 
-      <div class="details">
-
-        📍 LEGO Fabrik Günzburg
+      <div class="part-status">
 
         ${
-          last
+          isAvailable
+
             ? `
-              <br>
-              🕐 Zuletzt als vorhanden gemeldet:
-              ${esc(last)}
+
+              <span class="status-available">
+
+                🟢 Verfügbar
+
+              </span>
+
             `
-            : ""
+
+            : `
+
+              <span class="status-unavailable">
+
+                🔴 Nicht verfügbar
+
+              </span>
+
+            `
         }
 
-        <br>
-
-        📂 ${esc(ci.name)}
-
-
-        <div
-          class="
-            status-line
-            ${available
-              ? "available-status"
-              : "unavailable-status"}
-          "
-        >
-          ${
-            available
-              ? "✓ Dieses Teil wurde zuletzt als verfügbar gemeldet."
-              : "⚠️ Dieses Teil wurde zuletzt als nicht verfügbar gemeldet."
-          }
-        </div>
-
       </div>
+
+
+      ${adminHTML}
 
 
       ${
-        available
+        isAvailable
+
           ? `
-            <button
-              class="secondary confirm"
-              onclick="confirmPart(
-                '${esc(p.part_number)}',
-                '${esc(p.id)}'
-              )"
-            >
-              👍 Ich habe dieses Teil gesehen
-            </button>
 
             <button
-              class="danger unavailable-button"
+              class="report-button"
               onclick="reportUnavailable(
-                '${esc(p.id)}'
+                '${escapeHTML(
+                  String(
+                    part.id
+                  )
+                )}'
               )"
             >
-              ❌ Teil ist nicht mehr da
+
+              Nicht mehr da
+
             </button>
+
           `
+
           : `
+
             <button
-              class="success confirm"
+              class="confirm-button"
               onclick="confirmPart(
-                '${esc(p.part_number)}',
-                '${esc(p.id)}'
+                '${escapeHTML(
+                  String(
+                    part.part_number ||
+                    ""
+                  )
+                )}',
+                '${escapeHTML(
+                  String(
+                    part.id
+                  )
+                )}'
               )"
             >
-              👍 Ich habe dieses Teil gesehen
+
+              Wieder verfügbar
+
             </button>
+
           `
       }
 
-
-      <button
-        class="admin-delete"
-        onclick="adminDeletePart(
-          '${esc(p.id)}',
-          '${esc(p.part_number)}',
-          '${esc(p.name)}'
-        )"
-      >
-        🔒 Admin
-      </button>
-
     </div>
+
   `;
+
 }
 
 
 /* =========================================================
-   TEILE ANZEIGEN
+   KATEGORIE ÖFFNEN / SCHLIESSEN
 ========================================================= */
 
-function displayParts(list) {
+function toggleCategory(
+  button
+) {
 
-  let box =
+  if (
+    !button
+  ) {
+
+    return;
+
+  }
+
+
+  const folder =
+    button.closest(
+      ".category-folder"
+    );
+
+
+  if (
+    !folder
+  ) {
+
+    return;
+
+  }
+
+
+  folder.classList.toggle(
+    "open"
+  );
+
+}
+
+
+/* =========================================================
+   FEHLERANZEIGE
+========================================================= */
+
+function showError(
+  title,
+  message
+) {
+
+  const container =
     document.getElementById(
       "results"
     );
 
 
-  if (!list.length) {
-
-    box.innerHTML =
-      '<div class="card empty">Keine passenden Teile gefunden.</div>';
+  if (
+    !container
+  ) {
 
     return;
+
   }
 
 
-  let groups = {};
+  container.innerHTML = `
+
+    <div class="card error">
+
+      <div class="error-title">
+
+        ${escapeHTML(
+          title
+        )}
+
+      </div>
 
 
-  list.forEach(
-    p => {
+      <div>
 
-      let c =
-        cat(
-          p.category,
-          p.name
-        );
+        ${escapeHTML(
+          message
+        )}
+
+      </div>
+
+    </div>
+
+  `;
+
+}
 
 
-      (
-        groups[c.key] ??=
-        {
-          info: c,
-          parts: []
-        }
-      )
-        .parts
-        .push(p);
+/* =========================================================
+   START
+========================================================= */
+
+window.addEventListener(
+  "load",
+  function() {
+
+    /*
+     * Nur starten, wenn loadParts
+     * nicht bereits von einer anderen
+     * Startlogik aufgerufen wird.
+     */
+    if (
+      typeof loadParts ===
+      "function"
+    ) {
+
+      loadParts();
 
     }
-  );
 
-
-  let order =
-    [
-      "bricks",
-      "plates",
-      "tiles",
-      "slopes",
-      "technic",
-      "minifigs",
-      "wheels",
-      "other"
-    ];
-
-
-  box.innerHTML =
-    Object.keys(groups)
-      .sort(
-        (a, b) =>
-          order.indexOf(a) -
-          order.indexOf(b)
-      )
-      .map(
-        (k, i) => {
-
-          let g =
-            groups[k];
-
-
-          return `
-            <div
-              class="category-folder ${i ? "" : "open"}"
-            >
-
-              <button
-                class="category-header"
-                onclick="
-                  this.parentElement
-                    .classList
-                    .toggle('open')
-                "
-              >
-
-                <div class="category-left">
-
-                  <span class="category-icon">
-                    ${g.info.icon}
-                  </span>
-
-                  <span class="category-name">
-                    ${g.info.name}
-                  </span>
-
-                  <span class="category-count">
-                    ${g.parts.length}
-                  </span>
-
-                </div>
-
-
-                <span class="category-arrow">
-                  ▶
-                </span>
-
-              </button>
-
-
-              <div class="category-content">
-
-                ${g.parts
-                  .map(render)
-                  .join("")}
-
-              </div>
-
-            </div>
-          `;
-        }
-      )
-      .join("");
-}
+  }
+);
