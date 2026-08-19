@@ -2,6 +2,287 @@
    REPORT / MELDEFORMULAR
 ========================================================= */
 
+function relevance(
+  part,
+  query
+) {
+
+  const q =
+    norm(query);
+
+
+  const name =
+    String(
+      part.name || ""
+    )
+      .toLowerCase();
+
+
+  const number =
+    String(
+      part.part_num || ""
+    )
+      .toLowerCase();
+
+
+  const category =
+    String(
+      part.category || ""
+    )
+      .toLowerCase();
+
+
+  let score =
+    1000;
+
+
+  if (
+    number === q
+  ) {
+
+    score -=
+      2000;
+
+  }
+
+
+  const words =
+    q
+      .split(/\s+/)
+      .filter(Boolean);
+
+
+  let matches =
+    0;
+
+
+  words.forEach(
+    word => {
+
+      if (
+        name.includes(
+          word
+        )
+      ) {
+
+        matches++;
+
+      }
+
+    }
+  );
+
+
+  score -=
+    matches * 80;
+
+
+  if (
+    name.includes("brick") ||
+    category.includes("brick")
+  ) {
+
+    score -= 150;
+
+  }
+
+
+  if (
+    name.includes("plate") ||
+    category.includes("plate")
+  ) {
+
+    score -= 150;
+
+  }
+
+
+  if (
+    name.includes("tile") ||
+    category.includes("tile")
+  ) {
+
+    score -= 150;
+
+  }
+
+
+  const cleanName =
+    name
+      .replace(
+        /\s+/g,
+        " "
+      )
+      .trim();
+
+
+  const normalizedQuery =
+    norm(q)
+      .replace(
+        /\s+/g,
+        " "
+      )
+      .trim();
+
+
+  if (
+    cleanName ===
+    normalizedQuery
+  ) {
+
+    score -=
+      1000;
+
+  }
+
+
+  const d =
+    dims(q);
+
+
+  if (
+    d
+  ) {
+
+    const pd =
+      dims(name);
+
+
+    if (
+      pd &&
+      pd.a === d.a &&
+      pd.b === d.b
+    ) {
+
+      score -=
+        500;
+
+    }
+
+  }
+
+
+  if (
+    /^brick\s+\d+\s*x\s*\d+$/i.test(
+      cleanName
+    )
+  ) {
+
+    score -=
+      600;
+
+  }
+
+
+  if (
+    /^plate\s+\d+\s*x\s*\d+$/i.test(
+      cleanName
+    )
+  ) {
+
+    score -=
+      600;
+
+  }
+
+
+  if (
+    /^tile\s+\d+\s*x\s*\d+/i.test(
+      cleanName
+    )
+  ) {
+
+    score -=
+      600;
+
+  }
+
+
+  if (
+    name.includes("modified")
+  ) {
+
+    score += 500;
+
+  }
+
+
+  if (
+    name.includes("special")
+  ) {
+
+    score += 500;
+
+  }
+
+
+  if (
+    name.includes("assembly")
+  ) {
+
+    score += 500;
+
+  }
+
+
+  if (
+    name.includes("with ")
+  ) {
+
+    score += 450;
+
+  }
+
+
+  if (
+    name.includes("printed") ||
+    name.includes("print") ||
+    name.includes("pattern") ||
+    name.includes("decorated") ||
+    name.includes("decoration")
+  ) {
+
+    score += 700;
+
+  }
+
+
+  if (
+    name.includes("legoland") ||
+    name.includes("resort") ||
+    name.includes("fabrik")
+  ) {
+
+    score += 900;
+
+  }
+
+
+  if (
+    name.includes("duplo") ||
+    category.includes("duplo")
+  ) {
+
+    score += 1500;
+
+  }
+
+
+  if (
+    name.includes("education") ||
+    category.includes("education")
+  ) {
+
+    score += 1200;
+
+  }
+
+
+  return score;
+
+}
+
+
 function openReportForm() {
 
   let a =
@@ -308,286 +589,7 @@ async function fetchSuggestions(q) {
     /*
       Relevanzsortierung
     */
-     function relevance(
-  part,
-  query
-) {
 
-  const q =
-    norm(query);
-
-
-  const name =
-    String(
-      part.name || ""
-    )
-      .toLowerCase();
-
-
-  const number =
-    String(
-      part.part_num || ""
-    )
-      .toLowerCase();
-
-
-  const category =
-    String(
-      part.category || ""
-    )
-      .toLowerCase();
-
-
-  let score =
-    1000;
-
-
-  if (
-    number === q
-  ) {
-
-    score -=
-      2000;
-
-  }
-
-
-  const words =
-    q
-      .split(/\s+/)
-      .filter(Boolean);
-
-
-  let matches =
-    0;
-
-
-  words.forEach(
-    word => {
-
-      if (
-        name.includes(
-          word
-        )
-      ) {
-
-        matches++;
-
-      }
-
-    }
-  );
-
-
-  score -=
-    matches * 80;
-
-
-  if (
-    name.includes("brick") ||
-    category.includes("brick")
-  ) {
-
-    score -= 150;
-
-  }
-
-
-  if (
-    name.includes("plate") ||
-    category.includes("plate")
-  ) {
-
-    score -= 150;
-
-  }
-
-
-  if (
-    name.includes("tile") ||
-    category.includes("tile")
-  ) {
-
-    score -= 150;
-
-  }
-
-
-  const cleanName =
-    name
-      .replace(
-        /\s+/g,
-        " "
-      )
-      .trim();
-
-
-  const normalizedQuery =
-    norm(q)
-      .replace(
-        /\s+/g,
-        " "
-      )
-      .trim();
-
-
-  if (
-    cleanName ===
-    normalizedQuery
-  ) {
-
-    score -=
-      1000;
-
-  }
-
-
-  const d =
-    dims(q);
-
-
-  if (
-    d
-  ) {
-
-    const pd =
-      dims(name);
-
-
-    if (
-      pd &&
-      pd.a === d.a &&
-      pd.b === d.b
-    ) {
-
-      score -=
-        500;
-
-    }
-
-  }
-
-
-  if (
-    /^brick\s+\d+\s*x\s*\d+$/i.test(
-      cleanName
-    )
-  ) {
-
-    score -=
-      600;
-
-  }
-
-
-  if (
-    /^plate\s+\d+\s*x\s*\d+$/i.test(
-      cleanName
-    )
-  ) {
-
-    score -=
-      600;
-
-  }
-
-
-  if (
-    /^tile\s+\d+\s*x\s*\d+/i.test(
-      cleanName
-    )
-  ) {
-
-    score -=
-      600;
-
-  }
-
-
-  if (
-    name.includes("modified")
-  ) {
-
-    score += 500;
-
-  }
-
-
-  if (
-    name.includes("special")
-  ) {
-
-    score += 500;
-
-  }
-
-
-  if (
-    name.includes("assembly")
-  ) {
-
-    score += 500;
-
-  }
-
-
-  if (
-    name.includes("with ")
-  ) {
-
-    score += 450;
-
-  }
-
-
-  if (
-    name.includes("printed") ||
-    name.includes("print") ||
-    name.includes("pattern") ||
-    name.includes("decorated") ||
-    name.includes("decoration")
-  ) {
-
-    score += 700;
-
-  }
-
-
-  if (
-    name.includes("legoland") ||
-    name.includes("resort") ||
-    name.includes("fabrik")
-  ) {
-
-    score += 900;
-
-  }
-
-
-  if (
-    name.includes("duplo") ||
-    category.includes("duplo")
-  ) {
-
-    score += 1500;
-
-  }
-
-
-  if (
-    name.includes("education") ||
-    category.includes("education")
-  ) {
-
-    score += 1200;
-
-  }
-
-
-  return score;
-
-}
-      
     results.sort(
       (a, b) =>
         relevance(
@@ -1019,7 +1021,7 @@ async function submitReport() {
       null;
 
 
-    await loadParts();
+    await window.loadParts();
 
 
   } catch (e) {
