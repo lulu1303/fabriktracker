@@ -131,7 +131,6 @@ function cat(c, n) {
 ========================================================= */
 
 function norm(s) {
-
   return String(s || "")
     .toLowerCase()
     .replace(
@@ -143,7 +142,6 @@ function norm(s) {
       " "
     )
     .trim();
-
 }
 
 
@@ -154,14 +152,12 @@ function dims(s) {
       /(?:^|\s)(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)(?:\s|$)/
     );
 
-
   return m
     ? {
         a: +m[1].replace(",", "."),
         b: +m[2].replace(",", ".")
       }
     : null;
-
 }
 
 
@@ -173,10 +169,13 @@ function exactDims(p, q) {
   let b =
     dims(p.name);
 
-
   return !!a &&
          !!b &&
          a.a === b.a &&
          a.b === b.b;
+}
 
+
+function dimensionQuery(q) {
+  return !!dims(q);
 }
