@@ -57,3 +57,9 @@ async function req(url, opt = {}) {
 
   return d;
 }
+
+/* =========================================================
+   KOMPATIBILITÄTS-ALIAS
+========================================================= */
+
+const supabaseRequest = req;
