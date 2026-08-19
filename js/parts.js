@@ -10,6 +10,306 @@
 
 let parts = [];
 
+/* =========================================================
+   BILDER LADEN
+========================================================= */
+
+async function loadImagesForParts() {
+
+  if (
+    !Array.isArray(parts) ||
+    parts.length === 0
+  ) {
+    return;
+  }
+
+
+  const combinations = [
+    ...new Map(
+      parts
+        .filter(
+          part =>
+            part.part_number &&
+            part.color_id !== null &&
+            part.color_id !== undefined
+        )
+        .map(
+          part => {
+
+            const key =
+              String(part.part_number) +
+              "_" +
+              String(part.color_id);
+
+
+            return [
+              key,
+              {
+                part_num:
+                  String(part.part_number),
+
+                color_id:
+                  Number(part.color_id)
+              }
+            ];
+
+          }
+        )
+    ).values()
+  ];
+
+
+  if (
+    combinations.length === 0
+  ) {
+    return;
+  }
+
+
+  const imageMap = {};
+
+  const batchSize = 100;
+
+
+  try {
+
+    const partNumbers = [
+      ...new Set(
+        combinations.map(
+          item =>
+            item.part_num
+        )
+      )
+    ];
+
+
+    for (
+      let i = 0;
+      i < partNumbers.length;
+      i += batchSize
+    ) {
+
+      const batch =
+        partNumbers.slice(
+          i,
+          i + batchSize
+        );
+
+
+      const encodedNumbers =
+        batch
+          .map(
+            number =>
+              `"${String(number)
+                .replace(
+                  /"/g,
+                  '\\"'
+                )}"`
+          )
+          .join(",");
+
+
+      const url =
+        SUPABASE_URL +
+        "/rest/v1/lego_part_colors" +
+        "?part_num=in.(" +
+        encodedNumbers +
+        ")" +
+        "&select=part_num,color_id,image_url";
+
+
+      const rows =
+        await req(url);
+
+
+      (rows || []).forEach(
+        row => {
+
+          const key =
+            String(
+              row.part_num
+            ) +
+            "_" +
+            String(
+              row.color_id
+            );
+
+
+          imageMap[key] =
+            row.image_url ||
+            null;
+
+        }
+      );
+
+    }
+
+
+    parts.forEach(
+      part => {
+
+        const key =
+          String(
+            part.part_number || ""
+          ) +
+          "_" +
+          String(
+            part.color_id ?? ""
+          );
+
+
+        part.image_url =
+          imageMap[key] ||
+          null;
+
+      }
+    );
+
+
+  } catch (
+    error
+  ) {
+
+    console.warn(
+      "Farbabhängige LEGO-Bilder konnten nicht geladen werden:",
+      error
+    );
+
+
+    parts.forEach(
+      part => {
+
+        part.image_url =
+          null;
+
+      }
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   GEWICHTE LADEN
+========================================================= */
+
+async function loadWeightsForParts() {
+
+  if (
+    !Array.isArray(parts) ||
+    parts.length === 0
+  ) {
+    return;
+  }
+
+
+  const numbers = [
+    ...new Set(
+      parts
+        .map(
+          part =>
+            String(
+              part.part_number || ""
+            )
+        )
+        .filter(Boolean)
+    )
+  ];
+
+
+  if (
+    numbers.length === 0
+  ) {
+    return;
+  }
+
+
+  try {
+
+    const encodedNumbers =
+      numbers
+        .map(
+          number =>
+            `"${number.replace(
+              /"/g,
+              '\\"'
+            )}"`
+        )
+        .join(",");
+
+
+    const url =
+      WEIGHTS_URL +
+      "?part_num=in.(" +
+      encodedNumbers +
+      ")" +
+      "&select=part_num,weight_grams";
+
+
+    const weights =
+      await req(url);
+
+
+    const weightMap = {};
+
+
+    (weights || []).forEach(
+      row => {
+
+        weightMap[
+          String(
+            row.part_num
+          )
+        ] =
+          Number(
+            row.weight_grams
+          );
+
+      }
+    );
+
+
+    parts.forEach(
+      part => {
+
+        const number =
+          String(
+            part.part_number || ""
+          );
+
+
+        part.weight_grams =
+          weightMap[number] !== undefined
+            ? weightMap[number]
+            : null;
+
+      }
+    );
+
+
+  } catch (
+    error
+  ) {
+
+    console.warn(
+      "Gewichte konnten nicht geladen werden:",
+      error
+    );
+
+
+    parts.forEach(
+      part => {
+
+        part.weight_grams =
+          null;
+
+      }
+    );
+
+  }
+
+}
 
 /* =========================================================
    TEILE LADEN
