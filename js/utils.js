@@ -1,137 +1,392 @@
 /* =========================================================
    UTILS
+   FabrikTracker
 ========================================================= */
 
-function esc(v) {
-  return String(v ?? "")
+
+/* =========================================================
+   HTML ESCAPEN
+========================================================= */
+
+/*
+ * Hauptfunktion für HTML-Ausgabe.
+ *
+ * Dein aktuelles parts.js verwendet:
+ *     escapeHTML(...)
+ *
+ * Die alte Version verwendete:
+ *     esc(...)
+ *
+ * Deshalb unterstützen wir beide Namen.
+ */
+
+function escapeHTML(value) {
+
+  return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+
 }
 
 
-function euro(v) {
-  return v == null || isNaN(v)
-    ? "–"
-    : Number(v).toLocaleString(
-        "de-DE",
-        {
-          style: "currency",
-          currency: "EUR",
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        }
-      );
+/* Rückwärtskompatibilität */
+function esc(value) {
+
+  return escapeHTML(value);
+
 }
 
 
-function date(v) {
-  try {
-    return v
-      ? new Date(v).toLocaleString("de-DE")
-      : "";
-  } catch {
-    return "";
+/* =========================================================
+   EURO / PREIS
+========================================================= */
+
+function euro(value) {
+
+  if (
+    value == null ||
+    isNaN(value)
+  ) {
+
+    return "–";
+
   }
+
+
+  return Number(value).toLocaleString(
+    "de-DE",
+    {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  );
+
 }
 
 
-function cat(c, n) {
+/* =========================================================
+   DATUM
+========================================================= */
 
-  let x =
-    (c + " " + n).toLowerCase();
+/*
+ * Dein aktuelles parts.js verwendet:
+ *     formatDate(...)
+ *
+ * Die alte Version verwendete:
+ *     date(...)
+ *
+ * Beide Namen bleiben deshalb verfügbar.
+ */
 
-  let ct =
-    String(c || "").toLowerCase();
+function formatDate(value) {
+
+  try {
+
+    return value
+      ? new Date(value).toLocaleString("de-DE")
+      : "";
+
+  } catch {
+
+    return "";
+
+  }
+
+}
 
 
-  if (ct === "11")
+/* Rückwärtskompatibilität */
+function date(value) {
+
+  return formatDate(value);
+
+}
+
+
+/* =========================================================
+   KATEGORIE
+========================================================= */
+
+/*
+ * Einfache Kategorie-Erkennung.
+ *
+ * Wird weiterhin für ältere Teile der Anwendung
+ * bereitgestellt.
+ */
+
+function cat(category, name) {
+
+  const text =
+    (
+      String(category || "") +
+      " " +
+      String(name || "")
+    ).toLowerCase();
+
+
+  const categoryText =
+    String(category || "")
+      .toLowerCase();
+
+
+  if (
+    categoryText === "11"
+  ) {
+
     return {
+
       key: "bricks",
+
       name: "Bricks",
+
       icon: "🧱"
+
     };
 
+  }
 
-  if (x.includes("plate"))
+
+  if (
+    text.includes("plate")
+  ) {
+
     return {
+
       key: "plates",
+
       name: "Plates",
+
       icon: "▰"
+
     };
 
+  }
 
-  if (x.includes("tile"))
+
+  if (
+    text.includes("tile")
+  ) {
+
     return {
+
       key: "tiles",
+
       name: "Tiles",
+
       icon: "▫️"
+
     };
 
+  }
 
-  if (x.includes("brick"))
+
+  if (
+    text.includes("brick")
+  ) {
+
     return {
+
       key: "bricks",
+
       name: "Bricks",
+
       icon: "🧱"
+
     };
+
+  }
 
 
   if (
-    x.includes("slope") ||
-    x.includes("wedge")
-  )
+    text.includes("slope") ||
+    text.includes("wedge")
+  ) {
+
     return {
+
       key: "slopes",
+
       name: "Slopes",
+
       icon: "🔺"
+
     };
 
-
-  if (x.includes("technic"))
-    return {
-      key: "technic",
-      name: "Technic",
-      icon: "⚙️"
-    };
-
-
-  if (x.includes("minifig"))
-    return {
-      key: "minifigs",
-      name: "Minifiguren",
-      icon: "👤"
-    };
+  }
 
 
   if (
-    x.includes("wheel") ||
-    x.includes("tire")
-  )
+    text.includes("technic")
+  ) {
+
     return {
-      key: "wheels",
-      name: "Räder & Reifen",
-      icon: "⚫"
+
+      key: "technic",
+
+      name: "Technic",
+
+      icon: "⚙️"
+
     };
+
+  }
+
+
+  if (
+    text.includes("minifig")
+  ) {
+
+    return {
+
+      key: "minifigs",
+
+      name: "Minifiguren",
+
+      icon: "👤"
+
+    };
+
+  }
+
+
+  if (
+    text.includes("wheel") ||
+    text.includes("tire")
+  ) {
+
+    return {
+
+      key: "wheels",
+
+      name: "Räder & Reifen",
+
+      icon: "⚫"
+
+    };
+
+  }
 
 
   return {
+
     key: "other",
+
     name: "Sonstige",
+
     icon: "🧩"
+
   };
 
 }
 
 
 /* =========================================================
-   EXAKTE MASSSUCHE
+   KATEGORIENAME
 ========================================================= */
 
-function norm(s) {
-  return String(s || "")
+/*
+ * Wird von parts.js verwendet:
+ *
+ *     getCategoryName(
+ *       part.category_id,
+ *       "Sonstige"
+ *     )
+ *
+ * Falls categories.js bereits eine bessere
+ * Implementierung bereitstellt, wird diese
+ * Funktion dort später überschrieben.
+ */
+
+function getCategoryName(
+  categoryId,
+  fallback = "Sonstige"
+) {
+
+  /*
+   * Falls eine globale Kategorie-Liste vorhanden ist,
+   * versuchen wir daraus den Namen zu holen.
+   */
+
+  try {
+
+    if (
+      typeof categories !== "undefined" &&
+      Array.isArray(categories)
+    ) {
+
+      const found =
+        categories.find(
+          category =>
+            String(category.id) ===
+            String(categoryId)
+        );
+
+
+      if (
+        found &&
+        found.name
+      ) {
+
+        return found.name;
+
+      }
+
+    }
+
+
+    if (
+      typeof rebrickableCategories !== "undefined" &&
+      Array.isArray(rebrickableCategories)
+    ) {
+
+      const found =
+        rebrickableCategories.find(
+          category =>
+            String(category.id) ===
+            String(categoryId)
+        );
+
+
+      if (
+        found &&
+        found.name
+      ) {
+
+        return found.name;
+
+      }
+
+    }
+
+  } catch (
+    error
+  ) {
+
+    console.warn(
+      "Kategorie konnte nicht ermittelt werden:",
+      error
+    );
+
+  }
+
+
+  return fallback;
+
+}
+
+
+/* =========================================================
+   NORMALISIEREN
+========================================================= */
+
+function norm(value) {
+
+  return String(value || "")
     .toLowerCase()
     .replace(
       /[×✕]/g,
@@ -142,40 +397,76 @@ function norm(s) {
       " "
     )
     .trim();
+
 }
 
 
-function dims(s) {
+/* =========================================================
+   ABMESSUNGEN ERKENNEN
+========================================================= */
 
-  let m =
-    norm(s).match(
+function dims(value) {
+
+  const match =
+    norm(value).match(
       /(?:^|\s)(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)(?:\s|$)/
     );
 
-  return m
+
+  return match
+
     ? {
-        a: +m[1].replace(",", "."),
-        b: +m[2].replace(",", ".")
+
+        a:
+          +match[1]
+            .replace(",", "."),
+
+        b:
+          +match[2]
+            .replace(",", ".")
+
       }
+
     : null;
+
 }
 
 
-function exactDims(p, q) {
+/* =========================================================
+   EXAKTE MASS-SUCHE
+========================================================= */
 
-  let a =
-    dims(q);
+function exactDims(
+  part,
+  query
+) {
 
-  let b =
-    dims(p.name);
+  const queryDimensions =
+    dims(query);
 
-  return !!a &&
-         !!b &&
-         a.a === b.a &&
-         a.b === b.b;
+
+  const partDimensions =
+    dims(part.name);
+
+
+  return !!queryDimensions &&
+         !!partDimensions &&
+         queryDimensions.a ===
+           partDimensions.a &&
+         queryDimensions.b ===
+           partDimensions.b;
+
 }
 
 
-function dimensionQuery(q) {
-  return !!dims(q);
+/* =========================================================
+   DIMENSIONS-QUERY
+========================================================= */
+
+function dimensionQuery(
+  query
+) {
+
+  return !!dims(query);
+
 }
