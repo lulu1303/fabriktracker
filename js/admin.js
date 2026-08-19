@@ -14,6 +14,15 @@ let adminAuthenticated =
 
 async function adminLogin() {
 
+  /*
+   * Bereits angemeldet?
+   * Dann nichts weiter tun.
+   *
+   * Wichtig:
+   * adminLogin() wird auch beim Löschen aufgerufen.
+   * Deshalb darf diese Funktion bei bestehender
+   * Anmeldung NICHT ausloggen.
+   */
   if (
     adminAuthenticated
   ) {
@@ -41,11 +50,13 @@ async function adminLogin() {
   /*
    * TEMPORÄRE ENTWICKLUNGS-LÖSUNG
    *
-   * Hier dein bisher verwendetes Admin-Passwort einsetzen.
+   * Das Passwort wird nicht gespeichert.
+   * Es bleibt nur der Login-Status in der
+   * aktuellen Browser-Session erhalten.
    */
   if (
     password !==
-    luludel13"
+    "luludel13"
   ) {
 
     alert(
@@ -57,6 +68,9 @@ async function adminLogin() {
   }
 
 
+  /*
+   * Admin erfolgreich angemeldet.
+   */
   adminAuthenticated =
     true;
 
@@ -70,6 +84,22 @@ async function adminLogin() {
   updateAdminUI();
 
 
+  /*
+   * Teile neu darstellen,
+   * damit die Admin-Buttons sichtbar werden.
+   */
+  if (
+    typeof displayParts === "function" &&
+    typeof parts !== "undefined"
+  ) {
+
+    displayParts(
+      parts
+    );
+
+  }
+
+
   return true;
 
 }
@@ -81,6 +111,10 @@ async function adminLogin() {
 
 async function toggleAdminLogin() {
 
+  /*
+   * Wenn bereits angemeldet:
+   * ausloggen.
+   */
   if (
     adminAuthenticated
   ) {
@@ -92,28 +126,11 @@ async function toggleAdminLogin() {
   }
 
 
-  const success =
-    await adminLogin();
-
-
-  if (
-    success
-  ) {
-
-    updateAdminUI();
-
-    if (
-      typeof displayParts === "function" &&
-      typeof parts !== "undefined"
-    ) {
-
-      displayParts(
-        parts
-      );
-
-    }
-
-  }
+  /*
+   * Noch nicht angemeldet:
+   * Passwort abfragen.
+   */
+  await adminLogin();
 
 }
 
@@ -136,6 +153,10 @@ function adminLogout() {
   updateAdminUI();
 
 
+  /*
+   * Teile neu darstellen,
+   * damit die Löschen-Buttons wieder verschwinden.
+   */
   if (
     typeof displayParts === "function" &&
     typeof parts !== "undefined"
@@ -156,9 +177,12 @@ function adminLogout() {
 
 function updateAdminUI() {
 
+  /*
+   * Neuer Button im Header.
+   */
   const button =
     document.getElementById(
-      "adminLoginButton"
+      "adminHeaderButton"
     );
 
 
@@ -176,8 +200,9 @@ function updateAdminUI() {
     button.innerHTML =
       "🟢 Admin aktiv · Abmelden";
 
+
     button.classList.add(
-      "admin-active"
+      "active"
     );
 
   } else {
@@ -185,8 +210,9 @@ function updateAdminUI() {
     button.innerHTML =
       "🔒 Admin";
 
+
     button.classList.remove(
-      "admin-active"
+      "active"
     );
 
   }
@@ -207,6 +233,9 @@ async function adminDeletePart(
   /*
    * Falls noch nicht angemeldet:
    * einmalig Passwort abfragen.
+   *
+   * Wenn bereits angemeldet:
+   * adminLogin() gibt sofort true zurück.
    */
   const authenticated =
     await adminLogin();
@@ -221,6 +250,9 @@ async function adminDeletePart(
   }
 
 
+  /*
+   * Sicherheitsabfrage vor dem Löschen.
+   */
   const confirmed =
     confirm(
 
@@ -229,7 +261,11 @@ async function adminDeletePart(
       "LEGO " +
       partNumber +
       "\n" +
-      partName
+      partName +
+
+      "\n\n" +
+
+      "Dieser Vorgang kann nicht rückgängig gemacht werden."
 
     );
 
@@ -245,6 +281,9 @@ async function adminDeletePart(
 
   try {
 
+    /*
+     * Teil aus Supabase löschen.
+     */
     await req(
 
       PARTS_URL +
@@ -270,6 +309,9 @@ async function adminDeletePart(
     );
 
 
+    /*
+     * Liste neu laden.
+     */
     await loadParts();
 
 
@@ -308,6 +350,10 @@ async function adminSetAvailability(
   available
 ) {
 
+  /*
+   * Falls noch nicht angemeldet:
+   * einmalig Passwort abfragen.
+   */
   const authenticated =
     await adminLogin();
 
@@ -323,6 +369,9 @@ async function adminSetAvailability(
 
   try {
 
+    /*
+     * Verfügbarkeit des Teils ändern.
+     */
     await req(
 
       PARTS_URL +
@@ -360,6 +409,9 @@ async function adminSetAvailability(
     );
 
 
+    /*
+     * Liste neu laden.
+     */
     await loadParts();
 
 
