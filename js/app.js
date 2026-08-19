@@ -24,7 +24,7 @@ async function initializeApp() {
 
   try {
 
-    await loadParts();
+    await window.loadParts();
 
   } catch (
     error
