@@ -1360,6 +1360,11 @@ function showError(
   `;
 
 }
+/* =========================================================
+   GLOBAL VERFÜGBAR MACHEN
+========================================================= */
+
+window.loadParts = loadParts;
 
 
 /* =========================================================
@@ -1370,17 +1375,12 @@ window.addEventListener(
   "load",
   function() {
 
-    /*
-     * Nur starten, wenn loadParts
-     * nicht bereits von einer anderen
-     * Startlogik aufgerufen wird.
-     */
     if (
-      typeof loadParts ===
+      typeof window.loadParts ===
       "function"
     ) {
 
-      loadParts();
+      window.loadParts();
 
     }
 
