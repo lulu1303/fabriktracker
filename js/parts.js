@@ -161,12 +161,13 @@ async function loadParts() {
     if (ids.length) {
 
       let colors =
-        await req(
-          SUPABASE_URL +
-          "/rest/v1/lego_colors?id=in." +
-          ids.join(",") +
-          "&select=id,name"
-        ) || [];
+           await req(
+             SUPABASE_URL +
+             "/rest/v1/lego_colors?id=in.(" +  
+             ids.join(",") +
+             ")" +
+             "&select=id,name"
+           ) || [];
 
 
       let map = {};
