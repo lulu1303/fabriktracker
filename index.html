@@ -3834,8 +3834,7 @@ if (dimension) {
      * nicht automatisch ganz oben stehen.
      * =====================================================
      */
-
-    function getPartPriority(part) {
+  function getPartPriority(part) {
 
   const number =
     String(
@@ -3845,8 +3844,7 @@ if (dimension) {
   const name =
     String(
       part.name || ""
-    ).toLowerCase()
-    .trim();
+    ).toLowerCase();
 
   const category =
     String(
@@ -3854,31 +3852,12 @@ if (dimension) {
     ).toLowerCase();
 
 
-  /*
-   * Suchtext normalisieren
-   */
-  const normalizedSearch =
-    normalizeDimensionQuery(
-      search
-    )
-    .toLowerCase()
-    .trim();
-
-
-  const normalizedName =
-    normalizeDimensionQuery(
-      name
-    )
-    .toLowerCase()
-    .trim();
-
-
   let priority = 1000;
 
 
   /*
    * =====================================================
-   * 1. EXAKTE TEILENUMMER
+   * EXAKTE TEILENUMMER
    * =====================================================
    */
 
@@ -3886,122 +3865,138 @@ if (dimension) {
     number === search
   ) {
 
-    priority -= 10000;
+    priority -= 2000;
 
   }
 
 
   /*
    * =====================================================
-   * 2. EXAKTER NAME
+   * SUCHBEGRIFF ALS GANZES WORT
    *
-   * Beispiel:
-   *
-   * Suche:
-   * Brick 2 x 4
-   *
-   * Treffer:
-   * Brick 2 x 4
-   *
-   * -> ganz nach oben
-   *
-   * Brick 2 x 4 x 3
-   *
-   * -> darunter
+   * Dadurch werden normale Teile bevorzugt.
    * =====================================================
    */
+
+  const searchWords =
+    search
+      .split(/\s+/)
+      .filter(Boolean);
+
+
+  let wordMatches = 0;
+
+
+  searchWords.forEach(
+    word => {
+
+      if (
+        name.includes(word)
+      ) {
+
+        wordMatches++;
+
+      }
+
+    }
+  );
+
+
+  priority -=
+    wordMatches * 80;
+
+
+  /*
+   * =====================================================
+   * KATEGORIE
+   * =====================================================
+   */
+
+  if (
+    category.includes("brick")
+  ) {
+
+    priority -= 150;
+
+  }
+
+  if (
+    category.includes("plate")
+  ) {
+
+    priority -= 150;
+
+  }
+
+  if (
+    category.includes("tile")
+  ) {
+
+    priority -= 150;
+
+  }
+
+
+  /*
+   * =====================================================
+   * STANDARD-TEIL BEVORZUGEN
+   *
+   * "Brick 2 x 4"
+   * ist besser als
+   * "Brick 2 x 4 without..."
+   * oder
+   * "Brick 2 x 4 with LEGOland..."
+   * =====================================================
+   */
+
+  const cleanName =
+    name
+      .replace(
+        /\s+/g,
+        " "
+      )
+      .trim();
+
+
+  /*
+   * Exakter Namens-Treffer
+   */
+
+  const normalizedSearch =
+    normalizeDimensionQuery(
+      search
+    )
+      .replace(
+        /\s+/g,
+        " "
+      )
+      .trim();
+
+
+  const normalizedName =
+    normalizeDimensionQuery(
+      cleanName
+    )
+      .replace(
+        /\s+/g,
+        " "
+      )
+      .trim();
+
 
   if (
     normalizedName ===
     normalizedSearch
   ) {
 
-    priority -= 9000;
+    priority -= 1000;
 
   }
 
 
   /*
    * =====================================================
-   * 3. NAME BEGINNT MIT DER SUCHE
-   * =====================================================
-   */
-
-  else if (
-    normalizedName.startsWith(
-      normalizedSearch
-    )
-  ) {
-
-    priority -= 3000;
-
-  }
-
-
-  /*
-   * =====================================================
-   * 4. NAME ENTHÄLT DIE SUCHE
-   * =====================================================
-   */
-
-  else if (
-    normalizedName.includes(
-      normalizedSearch
-    )
-  ) {
-
-    priority -= 1500;
-
-  }
-
-
-  /*
-   * =====================================================
-   * 5. NORMALE KATEGORIE-PRIORITÄT
-   * =====================================================
-   */
-
-  if (
-    name.includes("brick")
-  ) {
-
-    priority -= 250;
-
-  }
-
-
-  if (
-    name.includes("plate")
-  ) {
-
-    priority -= 220;
-
-  }
-
-
-  if (
-    name.includes("tile")
-  ) {
-
-    priority -= 200;
-
-  }
-
-
-  if (
-    category.includes("brick") ||
-    category.includes("plate") ||
-    category.includes("tile")
-  ) {
-
-    priority -= 100;
-
-  }
-
-
-  /*
-   * =====================================================
-   * 6. DIMENSION
+   * DIMENSIONEN
    * =====================================================
    */
 
@@ -4022,7 +4017,7 @@ if (dimension) {
       dimension
     ) {
 
-      priority -= 1000;
+      priority -= 500;
 
     }
 
@@ -4031,29 +4026,93 @@ if (dimension) {
 
   /*
    * =====================================================
-   * 7. UNERWÜNSCHTE TREFFER NACH UNTEN
+   * STANDARD-BRICK / PLATE / TILE
+   *
+   * Wenn das Teil einfach nur "Brick 2 x 4"
+   * heißt, bekommt es einen starken Bonus.
    * =====================================================
    */
 
   if (
-    name.includes("duplo") ||
-    category.includes("duplo")
+    /^brick\s+\d+\s*x\s*\d+$/i.test(
+      cleanName
+    )
   ) {
 
-    priority += 1000;
+    priority -= 600;
 
   }
 
 
   if (
-    name.includes("education") ||
-    category.includes("education")
+    /^plate\s+\d+\s*x\s*\d+$/i.test(
+      cleanName
+    )
   ) {
 
-    priority += 700;
+    priority -= 600;
 
   }
 
+
+  if (
+    /^tile\s+\d+\s*x\s*\d+/i.test(
+      cleanName
+    )
+  ) {
+
+    priority -= 600;
+
+  }
+
+
+  /*
+   * =====================================================
+   * SONDERTEILE NACH HINTEN
+   * =====================================================
+   */
+
+  if (
+    name.includes("modified")
+  ) {
+
+    priority += 500;
+
+  }
+
+
+  if (
+    name.includes("special")
+  ) {
+
+    priority += 500;
+
+  }
+
+
+  if (
+    name.includes("assembly")
+  ) {
+
+    priority += 500;
+
+  }
+
+
+  if (
+    name.includes("with ")
+  ) {
+
+    priority += 450;
+
+  }
+
+
+  /*
+   * =====================================================
+   * PRINT / DEKORATION
+   * =====================================================
+   */
 
   if (
     name.includes("printed") ||
@@ -4063,19 +4122,50 @@ if (dimension) {
     name.includes("decoration")
   ) {
 
-    priority += 500;
+    priority += 700;
+
+  }
+
+
+  /*
+   * =====================================================
+   * LEGO LAND / RESORT / FABRIK
+   * =====================================================
+   */
+
+  if (
+    name.includes("legoland") ||
+    name.includes("resort") ||
+    name.includes("fabrik")
+  ) {
+
+    priority += 900;
+
+  }
+
+
+  /*
+   * =====================================================
+   * DUPLO / EDUCATION
+   * =====================================================
+   */
+
+  if (
+    name.includes("duplo") ||
+    category.includes("duplo")
+  ) {
+
+    priority += 1500;
 
   }
 
 
   if (
-    name.includes("modified") ||
-    name.includes("special") ||
-    name.includes("assembly") ||
-    name.includes("with ")
+    name.includes("education") ||
+    category.includes("education")
   ) {
 
-    priority += 250;
+    priority += 1200;
 
   }
 
