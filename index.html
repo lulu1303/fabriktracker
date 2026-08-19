@@ -3715,300 +3715,252 @@ if (dimension) {
 
     function getPartPriority(part) {
 
-      const number =
-        String(
-          part.part_num || ""
-        ).toLowerCase();
+  const number =
+    String(
+      part.part_num || ""
+    ).toLowerCase();
+
+  const name =
+    String(
+      part.name || ""
+    ).toLowerCase()
+    .trim();
+
+  const category =
+    String(
+      part.category || ""
+    ).toLowerCase();
+
+
+  /*
+   * Suchtext normalisieren
+   */
+  const normalizedSearch =
+    normalizeDimensionQuery(
+      search
+    )
+    .toLowerCase()
+    .trim();
+
+
+  const normalizedName =
+    normalizeDimensionQuery(
+      name
+    )
+    .toLowerCase()
+    .trim();
 
 
-      const name =
-        String(
-          part.name || ""
-        ).toLowerCase();
+  let priority = 1000;
 
 
-      const category =
-        String(
-          part.category || ""
-        ).toLowerCase();
+  /*
+   * =====================================================
+   * 1. EXAKTE TEILENUMMER
+   * =====================================================
+   */
 
+  if (
+    number === search
+  ) {
 
-      let priority = 1000;
+    priority -= 10000;
 
+  }
 
-      /*
-       * =================================================
-       * EXAKTE TEILENUMMER
-       * =================================================
-       */
 
-      if (number === search) {
+  /*
+   * =====================================================
+   * 2. EXAKTER NAME
+   *
+   * Beispiel:
+   *
+   * Suche:
+   * Brick 2 x 4
+   *
+   * Treffer:
+   * Brick 2 x 4
+   *
+   * -> ganz nach oben
+   *
+   * Brick 2 x 4 x 3
+   *
+   * -> darunter
+   * =====================================================
+   */
 
-        priority -= 2000;
+  if (
+    normalizedName ===
+    normalizedSearch
+  ) {
 
-      }
+    priority -= 9000;
 
+  }
 
-      /*
-       * =================================================
-       * NAMENSTREFFER
-       * =================================================
-       */
 
-      if (name === search) {
+  /*
+   * =====================================================
+   * 3. NAME BEGINNT MIT DER SUCHE
+   * =====================================================
+   */
 
-        priority -= 1500;
+  else if (
+    normalizedName.startsWith(
+      normalizedSearch
+    )
+  ) {
 
-      }
-      /*
- * Exakte Suchkombination im Namen bevorzugen.
- *
- * "Brick 2 x 4"
- * soll vor
- * "Brick 2 x 4 x 3"
- * stehen.
- */
+    priority -= 3000;
 
-const normalizedSearch =
-  normalizeDimensionQuery(search);
+  }
 
 
-const normalizedName =
-  normalizeDimensionQuery(name);
+  /*
+   * =====================================================
+   * 4. NAME ENTHÄLT DIE SUCHE
+   * =====================================================
+   */
 
+  else if (
+    normalizedName.includes(
+      normalizedSearch
+    )
+  ) {
 
-if (
-  normalizedName ===
-  normalizedSearch
-) {
+    priority -= 1500;
 
-  priority -= 2000;
+  }
 
-}
 
-      /*
-       * Suchwort am Anfang des Namens
-       *
-       * Brick 2 x 4
-       */
+  /*
+   * =====================================================
+   * 5. NORMALE KATEGORIE-PRIORITÄT
+   * =====================================================
+   */
 
-      if (
-        name.startsWith(search)
-      ) {
+  if (
+    name.includes("brick")
+  ) {
 
-        priority -= 700;
+    priority -= 250;
 
-      }
+  }
 
 
-      /*
-       * Suchwort als eigenes Wort
-       *
-       * "Brick 2 x 4"
-       * ist relevanter als
-       * "Door for Slotted Bricks"
-       */
+  if (
+    name.includes("plate")
+  ) {
 
-      const wordRegex =
-        new RegExp(
-          "(^|\\s)" +
-          search.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            "\\$&"
-          ) +
-          "(\\s|$)",
-          "i"
-        );
+    priority -= 220;
 
+  }
 
-      if (
-        wordRegex.test(name)
-      ) {
 
-        priority -= 500;
+  if (
+    name.includes("tile")
+  ) {
 
-      }
+    priority -= 200;
 
+  }
 
-      /*
-       * Normaler Teilstring-Treffer
-       */
 
-      if (
-        name.includes(search)
-      ) {
+  if (
+    category.includes("brick") ||
+    category.includes("plate") ||
+    category.includes("tile")
+  ) {
 
-        priority -= 200;
+    priority -= 100;
 
-      }
+  }
 
 
-      /*
-       * Kategorie passt zur Suche
-       */
+  /*
+   * =====================================================
+   * 6. DIMENSION
+   * =====================================================
+   */
 
-      if (
-        category.includes(search)
-      ) {
+  if (
+    dimension
+  ) {
 
-        priority -= 250;
+    const partDimension =
+      extractDimension(
+        normalizeDimensionQuery(
+          name
+        )
+      );
 
-      }
 
+    if (
+      partDimension ===
+      dimension
+    ) {
 
-      /*
-       * LEGO-Kategorien sinnvoll priorisieren
-       */
-
-      if (
-        name.includes("brick")
-      ) {
-
-        priority -= 80;
-
-      }
-
-
-      if (
-        name.includes("plate")
-      ) {
-
-        priority -= 70;
-
-      }
-
-
-      if (
-        name.includes("tile")
-      ) {
-
-        priority -= 60;
-
-      }
-
-
-      /*
-       * Dimension passt
-       */
-
-      if (dimension) {
-
-        const partDimension =
-          extractDimension(
-            normalizeDimensionQuery(
-              name
-            )
-          );
-
-
-        if (
-          partDimension ===
-          dimension
-        ) {
-
-          priority -= 500;
-
-        }
-
-      }
-
-
-      /*
-       * DUplo nach hinten
-       */
-
-      if (
-        name.includes("duplo") ||
-        category.includes("duplo")
-      ) {
-
-        priority += 1000;
-
-      }
-
-
-      /*
-       * Education nach hinten
-       */
-
-      if (
-        name.includes("education") ||
-        category.includes("education")
-      ) {
-
-        priority += 700;
-
-      }
-
-
-      /*
-       * Bedruckte / dekorierte Teile nach hinten
-       */
-
-      if (
-        name.includes("printed") ||
-        name.includes("print") ||
-        name.includes("pattern") ||
-        name.includes("decorated") ||
-        name.includes("decoration")
-      ) {
-
-        priority += 500;
-
-      }
-
-
-      /*
-       * Modifizierte / spezielle Teile nach hinten
-       */
-
-      if (
-        name.includes("modified") ||
-        name.includes("special") ||
-        name.includes("assembly") ||
-        name.includes("with ")
-      ) {
-
-        priority += 250;
-
-      }
-
-
-      /*
-       * =================================================
-       * SEHR WICHTIG:
-       *
-       * Bei einer normalen WORTSUCHE soll ein Treffer
-       * ausschließlich in der Teilnummer NICHT bevorzugt
-       * werden.
-       *
-       * Beispiel:
-       *
-       * Suche: "brick"
-       *
-       * brickslot0001
-       *
-       * soll NICHT automatisch vor normalen Brick-Namen
-       * erscheinen.
-       * =================================================
-       */
-
-      if (
-        !looksLikePartNumber &&
-        number.includes(search) &&
-        !name.includes(search)
-      ) {
-
-        priority += 800;
-
-      }
-
-
-      return priority;
+      priority -= 1000;
 
     }
 
+  }
 
+
+  /*
+   * =====================================================
+   * 7. UNERWÜNSCHTE TREFFER NACH UNTEN
+   * =====================================================
+   */
+
+  if (
+    name.includes("duplo") ||
+    category.includes("duplo")
+  ) {
+
+    priority += 1000;
+
+  }
+
+
+  if (
+    name.includes("education") ||
+    category.includes("education")
+  ) {
+
+    priority += 700;
+
+  }
+
+
+  if (
+    name.includes("printed") ||
+    name.includes("print") ||
+    name.includes("pattern") ||
+    name.includes("decorated") ||
+    name.includes("decoration")
+  ) {
+
+    priority += 500;
+
+  }
+
+
+  if (
+    name.includes("modified") ||
+    name.includes("special") ||
+    name.includes("assembly") ||
+    name.includes("with ")
+  ) {
+
+    priority += 250;
+
+  }
+
+
+  return priority;
+
+}
     /*
      * =====================================================
      * SORTIEREN
