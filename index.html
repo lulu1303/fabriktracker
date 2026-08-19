@@ -9,27 +9,27 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>FabrikTracker - LEGO Fabrik Günzburg </title>
+  <title>FabrikTracker - LEGO Fabrik Günzburg</title>
 
-<meta
-  name="description"
-  content="FabrikTracker zeigt aktuelle LEGO Teile in der LEGO Fabrik Günzburg. Teile suchen, Verfügbarkeit melden und Preise pro Stein ansehen."
->
+  <meta
+    name="description"
+    content="FabrikTracker zeigt aktuelle LEGO Teile in der LEGO Fabrik Günzburg. Teile suchen, Verfügbarkeit melden und Preise pro Stein ansehen."
+  >
 
-<meta
-  name="keywords"
-  content="LEGO Fabrik Günzburg, LEGO Teile Günzburg, LEGO Einzelsteine, LEGO Fabrik Teile, LEGO Teile Verfügbarkeit, Pick a Brick Günzburg, FabrikTracker"
->
+  <meta
+    name="keywords"
+    content="LEGO Fabrik Günzburg, LEGO Teile Günzburg, LEGO Einzelsteine, LEGO Fabrik Teile, LEGO Teile Verfügbarkeit, Pick a Brick Günzburg, FabrikTracker"
+  >
 
-<meta
-  name="robots"
-  content="index, follow"
->
+  <meta
+    name="robots"
+    content="index, follow"
+  >
 
-<link
-  rel="canonical"
-  href="https://fabriktracker.vercel.app/"
->
+  <link
+    rel="canonical"
+    href="https://fabriktracker.vercel.app/"
+  >
 
   <style>
 
@@ -167,10 +167,6 @@
         0 2px 10px rgba(0,0,0,0.05);
     }
 
-    /* =====================================================
-       KATEGORIEN
-    ===================================================== */
-
     .category-folder {
       background: white;
       border-radius: 16px;
@@ -234,10 +230,6 @@
     .category-folder.open .category-content {
       display: block;
     }
-
-    /* =====================================================
-       TEIL
-    ===================================================== */
 
     .part-card {
       background: #fafafa;
@@ -332,10 +324,6 @@
       color: #444;
     }
 
-    /* =====================================================
-       PREIS
-    ===================================================== */
-
     .price-box {
       margin-top: 14px;
       background: white;
@@ -414,31 +402,26 @@
       padding: 11px;
     }
 
-    /* =====================================================
-       ADMIN LÖSCHEN
-    ===================================================== */
     .admin-delete {
-  display: block;
-  width: fit-content;
-  margin-top: 10px;
-  margin-left: auto;
-  padding: 6px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  background: transparent;
-  color: #999;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  opacity: 0.45;
-}
+      display: block;
+      width: fit-content;
+      margin-top: 10px;
+      margin-left: auto;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      background: transparent;
+      color: #999;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      opacity: 0.45;
+    }
 
-.admin-delete:hover {
-  opacity: 1;
-  background: #fff5f5;
-  color: #a40000;
-  border-color: #e3a0a0;
-}
-  e3a0a0;
+    .admin-delete:hover {
+      opacity: 1;
+      background: #fff5f5;
+      color: #a40000;
+      border-color: #e3a0a0;
     }
 
     .empty {
@@ -482,10 +465,6 @@
       padding: 25px;
       color: #777;
     }
-
-    /* =====================================================
-       MELDEFORMULAR
-    ===================================================== */
 
     .report-form {
       margin-top: 20px;
@@ -642,9 +621,7 @@
 
 </head>
 
-
 <body>
-
 
 <header>
 
@@ -662,9 +639,7 @@
 
 </header>
 
-
 <main>
-
 
   <section class="hero">
 
@@ -696,11 +671,9 @@
 
   </section>
 
-
   <div class="section-title">
     🟢 Aktuell gemeldete Teile
   </div>
-
 
   <div id="results">
 
@@ -709,7 +682,6 @@
     </div>
 
   </div>
-
 
   <section class="report-box">
 
@@ -739,9 +711,7 @@
 
   </section>
 
-
 </main>
-
 
 <script>
 
@@ -1147,9 +1117,6 @@ function getCategoryInfo(
 /* =========================================================
    BILDER LADEN
 ========================================================= */
-/* =========================================================
-   BILDER PRO TEIL + FARBE LADEN
-========================================================= */
 
 async function loadImagesForParts() {
 
@@ -1161,22 +1128,6 @@ async function loadImagesForParts() {
     return;
 
   }
-
-
-  /*
-   * Wir brauchen nicht nur die Teilenummer,
-   * sondern die Kombination aus:
-   *
-   * part_number + color_id
-   *
-   * Beispiel:
-   *
-   * 3001 + Rot
-   * 3001 + Blau
-   * 3001 + Weiß
-   *
-   * Jede Kombination bekommt ihr eigenes Bild.
-   */
 
 
   const combinations = [
@@ -1241,21 +1192,10 @@ async function loadImagesForParts() {
 
   const imageMap = {};
 
-
   const batchSize = 100;
 
 
   try {
-
-    /*
-     * Supabase kann mehrere Teilenummern
-     * gleichzeitig abfragen.
-     *
-     * Wir holen die Bilder aus:
-     *
-     * lego_part_colors
-     */
-
 
     const partNumbers = [
 
@@ -1331,9 +1271,7 @@ async function loadImagesForParts() {
             String(
               row.part_num
             ) +
-
             "_" +
-
             String(
               row.color_id
             );
@@ -1349,15 +1287,6 @@ async function loadImagesForParts() {
     }
 
 
-    /*
-     * Bild der jeweiligen Teil/Farbe-Kombination
-     * direkt am Part speichern.
-     *
-     * renderPart() kann dadurch weiterhin
-     * einfach part.image_url verwenden.
-     */
-
-
     parts.forEach(
       part => {
 
@@ -1366,9 +1295,7 @@ async function loadImagesForParts() {
           String(
             part.part_number || ""
           ) +
-
           "_" +
-
           String(
             part.color_id ?? ""
           );
@@ -1589,10 +1516,6 @@ async function loadParts() {
       data || [];
 
 
-    /* =====================================================
-       FARBEN LADEN
-    ===================================================== */
-
     if (
       parts.length > 0
     ) {
@@ -1664,10 +1587,21 @@ async function loadParts() {
         parts.forEach(
           part => {
 
-            part.color_name =
-              colorMap[
-                part.color_id
-              ] || "";
+            if (
+              Number(part.color_id) === 9999
+            ) {
+
+              part.color_name =
+                "Not Applicable";
+
+            } else {
+
+              part.color_name =
+                colorMap[
+                  part.color_id
+                ] || "";
+
+            }
 
           }
         );
@@ -1825,20 +1759,14 @@ function renderPart(
               ? `
 
                 <img
-
                   class="part-image"
-
                   src="${safeImageUrl}"
-
                   alt="LEGO ${number}"
-
                   loading="lazy"
-
                   onerror="
                     this.style.display='none';
                     this.nextElementSibling.style.display='block';
                   "
-
                 >
 
                 <div
@@ -1874,11 +1802,8 @@ function renderPart(
             <div>
 
               <div class="part-number">
-
                 LEGO ${number}
-
               </div>
-
 
               <div class="part-name">
 
@@ -1904,9 +1829,7 @@ function renderPart(
                 ? `
 
                   <div class="available">
-
                     ● Verfügbar
-
                   </div>
 
                 `
@@ -1914,9 +1837,7 @@ function renderPart(
                 : `
 
                   <div class="not-available">
-
                     ● Nicht verfügbar
-
                   </div>
 
                 `
@@ -1931,9 +1852,7 @@ function renderPart(
               ? `
 
                 <div class="part-color">
-
                   🎨 ${color}
-
                 </div>
 
               `
@@ -1946,9 +1865,7 @@ function renderPart(
           <div class="price-box">
 
             <div class="price-title">
-
               Preis pro Stein
-
             </div>
 
 
@@ -1983,11 +1900,9 @@ function renderPart(
                       Normal:
 
                       <strong>
-
                         ${formatEuro(
                           normalPrice
                         )}
-
                       </strong>
 
                     </div>
@@ -1998,11 +1913,9 @@ function renderPart(
                       −20 %:
 
                       <strong>
-
                         ${formatEuro(
                           discountPrice
                         )}
-
                       </strong>
 
                     </div>
@@ -2037,9 +1950,7 @@ function renderPart(
                       font-size:14px;
                     "
                   >
-
                     ⚖️ Gewicht noch nicht hinterlegt
-
                   </div>
 
                 `
@@ -2140,34 +2051,24 @@ function renderPart(
           ? `
 
             <button
-
               class="secondary confirm"
-
               onclick="confirmPart('${escapeHTML(
                 part.part_number || ""
               )}', '${escapeHTML(
                 part.id || ""
               )}')"
-
             >
-
               👍 Ich habe dieses Teil gesehen
-
             </button>
 
 
             <button
-
               class="danger unavailable-button"
-
               onclick="reportUnavailable('${escapeHTML(
                 part.id || ""
               )}')"
-
             >
-
               ❌ Teil ist nicht mehr da
-
             </button>
 
           `
@@ -2175,19 +2076,14 @@ function renderPart(
           : `
 
             <button
-
               class="success confirm"
-
               onclick="confirmPart('${escapeHTML(
                 part.part_number || ""
               )}', '${escapeHTML(
                 part.id || ""
               )}')"
-
             >
-
               👍 Ich habe dieses Teil gesehen
-
             </button>
 
           `
@@ -2195,14 +2091,8 @@ function renderPart(
       }
 
 
-      <!-- =================================================
-           ADMIN LÖSCHEN
-      ================================================= -->
-
       <button
-
         class="admin-delete"
-
         onclick="adminDeletePart('${escapeHTML(
           part.id || ""
         )}', '${escapeHTML(
@@ -2210,11 +2100,8 @@ function renderPart(
         )}', '${escapeHTML(
           part.name || ""
         )}')"
-
       >
-
         🔒 Admin
-
       </button>
 
 
@@ -2248,7 +2135,7 @@ function displayParts(
 
       <div class="card empty">
 
-        Noch keine Teile gemeldet.
+        Keine passenden Teile gefunden.
 
       </div>
 
@@ -2377,54 +2264,41 @@ function displayParts(
           return `
 
             <div
-
               class="category-folder ${
                 index === 0
                   ? "open"
                   : ""
               }"
-
             >
 
               <button
-
                 class="category-header"
-
                 onclick="toggleCategory(this)"
-
               >
 
                 <div class="category-left">
 
                   <span class="category-icon">
-
                     ${group.info.icon}
-
                   </span>
 
 
                   <span class="category-name">
-
                     ${escapeHTML(
                       group.info.name
                     )}
-
                   </span>
 
 
                   <span class="category-count">
-
                     ${group.parts.length}
-
                   </span>
 
                 </div>
 
 
                 <span class="category-arrow">
-
                   ▶
-
                 </span>
 
               </button>
@@ -2433,18 +2307,14 @@ function displayParts(
               <div class="category-content">
 
                 ${
-
                   group.parts
-
                     .map(
                       part =>
                         renderPart(
                           part
                         )
                     )
-
                     .join("")
-
                 }
 
               </div>
@@ -2518,6 +2388,18 @@ function searchParts() {
   }
 
 
+  const normalizedQuery =
+    normalizeDimensionQuery(
+      query
+    );
+
+
+  const dimension =
+    extractDimension(
+      normalizedQuery
+    );
+
+
   const filtered =
     parts.filter(
       part => {
@@ -2564,6 +2446,45 @@ function searchParts() {
           .toLowerCase();
 
 
+        /*
+         * Wenn der Nutzer z.B.
+         *
+         * 1 x 4
+         *
+         * eingibt, suchen wir nach
+         * exakt 1 x 4 und NICHT einfach
+         * nach "1" oder "4".
+         */
+
+        if (
+          dimension
+        ) {
+
+          const partDimension =
+            extractDimension(
+              normalizeDimensionQuery(
+                name
+              )
+            );
+
+
+          if (
+            !partDimension ||
+            partDimension !==
+              dimension
+          ) {
+
+            return false;
+
+          }
+
+        }
+
+
+        /*
+         * Normale Suche
+         */
+
         return (
 
           number.includes(
@@ -2600,9 +2521,262 @@ function searchParts() {
     );
 
 
+  /*
+   * Suchergebnisse sinnvoll sortieren
+   */
+
+  filtered.sort(
+    (
+      a,
+      b
+    ) =>
+      getSearchPriority(
+        a,
+        query,
+        dimension
+      )
+      -
+      getSearchPriority(
+        b,
+        query,
+        dimension
+      )
+  );
+
+
   displayParts(
     filtered
   );
+
+}
+
+
+/* =========================================================
+   DIMENSIONS-SUCHE
+========================================================= */
+
+function normalizeDimensionQuery(
+  value
+) {
+
+  return String(
+    value || ""
+  )
+
+    .toLowerCase()
+
+    .replace(
+      /×/g,
+      "x"
+    )
+
+    .replace(
+      /(\d)\s*x\s*(\d)/g,
+      "$1 x $2"
+    )
+
+    .replace(
+      /\s+/g,
+      " "
+    )
+
+    .trim();
+
+}
+
+
+function extractDimension(
+  value
+) {
+
+  const normalized =
+    normalizeDimensionQuery(
+      value
+    );
+
+
+  const match =
+    normalized.match(
+      /(^|[^0-9])(\d+)\s*x\s*(\d+)([^0-9]|$)/
+    );
+
+
+  if (!match) {
+
+    return null;
+
+  }
+
+
+  return (
+    match[2] +
+    "x" +
+    match[3]
+  );
+
+}
+
+
+/* =========================================================
+   SUCHPRIORITÄT
+========================================================= */
+
+function getSearchPriority(
+  part,
+  query,
+  dimension
+) {
+
+  const name =
+    String(
+      part.name || ""
+    )
+      .toLowerCase();
+
+
+  const number =
+    String(
+      part.part_number || ""
+    )
+      .toLowerCase();
+
+
+  const category =
+    String(
+      part.category || ""
+    )
+      .toLowerCase();
+
+
+  let score = 1000;
+
+
+  /*
+   * Exakte Teilenummer immer ganz oben
+   */
+
+  if (
+    number === query
+  ) {
+
+    score -= 1000;
+
+  }
+
+
+  /*
+   * Exakte Dimension
+   */
+
+  if (
+    dimension
+  ) {
+
+    const partDimension =
+      extractDimension(
+        normalizeDimensionQuery(
+          name
+        )
+      );
+
+
+    if (
+      partDimension ===
+      dimension
+    ) {
+
+      score -= 500;
+
+    }
+
+  }
+
+
+  /*
+   * Standard-Bauteile zuerst
+   */
+
+  if (
+    name.includes("brick")
+  ) {
+
+    score -= 200;
+
+  }
+
+
+  if (
+    name.includes("plate")
+  ) {
+
+    score -= 180;
+
+  }
+
+
+  if (
+    name.includes("tile")
+  ) {
+
+    score -= 160;
+
+  }
+
+
+  /*
+   * Häufige Standardteile
+   */
+
+  if (
+    name.includes("basic") ||
+    name.includes("standard")
+  ) {
+
+    score -= 100;
+
+  }
+
+
+  /*
+   * Seltene Varianten nach hinten
+   */
+
+  if (
+    name.includes("duplo") ||
+    category.includes("duplo")
+  ) {
+
+    score += 1000;
+
+  }
+
+
+  if (
+    name.includes("printed") ||
+    name.includes("print") ||
+    name.includes("pattern") ||
+    name.includes("decorated") ||
+    name.includes("decoration")
+  ) {
+
+    score += 500;
+
+  }
+
+
+  if (
+    name.includes("modified") ||
+    name.includes("special") ||
+    name.includes("assembly") ||
+    name.includes("with ")
+  ) {
+
+    score += 250;
+
+  }
+
+
+  return score;
 
 }
 
@@ -2866,19 +3040,11 @@ async function adminDeletePart(
   }
 
 
-  /*
-   * Admin-Passwort abfragen
-   */
-
   const password =
     prompt(
       "🔒 Admin-Passwort eingeben:"
     );
 
-
-  /*
-   * Abbrechen
-   */
 
   if (
     password === null
@@ -2901,10 +3067,6 @@ async function adminDeletePart(
 
   }
 
-
-  /*
-   * Sicherheitsabfrage
-   */
 
   const confirmed =
     confirm(
@@ -2932,17 +3094,6 @@ async function adminDeletePart(
 
   try {
 
-    /*
-     * Supabase RPC
-     *
-     * Ruft exakt die SQL-Funktion auf:
-     *
-     * public.admin_delete_part(
-     *   bigint,
-     *   text
-     * )
-     */
-
     const result =
       await supabaseRequest(
 
@@ -2969,11 +3120,6 @@ async function adminDeletePart(
       );
 
 
-    /*
-     * Die SQL-Funktion gibt
-     * TRUE oder FALSE zurück.
-     */
-
     if (
       result !== true
     ) {
@@ -2987,18 +3133,10 @@ async function adminDeletePart(
     }
 
 
-    /*
-     * Erfolgreich gelöscht
-     */
-
     alert(
       "✅ Das Teil wurde komplett gelöscht."
     );
 
-
-    /*
-     * Daten erneut aus Supabase laden
-     */
 
     await loadParts();
 
@@ -3062,28 +3200,18 @@ function openReportForm() {
 
 
         <input
-
           id="partSearchInput"
-
           type="text"
-
           autocomplete="off"
-
           placeholder="z.B. 3001 oder Brick 2 x 4"
-
           oninput="searchLegoParts()"
-
         >
 
 
         <div
-
           id="partSuggestions"
-
           class="suggestions"
-
           style="display:none;"
-
         ></div>
 
 
@@ -3272,9 +3400,7 @@ async function fetchLegoPartSuggestions(
   suggestions.innerHTML = `
 
     <div class="suggestion">
-
       🔎 Suche Teile...
-
     </div>
 
   `;
@@ -3299,13 +3425,27 @@ async function fetchLegoPartSuggestions(
     let results = [];
 
 
+    /*
+     * DIREKTE TEILENUMMERNSUCHE
+     *
+     * Wichtig:
+     * Nicht mehr nur Zahlen zulassen.
+     *
+     * Dadurch funktionieren z.B.:
+     *
+     * 2431pr0232
+     * 3001
+     * 3024
+     * usw.
+     */
+
     if (
-      /^[0-9]+$/.test(
+      /^[a-z0-9._-]+$/i.test(
         search
       )
     ) {
 
-      const url =
+      const exactUrl =
 
         LEGO_PARTS_URL +
 
@@ -3322,31 +3462,59 @@ async function fetchLegoPartSuggestions(
 
       results =
         await supabaseRequest(
-          url
+          exactUrl
         );
 
     }
 
+
+    /*
+     * Wenn keine exakte Teilenummer gefunden
+     * wurde, teilweise nach Teilenummer suchen.
+     */
+
+    if (
+      results.length === 0 &&
+      /^[a-z0-9._-]+$/i.test(search)
+    ) {
+
+      const numberUrl =
+
+        LEGO_PARTS_URL +
+
+        "?part_num=ilike." +
+
+        encodeURIComponent(
+          "%" +
+          search +
+          "%"
+        ) +
+
+        "&select=part_num,name,category" +
+
+        "&limit=100";
+
+
+      results =
+        await supabaseRequest(
+          numberUrl
+        );
+
+    }
+
+
+    /*
+     * Danach Namenssuche.
+     */
 
     if (
       results.length === 0
     ) {
 
       const normalized =
-
-        search
-
-          .replace(
-            /\s*x\s*/gi,
-            " x "
-          )
-
-          .replace(
-            /\s+/g,
-            " "
-          )
-
-          .trim();
+        normalizeDimensionQuery(
+          search
+        );
 
 
       const nameUrl =
@@ -3371,6 +3539,16 @@ async function fetchLegoPartSuggestions(
           nameUrl
         );
 
+
+      /*
+       * Zusätzlich kompakte Schreibweise:
+       *
+       * 2x4
+       *
+       * statt
+       *
+       * 2 x 4
+       */
 
       if (
 
@@ -3430,9 +3608,7 @@ async function fetchLegoPartSuggestions(
       suggestions.innerHTML = `
 
         <div class="suggestion">
-
           ❌ Kein passendes LEGO Teil gefunden.
-
         </div>
 
       `;
@@ -3441,6 +3617,50 @@ async function fetchLegoPartSuggestions(
 
     }
 
+
+    /*
+     * DIMENSIONSFILTER
+     *
+     * Bei 1 x 4 dürfen keine
+     * 1 x 3 / 1 x 6 Ergebnisse auftauchen.
+     */
+
+    const dimension =
+      extractDimension(
+        search
+      );
+
+
+    if (
+      dimension
+    ) {
+
+      results =
+        results.filter(
+          part => {
+
+            const partDimension =
+              extractDimension(
+                normalizeDimensionQuery(
+                  part.name
+                )
+              );
+
+
+            return (
+              partDimension ===
+              dimension
+            );
+
+          }
+        );
+
+    }
+
+
+    /*
+     * Relevanzbewertung
+     */
 
     function getPartPriority(
       part
@@ -3465,13 +3685,103 @@ async function fetchLegoPartSuggestions(
 
 
       let priority =
-        100;
+        1000;
+
+
+      /*
+       * Exakte Teilenummer
+       */
+
+      if (
+        number === search
+      ) {
+
+        priority -= 1000;
+
+      }
+
+
+      /*
+       * Standardteile zuerst
+       */
+
+      if (
+        name.includes("brick")
+      ) {
+
+        priority -= 250;
+
+      }
 
 
       if (
+        name.includes("plate")
+      ) {
+
+        priority -= 220;
+
+      }
+
+
+      if (
+        name.includes("tile")
+      ) {
+
+        priority -= 200;
+
+      }
+
+
+      /*
+       * Häufige Kategorien
+       */
+
+      if (
+        category.includes("brick") ||
+        category.includes("plate") ||
+        category.includes("tile")
+      ) {
+
+        priority -= 100;
+
+      }
+
+
+      /*
+       * Exakte Dimension
+       */
+
+      if (
+        dimension
+      ) {
+
+        const partDimension =
+          extractDimension(
+            normalizeDimensionQuery(
+              name
+            )
+          );
+
+
+        if (
+          partDimension ===
+          dimension
+        ) {
+
+          priority -= 300;
+
+        }
+
+      }
+
+
+      /*
+       * Seltene / spezielle Varianten nach hinten
+       */
+
+      if (
         name.includes("duplo") ||
-        category.includes("duplo") ||
-        number.includes("duplo")
+        category.includes("duplo")
       ) {
 
         priority += 1000;
@@ -3510,102 +3820,6 @@ async function fetchLegoPartSuggestions(
       ) {
 
         priority += 250;
-
-      }
-
-
-      const standardCategories = [
-
-        "brick",
-        "bricks",
-        "plate",
-        "plates",
-        "tile",
-        "tiles",
-        "slope",
-        "slopes",
-        "wedge",
-        "technic",
-        "bar",
-        "round",
-        "basic"
-
-      ];
-
-
-      if (
-        standardCategories.some(
-          categoryName =>
-            category ===
-              categoryName ||
-
-            category.includes(
-              categoryName
-            )
-        )
-      ) {
-
-        priority -= 100;
-
-      }
-
-
-      const normalizedName =
-
-        name
-
-          .replace(
-            /\s+/g,
-            " "
-          )
-
-          .trim();
-
-
-      const normalizedSearch =
-
-        search
-
-          .replace(
-            /\s*x\s*/gi,
-            " x "
-          )
-
-          .replace(
-            /\s+/g,
-            " "
-          )
-
-          .trim();
-
-
-      if (
-        normalizedName ===
-        normalizedSearch
-      ) {
-
-        priority -= 500;
-
-      }
-
-      else if (
-        normalizedName.startsWith(
-          normalizedSearch
-        )
-      ) {
-
-        priority -= 250;
-
-      }
-
-
-      if (
-        normalizedName.includes(
-          normalizedSearch
-        )
-      ) {
-
-        priority -= 100;
 
       }
 
@@ -3880,9 +4094,7 @@ async function loadColorsForPart(
   colorSelect.innerHTML = `
 
     <option value="">
-
       Farben werden geladen...
-
     </option>
 
   `;
@@ -3927,9 +4139,7 @@ async function loadColorsForPart(
       colorSelect.innerHTML = `
 
         <option value="">
-
           Keine Farben gefunden
-
         </option>
 
       `;
@@ -3968,9 +4178,7 @@ async function loadColorsForPart(
       colorSelect.innerHTML = `
 
         <option value="">
-
           Keine Farben gefunden
-
         </option>
 
       `;
@@ -4003,18 +4211,80 @@ async function loadColorsForPart(
       "&order=id.asc";
 
 
-    const colors =
+    let colors =
       await supabaseRequest(
         colorsUrl
+      );
+
+
+    /*
+     * Farbe 9999 muss auch dann funktionieren,
+     * wenn sie nicht korrekt in lego_colors
+     * hinterlegt ist.
+     */
+
+    const has9999 =
+      colorIds.some(
+        id =>
+          Number(id) === 9999
+      );
+
+
+    if (
+      has9999 &&
+      !colors.some(
+        color =>
+          Number(color.id) === 9999
+      )
+    ) {
+
+      colors.push({
+
+        id: 9999,
+
+        name:
+          "Not Applicable"
+
+      });
+
+    }
+
+
+    colors =
+      colors.sort(
+        (a, b) => {
+
+          if (
+            Number(a.id) ===
+            9999
+          ) {
+
+            return 1;
+
+          }
+
+
+          if (
+            Number(b.id) ===
+            9999
+          ) {
+
+            return -1;
+
+          }
+
+
+          return Number(a.id) -
+            Number(b.id);
+
+        }
       );
 
 
     colorSelect.innerHTML = `
 
       <option value="">
-
         Farbe auswählen...
-
       </option>
 
     `;
@@ -4028,9 +4298,7 @@ async function loadColorsForPart(
       colorSelect.innerHTML = `
 
         <option value="">
-
           Keine Farben gefunden
-
         </option>
 
       `;
@@ -4054,7 +4322,13 @@ async function loadColorsForPart(
 
 
         option.textContent =
-          color.name;
+
+          Number(color.id) ===
+          9999
+
+            ? "Not Applicable"
+
+            : color.name;
 
 
         colorSelect.appendChild(
@@ -4095,9 +4369,7 @@ async function loadColorsForPart(
     colorSelect.innerHTML = `
 
       <option value="">
-
         Fehler beim Laden der Farben
-
       </option>
 
     `;
