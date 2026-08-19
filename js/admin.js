@@ -14,9 +14,6 @@ let adminAuthenticated =
 
 async function adminLogin() {
 
-  /*
-   * Bereits in dieser Browser-Sitzung authentifiziert.
-   */
   if (
     adminAuthenticated
   ) {
@@ -28,7 +25,7 @@ async function adminLogin() {
 
   const password =
     prompt(
-      "Admin-Passwort:"
+      "🔒 Admin-Passwort eingeben:"
     );
 
 
@@ -42,11 +39,13 @@ async function adminLogin() {
 
 
   /*
-   * Passwort prüfen.
+   * TEMPORÄRE ENTWICKLUNGS-LÖSUNG
+   *
+   * Hier dein bisher verwendetes Admin-Passwort einsetzen.
    */
   if (
     password !==
-    ADMIN_PASSWORD
+    "DEIN_ADMIN_PASSWORT"
   ) {
 
     alert(
@@ -58,10 +57,6 @@ async function adminLogin() {
   }
 
 
-  /*
-   * Nur den Authentifizierungsstatus speichern.
-   * Das Passwort selbst wird NICHT gespeichert.
-   */
   adminAuthenticated =
     true;
 
@@ -72,7 +67,129 @@ async function adminLogin() {
   );
 
 
+  updateAdminUI();
+
+
   return true;
+
+}
+
+
+/* =========================================================
+   ADMIN LOGIN / LOGOUT BUTTON
+========================================================= */
+
+async function toggleAdminLogin() {
+
+  if (
+    adminAuthenticated
+  ) {
+
+    adminLogout();
+
+    return;
+
+  }
+
+
+  const success =
+    await adminLogin();
+
+
+  if (
+    success
+  ) {
+
+    updateAdminUI();
+
+    if (
+      typeof displayParts === "function" &&
+      typeof parts !== "undefined"
+    ) {
+
+      displayParts(
+        parts
+      );
+
+    }
+
+  }
+
+}
+
+
+/* =========================================================
+   ADMIN LOGOUT
+========================================================= */
+
+function adminLogout() {
+
+  adminAuthenticated =
+    false;
+
+
+  sessionStorage.removeItem(
+    "fabriktracker_admin_authenticated"
+  );
+
+
+  updateAdminUI();
+
+
+  if (
+    typeof displayParts === "function" &&
+    typeof parts !== "undefined"
+  ) {
+
+    displayParts(
+      parts
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   ADMIN UI
+========================================================= */
+
+function updateAdminUI() {
+
+  const button =
+    document.getElementById(
+      "adminLoginButton"
+    );
+
+
+  if (!button) {
+
+    return;
+
+  }
+
+
+  if (
+    adminAuthenticated
+  ) {
+
+    button.innerHTML =
+      "🟢 Admin aktiv · Abmelden";
+
+    button.classList.add(
+      "admin-active"
+    );
+
+  } else {
+
+    button.innerHTML =
+      "🔒 Admin";
+
+    button.classList.remove(
+      "admin-active"
+    );
+
+  }
 
 }
 
@@ -87,6 +204,10 @@ async function adminDeletePart(
   partName
 ) {
 
+  /*
+   * Falls noch nicht angemeldet:
+   * einmalig Passwort abfragen.
+   */
   const authenticated =
     await adminLogin();
 
@@ -103,7 +224,7 @@ async function adminDeletePart(
   const confirmed =
     confirm(
 
-      "Soll dieses Teil wirklich gelöscht werden?\n\n" +
+      "⚠️ Teil wirklich löschen?\n\n" +
 
       "LEGO " +
       partNumber +
@@ -266,3 +387,17 @@ async function adminSetAvailability(
   }
 
 }
+
+
+/* =========================================================
+   ADMIN BEIM LADEN INITIALISIEREN
+========================================================= */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    updateAdminUI();
+
+  }
+);
