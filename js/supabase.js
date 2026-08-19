@@ -2,10 +2,7 @@
    SUPABASE
 ========================================================= */
 
-async function req(
-  url,
-  opt = {}
-) {
+async function req(url, opt = {}) {
 
   let r =
     await fetch(
@@ -34,10 +31,7 @@ async function req(
 
 
   try {
-
-    d =
-      await r.json();
-
+    d = await r.json();
   } catch {}
 
 
@@ -58,10 +52,8 @@ async function req(
 
 
     throw e;
-
   }
 
 
   return d;
-
 }
