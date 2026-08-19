@@ -3613,51 +3613,79 @@ async function fetchLegoPartSuggestions(query) {
      * DIMENSIONSFILTER
      * =====================================================
      */
+    /*
+ * =====================================================
+ * DIMENSIONSFILTER
+ *
+ * WICHTIG:
+ * 2 x 4 darf NICHT mit 2 x 4 x 3
+ * gleichgesetzt werden.
+ * =====================================================
+ */
 
-    const dimension =
-      extractDimension(search);
-
-
-    if (dimension) {
-
-      const filteredResults =
-        results.filter(
-          part => {
-
-            const partDimension =
-              extractDimension(
-                normalizeDimensionQuery(
-                  part.name
-                )
-              );
+const dimension =
+  extractDimension(search);
 
 
-            return (
-              partDimension ===
-              dimension
-            );
+if (dimension) {
 
-          }
+  const filteredResults =
+    results.filter(
+      part => {
+
+        const partName =
+          normalizeDimensionQuery(
+            String(part.name || "")
+          );
+
+
+        /*
+         * Exakte Dimension bevorzugen.
+         *
+         * Beispiel:
+         *
+         * Suche: 2 x 4
+         *
+         * 2 x 4       -> Treffer
+         * 2 x 4 x 3   -> kein exakter Treffer
+         */
+
+        const exactDimensionRegex =
+          new RegExp(
+            "(^|\\s)" +
+            dimension.replace(
+              /\s*x\s*/gi,
+              "\\s*x\\s*"
+            ) +
+            "(\\s|$)",
+            "i"
+          );
+
+
+        return exactDimensionRegex.test(
+          partName
         );
 
-
-      /*
-       * Nur filtern, wenn dadurch tatsächlich
-       * Ergebnisse übrig bleiben.
-       *
-       * So verschwindet die Suche nicht komplett,
-       * falls ein Name die Dimension nicht sauber
-       * erkennen lässt.
-       */
-
-      if (filteredResults.length > 0) {
-
-        results =
-          filteredResults;
-
       }
+    );
 
-    }
+
+  /*
+   * Nur übernehmen, wenn wirklich
+   * passende Ergebnisse vorhanden sind.
+   */
+
+  if (
+    filteredResults.length > 0
+  ) {
+
+    results =
+      filteredResults;
+
+  }
+
+}
+  
 
 
     /*
@@ -3732,7 +3760,31 @@ async function fetchLegoPartSuggestions(query) {
         priority -= 1500;
 
       }
+      /*
+ * Exakte Suchkombination im Namen bevorzugen.
+ *
+ * "Brick 2 x 4"
+ * soll vor
+ * "Brick 2 x 4 x 3"
+ * stehen.
+ */
 
+const normalizedSearch =
+  normalizeDimensionQuery(search);
+
+
+const normalizedName =
+  normalizeDimensionQuery(name);
+
+
+if (
+  normalizedName ===
+  normalizedSearch
+) {
+
+  priority -= 2000;
+
+}
 
       /*
        * Suchwort am Anfang des Namens
