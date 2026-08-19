@@ -45,7 +45,7 @@ async function adminLogin() {
    */
   if (
     password !==
-    "DEIN_ADMIN_PASSWORT"
+    luludel13"
   ) {
 
     alert(
