@@ -524,6 +524,7 @@
       padding: 13px 14px;
       border-bottom: 1px solid #eee;
       cursor: pointer;
+      user-select: none;
     }
 
     .suggestion:last-child {
@@ -532,6 +533,10 @@
 
     .suggestion:hover {
       background: #f5f5f5;
+    }
+
+    .suggestion:active {
+      background: #e9e9e9;
     }
 
     .suggestion-number {
@@ -743,6 +748,19 @@ let parts = [];
 let selectedPart = null;
 
 let searchTimer = null;
+
+
+/*
+ * NEU:
+ * Hier speichern wir die aktuellen
+ * Suchergebnisse separat.
+ *
+ * Dadurch müssen wir keine kompletten
+ * JavaScript-Objekte mehr direkt in
+ * onclick schreiben.
+ */
+
+let legoSearchResults = [];
 
 
 /* =========================================================
@@ -2446,16 +2464,6 @@ function searchParts() {
           .toLowerCase();
 
 
-        /*
-         * Wenn der Nutzer z.B.
-         *
-         * 1 x 4
-         *
-         * eingibt, suchen wir nach
-         * exakt 1 x 4 und NICHT einfach
-         * nach "1" oder "4".
-         */
-
         if (
           dimension
         ) {
@@ -2480,10 +2488,6 @@ function searchParts() {
 
         }
 
-
-        /*
-         * Normale Suche
-         */
 
         return (
 
@@ -2520,10 +2524,6 @@ function searchParts() {
       }
     );
 
-
-  /*
-   * Suchergebnisse sinnvoll sortieren
-   */
 
   filtered.sort(
     (
@@ -2651,10 +2651,6 @@ function getSearchPriority(
   let score = 1000;
 
 
-  /*
-   * Exakte Teilenummer immer ganz oben
-   */
-
   if (
     number === query
   ) {
@@ -2663,10 +2659,6 @@ function getSearchPriority(
 
   }
 
-
-  /*
-   * Exakte Dimension
-   */
 
   if (
     dimension
@@ -2691,10 +2683,6 @@ function getSearchPriority(
 
   }
 
-
-  /*
-   * Standard-Bauteile zuerst
-   */
 
   if (
     name.includes("brick")
@@ -2723,10 +2711,6 @@ function getSearchPriority(
   }
 
 
-  /*
-   * Häufige Standardteile
-   */
-
   if (
     name.includes("basic") ||
     name.includes("standard")
@@ -2736,10 +2720,6 @@ function getSearchPriority(
 
   }
 
-
-  /*
-   * Seltene Varianten nach hinten
-   */
 
   if (
     name.includes("duplo") ||
@@ -3183,6 +3163,9 @@ function openReportForm() {
 
     area.innerHTML = "";
 
+    selectedPart =
+      null;
+
     return;
 
   }
@@ -3331,6 +3314,14 @@ function searchLegoParts() {
     colorSelect.disabled =
       true;
 
+    colorSelect.innerHTML = `
+
+      <option value="">
+        Erst Teil auswählen...
+      </option>
+
+    `;
+
   }
 
 
@@ -3345,6 +3336,8 @@ function searchLegoParts() {
   if (
     query.length < 2
   ) {
+
+    legoSearchResults = [];
 
     hideSuggestions();
 
@@ -3427,16 +3420,6 @@ async function fetchLegoPartSuggestions(
 
     /*
      * DIREKTE TEILENUMMERNSUCHE
-     *
-     * Wichtig:
-     * Nicht mehr nur Zahlen zulassen.
-     *
-     * Dadurch funktionieren z.B.:
-     *
-     * 2431pr0232
-     * 3001
-     * 3024
-     * usw.
      */
 
     if (
@@ -3469,13 +3452,14 @@ async function fetchLegoPartSuggestions(
 
 
     /*
-     * Wenn keine exakte Teilenummer gefunden
-     * wurde, teilweise nach Teilenummer suchen.
+     * TEILENUMMER TEILWEISE SUCHEN
      */
 
     if (
       results.length === 0 &&
-      /^[a-z0-9._-]+$/i.test(search)
+      /^[a-z0-9._-]+$/i.test(
+        search
+      )
     ) {
 
       const numberUrl =
@@ -3504,7 +3488,7 @@ async function fetchLegoPartSuggestions(
 
 
     /*
-     * Danach Namenssuche.
+     * NAMENSSUCHE
      */
 
     if (
@@ -3541,13 +3525,7 @@ async function fetchLegoPartSuggestions(
 
 
       /*
-       * Zusätzlich kompakte Schreibweise:
-       *
-       * 2x4
-       *
-       * statt
-       *
-       * 2 x 4
+       * Kompakte Schreibweise 2x4
        */
 
       if (
@@ -3605,6 +3583,8 @@ async function fetchLegoPartSuggestions(
       results.length === 0
     ) {
 
+      legoSearchResults = [];
+
       suggestions.innerHTML = `
 
         <div class="suggestion">
@@ -3620,9 +3600,6 @@ async function fetchLegoPartSuggestions(
 
     /*
      * DIMENSIONSFILTER
-     *
-     * Bei 1 x 4 dürfen keine
-     * 1 x 3 / 1 x 6 Ergebnisse auftauchen.
      */
 
     const dimension =
@@ -3688,10 +3665,6 @@ async function fetchLegoPartSuggestions(
         1000;
 
 
-      /*
-       * Exakte Teilenummer
-       */
-
       if (
         number === search
       ) {
@@ -3700,10 +3673,6 @@ async function fetchLegoPartSuggestions(
 
       }
 
-
-      /*
-       * Standardteile zuerst
-       */
 
       if (
         name.includes("brick")
@@ -3732,10 +3701,6 @@ async function fetchLegoPartSuggestions(
       }
 
 
-      /*
-       * Häufige Kategorien
-       */
-
       if (
         category.includes("brick") ||
         category.includes("plate") ||
@@ -3746,10 +3711,6 @@ async function fetchLegoPartSuggestions(
 
       }
 
-
-      /*
-       * Exakte Dimension
-       */
 
       if (
         dimension
@@ -3774,10 +3735,6 @@ async function fetchLegoPartSuggestions(
 
       }
 
-
-      /*
-       * Seltene / spezielle Varianten nach hinten
-       */
 
       if (
         name.includes("duplo") ||
@@ -3876,12 +3833,30 @@ async function fetchLegoPartSuggestions(
       );
 
 
+    /*
+     * =====================================================
+     * WICHTIGER FIX
+     *
+     * Suchergebnisse global speichern.
+     *
+     * Wir schreiben NICHT mehr das komplette
+     * Objekt in onclick="...".
+     * =====================================================
+     */
+
+    legoSearchResults =
+      results;
+
+
     suggestions.innerHTML =
 
       results
 
         .map(
-          part => {
+          (
+            part,
+            index
+          ) => {
 
             const number =
               escapeHTML(
@@ -3904,25 +3879,23 @@ async function fetchLegoPartSuggestions(
               );
 
 
+            /*
+             * Nur der Index wird in onclick
+             * übergeben.
+             *
+             * Dadurch können Sonderzeichen,
+             * Apostrophe usw. im Namen
+             * niemals den onclick-Code kaputt machen.
+             */
+
             return `
 
               <div
-
                 class="suggestion"
-
-                onclick='selectLegoPart(${JSON.stringify({
-
-                  part_num:
-                    part.part_num || "",
-
-                  name:
-                    part.name || "",
-
-                  category:
-                    part.category || ""
-
-                })})'
-
+                role="button"
+                tabindex="0"
+                onclick="selectLegoPartByIndex(${index})"
+                onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectLegoPartByIndex(${index}); }"
               >
 
                 <div class="suggestion-number">
@@ -3960,6 +3933,9 @@ async function fetchLegoPartSuggestions(
     );
 
 
+    legoSearchResults = [];
+
+
     suggestions.innerHTML =
       "";
 
@@ -3983,12 +3959,58 @@ async function fetchLegoPartSuggestions(
 
 
 /* =========================================================
+   NEU:
+   TEIL ÜBER INDEX AUSWÄHLEN
+========================================================= */
+
+function selectLegoPartByIndex(
+  index
+) {
+
+  const part =
+    legoSearchResults[
+      Number(index)
+    ];
+
+
+  if (!part) {
+
+    console.error(
+      "LEGO-Suchergebnis nicht gefunden:",
+      index,
+      legoSearchResults
+    );
+
+    return;
+
+  }
+
+
+  selectLegoPart(
+    part
+  );
+
+}
+
+
+/* =========================================================
    TEIL AUSWÄHLEN
 ========================================================= */
 
 async function selectLegoPart(
   part
 ) {
+
+  if (!part) {
+
+    return;
+
+  }
+
+
+  /*
+   * Teil global speichern
+   */
 
   selectedPart =
     part;
@@ -4012,6 +4034,16 @@ async function selectLegoPart(
     );
 
 
+  const errorBox =
+    document.getElementById(
+      "partSearchError"
+    );
+
+
+  /*
+   * Suchfeld aktualisieren
+   */
+
   if (input) {
 
     input.value =
@@ -4022,6 +4054,10 @@ async function selectLegoPart(
   }
 
 
+  /*
+   * Vorschläge schließen
+   */
+
   if (suggestions) {
 
     suggestions.style.display =
@@ -4029,6 +4065,22 @@ async function selectLegoPart(
 
   }
 
+
+  /*
+   * Fehler entfernen
+   */
+
+  if (errorBox) {
+
+    errorBox.textContent =
+      "";
+
+  }
+
+
+  /*
+   * Ausgewähltes Teil anzeigen
+   */
 
   if (selected) {
 
@@ -4052,6 +4104,10 @@ async function selectLegoPart(
 
   }
 
+
+  /*
+   * Farben laden
+   */
 
   await loadColorsForPart(
     part.part_num
@@ -4218,9 +4274,7 @@ async function loadColorsForPart(
 
 
     /*
-     * Farbe 9999 muss auch dann funktionieren,
-     * wenn sie nicht korrekt in lego_colors
-     * hinterlegt ist.
+     * 9999 ergänzen
      */
 
     const has9999 =
@@ -4562,6 +4616,10 @@ function closeReportForm() {
 
   selectedPart =
     null;
+
+
+  legoSearchResults =
+    [];
 
 }
 
