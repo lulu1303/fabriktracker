@@ -1,79 +1,67 @@
 /* =========================================================
-   SUPABASE REQUEST
+   SUPABASE
 ========================================================= */
 
-async function supabaseRequest(
+async function req(
   url,
-  options = {}
+  opt = {}
 ) {
 
-  const response =
+  let r =
     await fetch(
       url,
       {
-
-        ...options,
+        ...opt,
 
         headers: {
-
-          "apikey":
+          apikey:
             SUPABASE_KEY,
 
-          "Authorization":
+          Authorization:
             "Bearer " +
             SUPABASE_KEY,
 
           "Content-Type":
             "application/json",
 
-          ...(options.headers || {})
-
+          ...(opt.headers || {})
         }
-
       }
     );
 
 
-  let data = null;
+  let d = null;
 
 
   try {
 
-    data =
-      await response.json();
+    d =
+      await r.json();
 
-  } catch {
-
-    data = null;
-
-  }
+  } catch {}
 
 
-  if (!response.ok) {
+  if (!r.ok) {
 
-    const message =
-      data?.message ||
-      data?.error ||
-      ("HTTP Fehler " +
-       response.status);
-
-
-    const error =
-      new Error(message);
-
-
-    error.code =
-      data?.code ||
-      String(
-        response.status
+    let e =
+      new Error(
+        d?.message ||
+        d?.error ||
+        "HTTP Fehler " +
+        r.status
       );
 
 
-    throw error;
+    e.code =
+      d?.code ||
+      r.status;
+
+
+    throw e;
 
   }
 
 
-  return data;
+  return d;
 
 }
