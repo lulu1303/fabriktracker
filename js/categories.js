@@ -1,19 +1,24 @@
 /* =========================================================
    REBRICKABLE CATEGORIES
+   FabrikTracker
 ========================================================= */
 
 /*
- * Zentrale Verwaltung der Rebrickable-Kategorien.
+ * Die Kategorien kommen direkt aus unserer
+ * Supabase-Tabelle:
  *
- * Die IDs entsprechen direkt den IDs aus
- * Rebrickable / part_categories.csv.
+ *     part_categories
  *
- * Die Daten kommen aus unserer Supabase-Tabelle:
+ * Diese Tabelle basiert auf den Rebrickable
+ * part_categories.
  *
- *   part_categories
+ * Wir verwenden:
  *
- * Dadurch müssen wir die Kategorien nicht mehr
- * selbst anhand von Namen erraten.
+ *     id
+ *     name
+ *
+ * Keine eigene Kategorie-Erkennung anhand
+ * von Teilnamen.
  */
 
 
@@ -41,12 +46,11 @@ let categoriesLoaded = false;
 
 async function loadPartCategories() {
 
-  /*
-   * Wenn bereits geladen:
-   * vorhandenen Cache verwenden.
-   */
   if (
-    categoriesLoaded
+    categoriesLoaded &&
+    Array.isArray(
+      rebrickableCategories
+    )
   ) {
 
     return rebrickableCategories;
@@ -69,18 +73,67 @@ async function loadPartCategories() {
 
 
     if (
-      !Array.isArray(result)
+      !Array.isArray(
+        result
+      )
     ) {
 
       throw new Error(
-        "Ungültige Kategorie-Daten."
+        "Ungültige Rebrickable-Kategorien."
       );
 
     }
 
 
+    /*
+     * Nur gültige Kategorien übernehmen.
+     */
+
     rebrickableCategories =
-      result;
+      result
+        .filter(
+          category =>
+            category &&
+            category.id !== null &&
+            category.id !== undefined &&
+            category.name
+        )
+        .map(
+          category => ({
+
+            id:
+              Number(
+                category.id
+              ),
+
+            name:
+              String(
+                category.name
+              )
+
+          })
+        )
+        .filter(
+          category =>
+            Number.isFinite(
+              category.id
+            )
+        );
+
+
+    /*
+     * Rebrickable-Reihenfolge:
+     * Kategorie-ID aufsteigend.
+     */
+
+    rebrickableCategories.sort(
+      (
+        a,
+        b
+      ) =>
+        a.id -
+        b.id
+    );
 
 
     categoriesLoaded =
@@ -101,7 +154,6 @@ async function loadPartCategories() {
 
     rebrickableCategories =
       [];
-
 
     categoriesLoaded =
       false;
@@ -133,10 +185,21 @@ function getCategoryById(
   }
 
 
-  const numericId =
+  const id =
     Number(
       categoryId
     );
+
+
+  if (
+    !Number.isFinite(
+      id
+    )
+  ) {
+
+    return null;
+
+  }
 
 
   return (
@@ -144,7 +207,7 @@ function getCategoryById(
       category =>
         Number(
           category.id
-        ) === numericId
+        ) === id
     ) ||
     null
   );
@@ -168,8 +231,7 @@ function getCategoryName(
 
 
   if (
-    category &&
-    category.name
+    category
   ) {
 
     return category.name;
@@ -203,9 +265,7 @@ function getRebrickableCategoryInfo(
     return {
 
       id:
-        Number(
-          category.id
-        ),
+        category.id,
 
       name:
         category.name
@@ -229,7 +289,7 @@ function getRebrickableCategoryInfo(
 
 
 /* =========================================================
-   KATEGORIEN SORTIEREN
+   TEILE NACH REBRICKABLE-KATEGORIE SORTIEREN
 ========================================================= */
 
 function sortByRebrickableCategory(
@@ -237,7 +297,9 @@ function sortByRebrickableCategory(
 ) {
 
   if (
-    !Array.isArray(parts)
+    !Array.isArray(
+      parts
+    )
   ) {
 
     return [];
@@ -265,14 +327,35 @@ function sortByRebrickableCategory(
         );
 
 
+      const validA =
+        Number.isFinite(
+          categoryA
+        );
+
+
+      const validB =
+        Number.isFinite(
+          categoryB
+        );
+
+
       /*
        * Teile ohne Kategorie kommen
-       * ans Ende.
+       * ganz nach hinten.
        */
+
       if (
-        Number.isNaN(
-          categoryA
-        )
+        !validA &&
+        !validB
+      ) {
+
+        return 0;
+
+      }
+
+
+      if (
+        !validA
       ) {
 
         return 1;
@@ -281,9 +364,7 @@ function sortByRebrickableCategory(
 
 
       if (
-        Number.isNaN(
-          categoryB
-        )
+        !validB
       ) {
 
         return -1;
@@ -303,24 +384,26 @@ function sortByRebrickableCategory(
 
 
 /* =========================================================
-   KATEGORIEN GRUPPIEREN
+   TEILE IN REBRICKABLE-KATEGORIEN GRUPPIEREN
 ========================================================= */
 
 function groupPartsByRebrickableCategory(
   parts
 ) {
 
-  const groups =
-    new Map();
-
-
   if (
-    !Array.isArray(parts)
+    !Array.isArray(
+      parts
+    )
   ) {
 
     return [];
 
   }
+
+
+  const groups =
+    new Map();
 
 
   parts.forEach(
@@ -332,15 +415,14 @@ function groupPartsByRebrickableCategory(
         );
 
 
-      /*
-       * Falls keine gültige Rebrickable-ID
-       * vorhanden ist, verwenden wir
-       * eine separate "Sonstige"-Gruppe.
-       */
-      const key =
+      const validCategory =
         Number.isFinite(
           categoryId
-        )
+        );
+
+
+      const key =
+        validCategory
           ? categoryId
           : null;
 
@@ -352,9 +434,9 @@ function groupPartsByRebrickableCategory(
       ) {
 
         const category =
-          key !== null
+          validCategory
             ? getCategoryById(
-                key
+                categoryId
               )
             : null;
 
@@ -364,11 +446,14 @@ function groupPartsByRebrickableCategory(
           {
 
             id:
-              key,
+              validCategory
+                ? categoryId
+                : null,
 
             name:
-              category?.name ||
-              "Sonstige",
+              category
+                ? category.name
+                : "Sonstige",
 
             parts:
               []
@@ -393,16 +478,27 @@ function groupPartsByRebrickableCategory(
 
 
   /*
-   * Nach Rebrickable-ID sortieren.
+   * Kategorien exakt nach ihrer
+   * Rebrickable-ID sortieren.
    */
+
   return Array.from(
     groups.values()
-  )
-  .sort(
+  ).sort(
     (
       a,
       b
     ) => {
+
+      if (
+        a.id === null &&
+        b.id === null
+      ) {
+
+        return 0;
+
+      }
+
 
       if (
         a.id === null
@@ -439,7 +535,7 @@ function groupPartsByRebrickableCategory(
 
 async function initializeCategories() {
 
-  await loadPartCategories();
+  return await loadPartCategories();
 
 }
 
@@ -455,4 +551,3 @@ function getLoadedCategories() {
   ];
 
 }
-
