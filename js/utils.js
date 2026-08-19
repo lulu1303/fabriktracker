@@ -1,100 +1,182 @@
 /* =========================================================
-   HTML ESCAPEN
+   UTILS
 ========================================================= */
 
-function escapeHTML(value) {
-
-  return String(value)
-
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-
-    .replace(
-      /</g,
-      "&lt;"
-    )
-
-    .replace(
-      />/g,
-      "&gt;"
-    )
-
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-
-    .replace(
-      /'/g,
-      "&#039;"
-    );
-
+function esc(v) {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 
-/* =========================================================
-   GELD FORMATIEREN
-========================================================= */
+function euro(v) {
+  return v == null || isNaN(v)
+    ? "–"
+    : Number(v).toLocaleString(
+        "de-DE",
+        {
+          style: "currency",
+          currency: "EUR",
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }
+      );
+}
 
-function formatEuro(value) {
+
+function date(v) {
+  try {
+    return v
+      ? new Date(v).toLocaleString("de-DE")
+      : "";
+  } catch {
+    return "";
+  }
+}
+
+
+function cat(c, n) {
+
+  let x =
+    (c + " " + n).toLowerCase();
+
+  let ct =
+    String(c || "").toLowerCase();
+
+
+  if (ct === "11")
+    return {
+      key: "bricks",
+      name: "Bricks",
+      icon: "🧱"
+    };
+
+
+  if (x.includes("plate"))
+    return {
+      key: "plates",
+      name: "Plates",
+      icon: "▰"
+    };
+
+
+  if (x.includes("tile"))
+    return {
+      key: "tiles",
+      name: "Tiles",
+      icon: "▫️"
+    };
+
+
+  if (x.includes("brick"))
+    return {
+      key: "bricks",
+      name: "Bricks",
+      icon: "🧱"
+    };
+
 
   if (
-    value === null ||
-    value === undefined ||
-    isNaN(value)
-  ) {
+    x.includes("slope") ||
+    x.includes("wedge")
+  )
+    return {
+      key: "slopes",
+      name: "Slopes",
+      icon: "🔺"
+    };
 
-    return "–";
 
-  }
+  if (x.includes("technic"))
+    return {
+      key: "technic",
+      name: "Technic",
+      icon: "⚙️"
+    };
 
 
-  return Number(value)
-    .toLocaleString(
-      "de-DE",
-      {
+  if (x.includes("minifig"))
+    return {
+      key: "minifigs",
+      name: "Minifiguren",
+      icon: "👤"
+    };
 
-        style: "currency",
 
-        currency: "EUR",
+  if (
+    x.includes("wheel") ||
+    x.includes("tire")
+  )
+    return {
+      key: "wheels",
+      name: "Räder & Reifen",
+      icon: "⚫"
+    };
 
-        minimumFractionDigits: 2,
 
-        maximumFractionDigits: 2
-
-      }
-    );
+  return {
+    key: "other",
+    name: "Sonstige",
+    icon: "🧩"
+  };
 
 }
 
 
 /* =========================================================
-   DATUM FORMATIEREN
+   EXAKTE MASSSUCHE
 ========================================================= */
 
-function formatDate(value) {
+function norm(s) {
 
-  if (!value) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(
+      /[×✕]/g,
+      "x"
+    )
+    .replace(
+      /\s+/g,
+      " "
+    )
+    .trim();
 
-    return "";
-
-  }
+}
 
 
-  try {
+function dims(s) {
 
-    return new Date(
-      value
-    ).toLocaleString(
-      "de-DE"
+  let m =
+    norm(s).match(
+      /(?:^|\s)(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)(?:\s|$)/
     );
 
-  } catch {
 
-    return "";
+  return m
+    ? {
+        a: +m[1].replace(",", "."),
+        b: +m[2].replace(",", ".")
+      }
+    : null;
 
-  }
+}
+
+
+function exactDims(p, q) {
+
+  let a =
+    dims(q);
+
+  let b =
+    dims(p.name);
+
+
+  return !!a &&
+         !!b &&
+         a.a === b.a &&
+         a.b === b.b;
 
 }
