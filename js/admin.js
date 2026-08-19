@@ -1,4 +1,3 @@
-
 /* =========================================================
    ADMIN
 ========================================================= */
@@ -125,7 +124,7 @@ async function adminDeletePart(
 
   try {
 
-    await supabaseRequest(
+    await req(
 
       PARTS_URL +
 
@@ -203,7 +202,7 @@ async function adminSetAvailability(
 
   try {
 
-    await supabaseRequest(
+    await req(
 
       PARTS_URL +
 
