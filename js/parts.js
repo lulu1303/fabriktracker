@@ -1,173 +1,212 @@
 /* =========================================================
-   KATEGORIE
+   PARTS
 ========================================================= */
 
-function getCategoryInfo(
-  category,
-  name
-) {
+function relevance(p, q) {
 
-  const categoryText =
-    String(
-      category || ""
-    ).toLowerCase();
+  q = norm(q);
 
+  let n =
+    norm(p.name);
 
-  const text =
-    (
-      String(category || "") +
-      " " +
-      String(name || "")
-    ).toLowerCase();
+  let num =
+    norm(
+      p.part_num ||
+      p.part_number
+    );
 
+  let c =
+    norm(p.category);
 
-  if (
-    categoryText === "11"
-  ) {
-
-    return {
-
-      key: "bricks",
-
-      name: "Bricks",
-
-      icon: "🧱"
-
-    };
-
-  }
+  let s = 0;
 
 
-  if (
-    text.includes("plate")
-  ) {
+  if (dimensionQuery(q)) {
 
-    return {
+    if (!exactDims(p, q))
+      return 1e9;
 
-      key: "plates",
-
-      name: "Plates",
-
-      icon: "▰"
-
-    };
-
-  }
+    s -= 5000;
 
 
-  if (
-    text.includes("tile")
-  ) {
-
-    return {
-
-      key: "tiles",
-
-      name: "Tiles",
-
-      icon: "▫️"
-
-    };
-
-  }
+    if (/\bplate\b/.test(q))
+      s +=
+        n.includes("plate")
+          ? -500
+          : 100;
 
 
-  if (
-    text.includes("brick")
-  ) {
+    if (/\btile\b/.test(q))
+      s +=
+        n.includes("tile")
+          ? -500
+          : 100;
 
-    return {
 
-      key: "bricks",
+    if (/\bbrick\b/.test(q))
+      s +=
+        n.includes("brick")
+          ? -500
+          : 100;
 
-      name: "Bricks",
+  } else {
 
-      icon: "🧱"
+    if (num === q)
+      s -= 10000;
 
-    };
+    else if (num.startsWith(q))
+      s -= 5000;
+
+    else if (num.includes(q))
+      s -= 3000;
+
+
+    if (n === q)
+      s -= 2000;
+
+    else if (n.startsWith(q))
+      s -= 800;
+
+    else if (n.includes(q))
+      s -= 300;
 
   }
 
 
   if (
-    text.includes("slope") ||
-    text.includes("wedge")
-  ) {
-
-    return {
-
-      key: "slopes",
-
-      name: "Slopes",
-
-      icon: "🔺"
-
-    };
-
-  }
+    n.includes("duplo") ||
+    c.includes("duplo")
+  )
+    s += 3000;
 
 
   if (
-    text.includes("technic")
-  ) {
-
-    return {
-
-      key: "technic",
-
-      name: "Technic",
-
-      icon: "⚙️"
-
-    };
-
-  }
+    n.includes("education") ||
+    c.includes("education")
+  )
+    s += 2000;
 
 
   if (
-    text.includes("minifig")
-  ) {
-
-    return {
-
-      key: "minifigs",
-
-      name: "Minifiguren",
-
-      icon: "👤"
-
-    };
-
-  }
+    /printed|print|pattern|decorated|decoration/.test(n)
+  )
+    s += 1000;
 
 
   if (
-    text.includes("wheel") ||
-    text.includes("tire")
-  ) {
+    n.includes("modified") ||
+    n.includes("assembly")
+  )
+    s += 500;
 
-    return {
 
-      key: "wheels",
+  if (
+    n.includes("brick") ||
+    c === "11"
+  )
+    s -= 80;
 
-      name: "Räder & Reifen",
 
-      icon: "⚫"
+  if (n.includes("plate"))
+    s -= 70;
 
-    };
+
+  if (n.includes("tile"))
+    s -= 60;
+
+
+  return s;
+}
+
+
+/* =========================================================
+   TEILE LADEN
+========================================================= */
+
+async function loadParts() {
+
+  let box =
+    document.getElementById(
+      "results"
+    );
+
+
+  box.innerHTML =
+    '<div class="card loading">Teile werden geladen...</div>';
+
+
+  try {
+
+    parts =
+      await req(
+        PARTS_URL +
+        "?select=*&order=created_at.desc"
+      ) || [];
+
+
+    let ids =
+      [
+        ...new Set(
+          parts
+            .map(
+              p => p.color_id
+            )
+            .filter(
+              x => x != null
+            )
+        )
+      ];
+
+
+    if (ids.length) {
+
+      let colors =
+        await req(
+          SUPABASE_URL +
+          "/rest/v1/lego_colors?id=in." +
+          ids.join(",") +
+          "&select=id,name"
+        ) || [];
+
+
+      let map = {};
+
+
+      colors.forEach(
+        c =>
+          map[c.id] =
+            c.name
+      );
+
+
+      parts.forEach(
+        p =>
+          p.color_name =
+            Number(
+              p.color_id
+            ) === 9999
+              ? "Not Applicable"
+              : map[p.color_id] || ""
+      );
+
+    }
+
+
+    await loadImages();
+
+    await loadWeights();
+
+    displayParts(parts);
+
+
+  } catch (e) {
+
+    box.innerHTML =
+      '<div class="card error"><b>Supabase-Fehler beim Laden</b><br>' +
+      esc(e.message) +
+      '</div>';
 
   }
-
-
-  return {
-
-    key: "other",
-
-    name: "Sonstige",
-
-    icon: "🧩"
-
-  };
 
 }
 
@@ -176,212 +215,96 @@ function getCategoryInfo(
    BILDER LADEN
 ========================================================= */
 
-async function loadImagesForParts() {
+async function loadImages() {
 
-  if (
-    !parts ||
-    parts.length === 0
-  ) {
-
+  if (!parts.length)
     return;
 
-  }
 
-
-  const combinations = [
-
-    ...new Map(
-
-      parts
-
-        .filter(
-          part =>
-            part.part_number &&
-            part.color_id !== null &&
-            part.color_id !== undefined
-        )
-
-        .map(
-          part => {
-
-            const key =
+  let nums =
+    [
+      ...new Set(
+        parts
+          .map(
+            p =>
               String(
-                part.part_number
-              ) +
-              "_" +
-              String(
-                part.color_id
-              );
+                p.part_number || ""
+              )
+          )
+          .filter(Boolean)
+      )
+    ];
 
 
-            return [
-              key,
-              {
-
-                part_num:
-                  String(
-                    part.part_number
-                  ),
-
-                color_id:
-                  Number(
-                    part.color_id
-                  )
-
-              }
-            ];
-
-          }
-        )
-
-    ).values()
-
-  ];
-
-
-  if (
-    combinations.length === 0
-  ) {
-
-    return;
-
-  }
-
-
-  const imageMap = {};
-
-  const batchSize = 100;
+  let map = {};
 
 
   try {
 
-    const partNumbers = [
-
-      ...new Set(
-
-        combinations.map(
-          item =>
-            item.part_num
-        )
-
-      )
-
-    ];
-
-
     for (
       let i = 0;
-      i < partNumbers.length;
-      i += batchSize
+      i < nums.length;
+      i += 100
     ) {
 
-      const batch =
-        partNumbers.slice(
+      let b =
+        nums.slice(
           i,
-          i + batchSize
+          i + 100
         );
 
 
-      const encodedNumbers =
-        batch
-
+      let q =
+        b
           .map(
-            number =>
-              `"${String(
-                number
-              ).replace(
+            x =>
+              `"${x.replace(
                 /"/g,
                 '\\"'
               )}"`
           )
-
           .join(",");
 
 
-      const url =
-
-        SUPABASE_URL +
-
-        "/rest/v1/lego_part_colors" +
-
-        "?part_num=in.(" +
-
-        encodedNumbers +
-
-        ")" +
-
-        "&select=part_num,color_id,image_url";
+      let rows =
+        await req(
+          SUPABASE_URL +
+          "/rest/v1/lego_part_colors?part_num=in.(" +
+          q +
+          ")&select=part_num,color_id,image_url"
+        ) || [];
 
 
-      const rows =
-        await supabaseRequest(
-          url
-        );
-
-
-      (
-        rows || []
-      ).forEach(
-        row => {
-
-          const key =
-
-            String(
-              row.part_num
-            ) +
+      rows.forEach(
+        r =>
+          map[
+            r.part_num +
             "_" +
-            String(
-              row.color_id
-            );
-
-
-          imageMap[key] =
-            row.image_url ||
-            null;
-
-        }
+            r.color_id
+          ] =
+            r.image_url
       );
 
     }
 
 
     parts.forEach(
-      part => {
-
-        const key =
-
-          String(
-            part.part_number || ""
-          ) +
-          "_" +
-          String(
-            part.color_id ?? ""
-          );
-
-
-        part.image_url =
-          imageMap[key] ||
-          null;
-
-      }
+      p =>
+        p.image_url =
+          map[
+            p.part_number +
+            "_" +
+            p.color_id
+          ] || null
     );
 
 
-  } catch (error) {
-
-    console.warn(
-      "Farbabhängige LEGO-Bilder konnten nicht geladen werden:",
-      error
-    );
-
+  } catch {
 
     parts.forEach(
-      part => {
-
-        part.image_url =
-          null;
-
-      }
+      p =>
+        p.image_url =
+          null
     );
 
   }
@@ -393,141 +316,74 @@ async function loadImagesForParts() {
    GEWICHTE LADEN
 ========================================================= */
 
-async function loadWeightsForParts() {
+async function loadWeights() {
 
-  if (
-    !parts ||
-    parts.length === 0
-  ) {
-
+  if (!parts.length)
     return;
 
-  }
 
-
-  const numbers = [
-
-    ...new Set(
-
-      parts
-
-        .map(
-          part =>
-            String(
-              part.part_number || ""
-            )
-        )
-
-        .filter(Boolean)
-
-    )
-
-  ];
-
-
-  if (
-    numbers.length === 0
-  ) {
-
-    return;
-
-  }
+  let nums =
+    [
+      ...new Set(
+        parts
+          .map(
+            p =>
+              String(
+                p.part_number || ""
+              )
+          )
+          .filter(Boolean)
+      )
+    ];
 
 
   try {
 
-    const encodedNumbers =
-      numbers
-
+    let q =
+      nums
         .map(
-          number =>
-            `"${number.replace(
+          x =>
+            `"${x.replace(
               /"/g,
               '\\"'
             )}"`
         )
-
         .join(",");
 
 
-    const url =
-      WEIGHTS_URL +
-
-      "?part_num=in.(" +
-
-      encodedNumbers +
-
-      ")" +
-
-      "&select=part_num,weight_grams";
+    let rows =
+      await req(
+        WEIGHTS_URL +
+        "?part_num=in.(" +
+        q +
+        ")" +
+        "&select=part_num,weight_grams"
+      ) || [];
 
 
-    const weights =
-      await supabaseRequest(
-        url
-      );
+    let m = {};
 
 
-    const weightMap = {};
-
-
-    (
-      weights || []
-    ).forEach(
-      row => {
-
-        weightMap[
-          String(
-            row.part_num
-          )
-        ] =
-          Number(
-            row.weight_grams
-          );
-
-      }
+    rows.forEach(
+      r =>
+        m[r.part_num] =
+          +r.weight_grams
     );
 
 
     parts.forEach(
-      part => {
-
-        const number =
-          String(
-            part.part_number || ""
-          );
-
-
-        if (
-          weightMap[number] !==
-          undefined
-        ) {
-
-          part.weight_grams =
-            weightMap[number];
-
-        } else {
-
-          part.weight_grams =
-            null;
-
-        }
-
-      }
+      p =>
+        p.weight_grams =
+          m[p.part_number] ?? null
     );
 
 
-  } catch (error) {
-
-    console.warn(
-      "Gewichte konnten nicht geladen werden:",
-      error
-    );
-
+  } catch {
 
     parts.forEach(
-      part =>
-        part.weight_grams = null
+      p =>
+        p.weight_grams =
+          null
     );
 
   }
@@ -536,317 +392,92 @@ async function loadWeightsForParts() {
 
 
 /* =========================================================
-   TEILE LADEN
+   TEIL RENDERN
 ========================================================= */
 
-async function loadParts() {
+function render(p) {
 
-  const container =
-    document.getElementById(
-      "results"
+  let n =
+    esc(p.part_number);
+
+  let name =
+    esc(p.name);
+
+  let color =
+    esc(
+      Number(p.color_id) === 9999
+        ? "Not Applicable"
+        : p.color_name || ""
     );
 
+  let w =
+    +p.weight_grams;
 
-  container.innerHTML = `
+  let has =
+    w > 0;
 
-    <div class="card loading">
-      Teile werden geladen...
-    </div>
+  let normal =
+    has
+      ? w * PRICE_PER_GRAM
+      : null;
 
-  `;
+  let disc =
+    has
+      ? normal * (1 - DISCOUNT)
+      : null;
 
+  let available =
+    p.is_available !== false;
 
-  try {
-
-    const data =
-      await supabaseRequest(
-
-        PARTS_URL +
-
-        "?select=*" +
-
-        "&order=created_at.desc"
-
-      );
-
-
-    parts =
-      data || [];
-
-
-    if (
-      parts.length > 0
-    ) {
-
-      const colorIds = [
-
-        ...new Set(
-
-          parts
-
-            .map(
-              part =>
-                part.color_id
-            )
-
-            .filter(
-              id =>
-                id !== null &&
-                id !== undefined
-            )
-
-        )
-
-      ];
-
-
-      if (
-        colorIds.length > 0
-      ) {
-
-        const colorsUrl =
-
-          SUPABASE_URL +
-
-          "/rest/v1/lego_colors" +
-
-          "?id=in.(" +
-
-          colorIds.join(",") +
-
-          ")" +
-
-          "&select=id,name";
-
-
-        const colors =
-          await supabaseRequest(
-            colorsUrl
-          );
-
-
-        const colorMap = {};
-
-
-        (
-          colors || []
-        ).forEach(
-          color => {
-
-            colorMap[
-              color.id
-            ] =
-              color.name;
-
-          }
-        );
-
-
-        parts.forEach(
-          part => {
-
-            if (
-              Number(part.color_id) === 9999
-            ) {
-
-              part.color_name =
-                "Not Applicable";
-
-            } else {
-
-              part.color_name =
-                colorMap[
-                  part.color_id
-                ] || "";
-
-            }
-
-          }
-        );
-
-      }
-
-    }
-
-
-    await loadImagesForParts();
-
-    await loadWeightsForParts();
-
-    displayParts(
-      parts
+  let ci =
+    cat(
+      p.category,
+      p.name
     );
 
-
-  } catch (error) {
-
-    console.error(
-      error
-    );
-
-
-    showError(
-      "Supabase-Fehler beim Laden",
-
-      error.message ||
-      "Unbekannter Fehler"
-
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   EIN TEIL RENDERN
-========================================================= */
-
-function renderPart(
-  part
-) {
-
-  const number =
-    escapeHTML(
-      part.part_number || ""
-    );
-
-
-  const name =
-    escapeHTML(
-      part.name || ""
-    );
-
-
-  const color =
-    escapeHTML(
-      part.color_name || ""
-    );
-
-
-  const weight =
-    Number(
-      part.weight_grams
-    );
-
-
-  const hasWeight =
-    Number.isFinite(
-      weight
-    ) &&
-    weight > 0;
-
-
-  let normalPrice =
-    null;
-
-
-  let discountPrice =
-    null;
-
-
-  if (
-    hasWeight
-  ) {
-
-    normalPrice =
-      weight *
-      PRICE_PER_GRAM;
-
-
-    discountPrice =
-      normalPrice *
-      (1 - DISCOUNT);
-
-  }
-
-
-  const isAvailable =
-    part.is_available !== false;
-
-
-  const lastSeen =
-    part.last_seen_at ||
-    part.created_at ||
-    null;
-
-
-  const lastSeenFormatted =
-    formatDate(
-      lastSeen
-    );
-
-
-  const categoryInfo =
-    getCategoryInfo(
-      part.category,
-      part.name
-    );
-
-
-  const imageUrl =
-    part.image_url ||
-    "";
-
-
-  const safeImageUrl =
-    imageUrl
-      ? escapeHTML(
-          imageUrl
-        )
+  let img =
+    p.image_url
+      ? esc(p.image_url)
       : "";
+
+  let last =
+    date(
+      p.last_seen_at ||
+      p.created_at
+    );
 
 
   return `
-
-    <div
-      class="part-card ${
-        isAvailable
-          ? ""
-          : "unavailable"
-      }"
-    >
+    <div class="part-card ${available ? "" : "unavailable"}">
 
       <div class="part-main">
 
         <div class="part-image-wrapper">
 
           ${
-            safeImageUrl
-
+            img
               ? `
-
                 <img
                   class="part-image"
-                  src="${safeImageUrl}"
-                  alt="LEGO ${number}"
+                  src="${img}"
+                  alt="LEGO ${n}"
                   loading="lazy"
-                  onerror="
-                    this.style.display='none';
-                    this.nextElementSibling.style.display='block';
-                  "
+                  onerror="this.style.display='none';this.nextElementSibling.style.display='block'"
                 >
 
                 <div
                   class="part-image-fallback"
-                  style="display:none;"
+                  style="display:none"
                 >
                   🧱<br>
                   Kein Bild verfügbar
                 </div>
-
               `
-
               : `
-
-                <div
-                  class="part-image-fallback"
-                  style="display:block;"
-                >
+                <div class="part-image-fallback">
                   🧱<br>
                   Kein Bild verfügbar
                 </div>
-
               `
           }
 
@@ -860,63 +491,33 @@ function renderPart(
             <div>
 
               <div class="part-number">
-                LEGO ${number}
+                LEGO ${n}
               </div>
 
               <div class="part-name">
-
-                ${name}
-
-                ${
-                  categoryInfo
-                    ? " · " +
-                      escapeHTML(
-                        categoryInfo.name
-                      )
-                    : ""
-                }
-
+                ${name} · ${esc(ci.name)}
               </div>
 
             </div>
 
 
-            ${
-              isAvailable
-
-                ? `
-
-                  <div class="available">
-                    ● Verfügbar
-                  </div>
-
-                `
-
-                : `
-
-                  <div class="not-available">
-                    ● Nicht verfügbar
-                  </div>
-
-                `
-            }
+            <div
+              class="${available ? "available" : "not-available"}"
+            >
+              ● ${available ? "Verfügbar" : "Nicht verfügbar"}
+            </div>
 
           </div>
 
 
           ${
             color
-
               ? `
-
                 <div class="part-color">
                   🎨 ${color}
                 </div>
-
               `
-
               : ""
-
           }
 
 
@@ -928,21 +529,16 @@ function renderPart(
 
 
             ${
-              hasWeight
-
+              has
                 ? `
-
                   <div class="price-per-piece">
 
-                    ${formatEuro(
-                      discountPrice
-                    )}
+                    ${euro(disc)}
 
                     <span
                       style="
                         font-size:12px;
-                        color:#777;
-                        font-weight:600;
+                        color:#777
                       "
                     >
                       mit 20 % Rabatt
@@ -953,29 +549,19 @@ function renderPart(
 
                   <div class="price-row">
 
-                    <div class="price-normal">
-
+                    <div>
                       Normal:
-
                       <strong>
-                        ${formatEuro(
-                          normalPrice
-                        )}
+                        ${euro(normal)}
                       </strong>
-
                     </div>
 
 
                     <div class="price-discount">
-
                       −20 %:
-
                       <strong>
-                        ${formatEuro(
-                          discountPrice
-                        )}
+                        ${euro(disc)}
                       </strong>
-
                     </div>
 
                   </div>
@@ -984,33 +570,20 @@ function renderPart(
                   <div class="weight">
 
                     ⚖️
-
-                    ${weight.toLocaleString(
+                    ${w.toLocaleString(
                       "de-DE",
                       {
                         maximumFractionDigits: 3
                       }
                     )}
-
-                    g
-
-                    · 11 €/100 g
+                    g · 11 €/100 g
 
                   </div>
-
                 `
-
                 : `
-
-                  <div
-                    style="
-                      color:#999;
-                      font-size:14px;
-                    "
-                  >
+                  <div style="color:#999">
                     ⚖️ Gewicht noch nicht hinterlegt
                   </div>
-
                 `
             }
 
@@ -1026,147 +599,87 @@ function renderPart(
         📍 LEGO Fabrik Günzburg
 
         ${
-          lastSeenFormatted
-
+          last
             ? `
-
               <br>
-
               🕐 Zuletzt als vorhanden gemeldet:
-
-              ${escapeHTML(
-                lastSeenFormatted
-              )}
-
+              ${esc(last)}
             `
-
             : ""
-
         }
 
+        <br>
 
-        ${
-          categoryInfo
-
-            ? `
-
-              <br>
-
-              📂 ${escapeHTML(
-                categoryInfo.name
-              )}
-
-            `
-
-            : ""
-
-        }
+        📂 ${esc(ci.name)}
 
 
-        ${
-          !isAvailable
-
-            ? `
-
-              <div
-                class="
-                  status-line
-                  unavailable-status
-                "
-              >
-
-                ⚠️ Dieses Teil wurde zuletzt
-                als nicht verfügbar gemeldet.
-
-              </div>
-
-            `
-
-            : `
-
-              <div
-                class="
-                  status-line
-                  available-status
-                "
-              >
-
-                ✓ Dieses Teil wurde zuletzt
-                als verfügbar gemeldet.
-
-              </div>
-
-            `
-
-        }
+        <div
+          class="
+            status-line
+            ${available
+              ? "available-status"
+              : "unavailable-status"}
+          "
+        >
+          ${
+            available
+              ? "✓ Dieses Teil wurde zuletzt als verfügbar gemeldet."
+              : "⚠️ Dieses Teil wurde zuletzt als nicht verfügbar gemeldet."
+          }
+        </div>
 
       </div>
 
 
       ${
-        isAvailable
-
+        available
           ? `
-
             <button
               class="secondary confirm"
-              onclick="confirmPart('${escapeHTML(
-                part.part_number || ""
-              )}', '${escapeHTML(
-                part.id || ""
-              )}')"
+              onclick="confirmPart(
+                '${esc(p.part_number)}',
+                '${esc(p.id)}'
+              )"
             >
               👍 Ich habe dieses Teil gesehen
             </button>
-
 
             <button
               class="danger unavailable-button"
-              onclick="reportUnavailable('${escapeHTML(
-                part.id || ""
-              )}')"
+              onclick="reportUnavailable(
+                '${esc(p.id)}'
+              )"
             >
               ❌ Teil ist nicht mehr da
             </button>
-
           `
-
           : `
-
             <button
               class="success confirm"
-              onclick="confirmPart('${escapeHTML(
-                part.part_number || ""
-              )}', '${escapeHTML(
-                part.id || ""
-              )}')"
+              onclick="confirmPart(
+                '${esc(p.part_number)}',
+                '${esc(p.id)}'
+              )"
             >
               👍 Ich habe dieses Teil gesehen
             </button>
-
           `
-
       }
 
 
       <button
         class="admin-delete"
-        onclick="adminDeletePart('${escapeHTML(
-          part.id || ""
-        )}', '${escapeHTML(
-          part.part_number || ""
-        )}', '${escapeHTML(
-          part.name || ""
-        )}')"
+        onclick="adminDeletePart(
+          '${esc(p.id)}',
+          '${esc(p.part_number)}',
+          '${esc(p.name)}'
+        )"
       >
         🔒 Admin
       </button>
 
-
     </div>
-
   `;
-
 }
 
 
@@ -1174,182 +687,103 @@ function renderPart(
    TEILE ANZEIGEN
 ========================================================= */
 
-function displayParts(
-  list
-) {
+function displayParts(list) {
 
-  const container =
+  let box =
     document.getElementById(
       "results"
     );
 
 
-  if (
-    !list ||
-    list.length === 0
-  ) {
+  if (!list.length) {
 
-    container.innerHTML = `
-
-      <div class="card empty">
-
-        Keine passenden Teile gefunden.
-
-      </div>
-
-    `;
+    box.innerHTML =
+      '<div class="card empty">Keine passenden Teile gefunden.</div>';
 
     return;
-
   }
 
 
-  const groups = {};
+  let groups = {};
 
 
   list.forEach(
-    part => {
+    p => {
 
-      const category =
-        getCategoryInfo(
-          part.category,
-          part.name
+      let c =
+        cat(
+          p.category,
+          p.name
         );
 
 
-      if (
-        !groups[
-          category.key
-        ]
-      ) {
-
-        groups[
-          category.key
-        ] = {
-
-          info: category,
-
+      (
+        groups[c.key] ??=
+        {
+          info: c,
           parts: []
-
-        };
-
-      }
-
-
-      groups[
-        category.key
-      ]
+        }
+      )
         .parts
-        .push(
-          part
-        );
+        .push(p);
 
     }
   );
 
 
-  const categoryOrder = [
-
-    "bricks",
-    "plates",
-    "tiles",
-    "slopes",
-    "technic",
-    "minifigs",
-    "wheels",
-    "other"
-
-  ];
-
-
-  const sortedKeys =
-
-    Object.keys(
-      groups
-    )
-
-    .sort(
-      (a, b) => {
-
-        const indexA =
-          categoryOrder.indexOf(
-            a
-          );
+  let order =
+    [
+      "bricks",
+      "plates",
+      "tiles",
+      "slopes",
+      "technic",
+      "minifigs",
+      "wheels",
+      "other"
+    ];
 
 
-        const indexB =
-          categoryOrder.indexOf(
-            b
-          );
-
-
-        return (
-
-          (
-            indexA === -1
-              ? 999
-              : indexA
-          )
-
-          -
-
-          (
-            indexB === -1
-              ? 999
-              : indexB
-          )
-
-        );
-
-      }
-    );
-
-
-  container.innerHTML =
-
-    sortedKeys
-
+  box.innerHTML =
+    Object.keys(groups)
+      .sort(
+        (a, b) =>
+          order.indexOf(a) -
+          order.indexOf(b)
+      )
       .map(
-        (
-          key,
-          index
-        ) => {
+        (k, i) => {
 
-          const group =
-            groups[key];
+          let g =
+            groups[k];
 
 
           return `
-
             <div
-              class="category-folder ${
-                index === 0
-                  ? "open"
-                  : ""
-              }"
+              class="category-folder ${i ? "" : "open"}"
             >
 
               <button
                 class="category-header"
-                onclick="toggleCategory(this)"
+                onclick="
+                  this.parentElement
+                    .classList
+                    .toggle('open')
+                "
               >
 
                 <div class="category-left">
 
                   <span class="category-icon">
-                    ${group.info.icon}
+                    ${g.info.icon}
                   </span>
-
 
                   <span class="category-name">
-                    ${escapeHTML(
-                      group.info.name
-                    )}
+                    ${g.info.name}
                   </span>
 
-
                   <span class="category-count">
-                    ${group.parts.length}
+                    ${g.parts.length}
                   </span>
 
                 </div>
@@ -1364,26 +798,15 @@ function displayParts(
 
               <div class="category-content">
 
-                ${
-                  group.parts
-                    .map(
-                      part =>
-                        renderPart(
-                          part
-                        )
-                    )
-                    .join("")
-                }
+                ${g.parts
+                  .map(render)
+                  .join("")}
 
               </div>
 
             </div>
-
           `;
-
         }
       )
-
       .join("");
-
 }
