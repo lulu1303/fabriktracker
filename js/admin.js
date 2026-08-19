@@ -1,8 +1,12 @@
+
 /* =========================================================
    ADMIN
 ========================================================= */
 
-let adminAuthenticated = false;
+let adminAuthenticated =
+  sessionStorage.getItem(
+    "fabriktracker_admin_authenticated"
+  ) === "true";
 
 
 /* =========================================================
@@ -11,7 +15,12 @@ let adminAuthenticated = false;
 
 async function adminLogin() {
 
-  if (adminAuthenticated) {
+  /*
+   * Bereits in dieser Browser-Sitzung authentifiziert.
+   */
+  if (
+    adminAuthenticated
+  ) {
 
     return true;
 
@@ -34,14 +43,8 @@ async function adminLogin() {
 
 
   /*
-   * Das Passwort wird aktuell nur lokal
-   * geprüft.
-   *
-   * Die eigentliche Admin-Berechtigung
-   * wird zusätzlich durch Supabase/RLS
-   * abgesichert.
+   * Passwort prüfen.
    */
-
   if (
     password !==
     ADMIN_PASSWORD
@@ -56,8 +59,18 @@ async function adminLogin() {
   }
 
 
+  /*
+   * Nur den Authentifizierungsstatus speichern.
+   * Das Passwort selbst wird NICHT gespeichert.
+   */
   adminAuthenticated =
     true;
+
+
+  sessionStorage.setItem(
+    "fabriktracker_admin_authenticated",
+    "true"
+  );
 
 
   return true;
