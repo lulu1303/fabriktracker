@@ -71,16 +71,12 @@ function searchParts() {
           .toLowerCase();
 
 
-        const categoryInfo =
-          getCategoryInfo(
-            part.category,
-            part.name
-          );
-
-
         const categoryName =
           String(
-            categoryInfo.name || ""
+            getCategoryName(
+              part.category_id,
+              part.category || ""
+            )
           )
           .toLowerCase();
 
@@ -600,7 +596,7 @@ async function fetchLegoPartSuggestions(
           search
         ) +
 
-        "&select=part_num,name,category" +
+        "&select=part_num,name,category_id,category" +
 
         "&limit=20";
 
@@ -639,7 +635,7 @@ async function fetchLegoPartSuggestions(
           "%"
         ) +
 
-        "&select=part_num,name,category" +
+        "&select=part_num,name,category_id,category" +
 
         "&limit=100";
 
@@ -694,7 +690,7 @@ async function fetchLegoPartSuggestions(
           normalized
         ) +
 
-        "&select=part_num,name,category" +
+        "&select=part_num,name,category_id,category" +
 
         "&limit=20";
 
@@ -733,7 +729,7 @@ async function fetchLegoPartSuggestions(
           "%"
         ) +
 
-        "&select=part_num,name,category" +
+        "&select=part_num,name,category_id,category" +
 
         "&limit=500";
 
@@ -804,7 +800,7 @@ async function fetchLegoPartSuggestions(
               "%"
             ) +
 
-            "&select=part_num,name,category" +
+            "&select=part_num,name,category_id,category" +
 
             "&limit=500";
 
@@ -1016,7 +1012,10 @@ async function fetchLegoPartSuggestions(
 
       const category =
         String(
-          part.category || ""
+          getCategoryName(
+            part.category_id,
+            part.category || ""
+          )
         )
         .toLowerCase();
 
@@ -1525,10 +1524,10 @@ async function fetchLegoPartSuggestions(
 
             const category =
               escapeHTML(
-                getCategoryInfo(
-                  part.category,
-                  part.name
-                ).name
+                getCategoryName(
+                  part.category_id,
+                  part.category || ""
+                )
               );
 
 
