@@ -8,6 +8,10 @@ let adminAuthenticated =
   ) === "true";
 
 
+let adminPassword =
+  "";
+
+
 /* =========================================================
    ADMIN LOGIN
 ========================================================= */
@@ -16,12 +20,7 @@ async function adminLogin() {
 
   /*
    * Bereits angemeldet?
-   * Dann nichts weiter tun.
-   *
-   * Wichtig:
-   * adminLogin() wird auch beim Löschen aufgerufen.
-   * Deshalb darf diese Funktion bei bestehender
-   * Anmeldung NICHT ausloggen.
+   * Dann kein neues Passwort verlangen.
    */
   if (
     adminAuthenticated
@@ -47,12 +46,24 @@ async function adminLogin() {
   }
 
 
+  if (
+    password.trim() === ""
+  ) {
+
+    alert(
+      "Bitte ein Passwort eingeben."
+    );
+
+    return false;
+
+  }
+
+
   /*
    * TEMPORÄRE ENTWICKLUNGS-LÖSUNG
    *
-   * Das Passwort wird nicht gespeichert.
-   * Es bleibt nur der Login-Status in der
-   * aktuellen Browser-Session erhalten.
+   * Das Passwort wird nur im Arbeitsspeicher
+   * gehalten und nicht gespeichert.
    */
   if (
     password !==
@@ -69,8 +80,13 @@ async function adminLogin() {
 
 
   /*
-   * Admin erfolgreich angemeldet.
+   * Passwort für weitere Admin-Aktionen
+   * dieser Sitzung merken.
    */
+  adminPassword =
+    password;
+
+
   adminAuthenticated =
     true;
 
@@ -85,8 +101,8 @@ async function adminLogin() {
 
 
   /*
-   * Teile neu darstellen,
-   * damit die Admin-Buttons sichtbar werden.
+   * Teile neu rendern,
+   * damit Admin-Funktionen sichtbar werden.
    */
   if (
     typeof displayParts === "function" &&
@@ -111,10 +127,6 @@ async function adminLogin() {
 
 async function toggleAdminLogin() {
 
-  /*
-   * Wenn bereits angemeldet:
-   * ausloggen.
-   */
   if (
     adminAuthenticated
   ) {
@@ -126,10 +138,6 @@ async function toggleAdminLogin() {
   }
 
 
-  /*
-   * Noch nicht angemeldet:
-   * Passwort abfragen.
-   */
   await adminLogin();
 
 }
@@ -145,6 +153,10 @@ function adminLogout() {
     false;
 
 
+  adminPassword =
+    "";
+
+
   sessionStorage.removeItem(
     "fabriktracker_admin_authenticated"
   );
@@ -153,10 +165,6 @@ function adminLogout() {
   updateAdminUI();
 
 
-  /*
-   * Teile neu darstellen,
-   * damit die Löschen-Buttons wieder verschwinden.
-   */
   if (
     typeof displayParts === "function" &&
     typeof parts !== "undefined"
@@ -177,9 +185,6 @@ function adminLogout() {
 
 function updateAdminUI() {
 
-  /*
-   * Neuer Button im Header.
-   */
   const button =
     document.getElementById(
       "adminHeaderButton"
@@ -230,20 +235,11 @@ async function adminDeletePart(
   partName
 ) {
 
-  /*
-   * Falls noch nicht angemeldet:
-   * einmalig Passwort abfragen.
-   *
-   * Wenn bereits angemeldet:
-   * adminLogin() gibt sofort true zurück.
-   */
-  const authenticated =
-    await adminLogin();
+  if (!id) {
 
-
-  if (
-    !authenticated
-  ) {
+    alert(
+      "Dieses Teil konnte nicht eindeutig gefunden werden."
+    );
 
     return;
 
@@ -251,12 +247,35 @@ async function adminDeletePart(
 
 
   /*
-   * Sicherheitsabfrage vor dem Löschen.
+   * Falls noch nicht angemeldet:
+   * einmalig Passwort abfragen.
+   */
+  if (
+    !adminAuthenticated
+  ) {
+
+    const authenticated =
+      await adminLogin();
+
+
+    if (
+      !authenticated
+    ) {
+
+      return;
+
+    }
+
+  }
+
+
+  /*
+   * Sicherheitsabfrage.
    */
   const confirmed =
     confirm(
 
-      "⚠️ Teil wirklich löschen?\n\n" +
+      "⚠️ Teil wirklich komplett löschen?\n\n" +
 
       "LEGO " +
       partNumber +
@@ -282,35 +301,72 @@ async function adminDeletePart(
   try {
 
     /*
-     * Teil aus Supabase löschen.
+     * WICHTIG:
+     *
+     * Wir benutzen die vorhandene
+     * Supabase-RPC.
+     *
+     * Nicht direkt DELETE auf /parts.
      */
-    await req(
+    const result =
+      await req(
 
-      PARTS_URL +
+        SUPABASE_URL +
+        "/rest/v1/rpc/admin_delete_part",
 
-      "?id=eq." +
+        {
 
-      encodeURIComponent(
-        id
-      ),
+          method:
+            "POST",
 
-      {
+          body:
+            JSON.stringify({
 
-        method:
-          "DELETE"
+              p_part_id:
+                Number(id),
 
-      }
+              p_password:
+                adminPassword
 
-    );
+            })
+
+        }
+
+      );
 
 
+    /*
+     * Die RPC muss true zurückgeben.
+     */
+    if (
+      result !== true
+    ) {
+
+      alert(
+
+        "❌ Das Teil wurde NICHT gelöscht.\n\n" +
+
+        "Supabase hat den Löschvorgang nicht bestätigt."
+
+      );
+
+      return;
+
+    }
+
+
+    /*
+     * Erst NACH erfolgreicher RPC
+     * Erfolg melden.
+     */
     alert(
-      "✅ Teil wurde gelöscht."
+      "✅ Das Teil wurde komplett gelöscht."
     );
 
 
     /*
-     * Liste neu laden.
+     * Aktuelle Liste erneut aus
+     * Supabase laden.
      */
     await loadParts();
 
@@ -331,7 +387,7 @@ async function adminDeletePart(
 
       (
         error.message ||
-        "Unbekannter Fehler"
+        "Unbekannter Supabase-Fehler"
       )
 
     );
@@ -354,24 +410,27 @@ async function adminSetAvailability(
    * Falls noch nicht angemeldet:
    * einmalig Passwort abfragen.
    */
-  const authenticated =
-    await adminLogin();
-
-
   if (
-    !authenticated
+    !adminAuthenticated
   ) {
 
-    return;
+    const authenticated =
+      await adminLogin();
+
+
+    if (
+      !authenticated
+    ) {
+
+      return;
+
+    }
 
   }
 
 
   try {
 
-    /*
-     * Verfügbarkeit des Teils ändern.
-     */
     await req(
 
       PARTS_URL +
@@ -409,9 +468,6 @@ async function adminSetAvailability(
     );
 
 
-    /*
-     * Liste neu laden.
-     */
     await loadParts();
 
 
