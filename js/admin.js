@@ -368,7 +368,7 @@ async function adminDeletePart(
      * Aktuelle Liste erneut aus
      * Supabase laden.
      */
-    await loadParts();
+    await window.loadParts();
 
 
   } catch (
@@ -468,7 +468,7 @@ async function adminSetAvailability(
     );
 
 
-    await loadParts();
+    await window.loadParts();
 
 
   } catch (
