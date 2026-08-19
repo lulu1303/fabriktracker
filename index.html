@@ -3496,93 +3496,215 @@ async function fetchLegoPartSuggestions(query) {
         await supabaseRequest(numberUrl);
 
     }
+      /*
+ * =====================================================
+ * NAMENSSUCHE
+ *
+ * WICHTIG:
+ * Zuerst exakt nach dem Namen suchen.
+ *
+ * Dadurch wird z.B.
+ *
+ * "Brick 2 x 4"
+ *
+ * direkt gefunden, auch wenn in der Datenbank
+ * tausende andere Treffer davor liegen.
+ * =====================================================
+ */
+
+if (
+  results.length === 0
+) {
+
+  const normalized =
+    normalizeDimensionQuery(
+      search
+    );
 
 
-    /*
-     * =====================================================
-     * NAMENSSUCHE
-     *
-     * "brick" landet jetzt IMMER hier.
-     * =====================================================
-     */
+  /*
+   * =====================================================
+   * 1. EXAKTER NAME
+   * =====================================================
+   */
+
+  const exactNameUrl =
+
+    LEGO_PARTS_URL +
+
+    "?name=ilike." +
+
+    encodeURIComponent(
+      normalized
+    ) +
+
+    "&select=part_num,name,category" +
+
+    "&limit=20";
+
+
+  const exactResults =
+    await supabaseRequest(
+      exactNameUrl
+    );
+
+
+  results =
+    Array.isArray(
+      exactResults
+    )
+      ? exactResults
+      : [];
+
+
+  /*
+   * =====================================================
+   * 2. NORMALE TEILSUCHE
+   *
+   * Hier holen wir zusätzlich weitere Treffer.
+   * =====================================================
+   */
+
+  const nameUrl =
+
+    LEGO_PARTS_URL +
+
+    "?name=ilike." +
+
+    encodeURIComponent(
+      "%" +
+      normalized +
+      "%"
+    ) +
+
+    "&select=part_num,name,category" +
+
+    "&limit=500";
+
+
+  const broadResults =
+    await supabaseRequest(
+      nameUrl
+    );
+
+
+  /*
+   * Exakte Treffer + normale Treffer zusammenführen
+   */
+
+  if (
+    Array.isArray(
+      broadResults
+    )
+  ) {
+
+    results =
+      results.concat(
+        broadResults
+      );
+
+  }
+
+
+  /*
+   * =====================================================
+   * 3. KOMPAKTE SCHREIBWEISE
+   *
+   * Beispiel:
+   *
+   * Brick 2x4
+   * Brick 2 x 4
+   * =====================================================
+   */
+
+  if (
+    !results ||
+    results.length === 0
+  ) {
 
     if (
-      results.length === 0 &&
-      !looksLikePartNumber
+      normalized.includes(
+        " x "
+      )
     ) {
 
-      const normalized =
-        normalizeDimensionQuery(search);
+      const compact =
+
+        normalized.replace(
+          /\s*x\s*/gi,
+          "x"
+        );
 
 
-      const nameUrl =
+      const compactUrl =
 
         LEGO_PARTS_URL +
 
         "?name=ilike." +
 
         encodeURIComponent(
-          "%" + normalized + "%"
+          "%" +
+          compact +
+          "%"
         ) +
 
         "&select=part_num,name,category" +
 
-        "&limit=200";
+        "&limit=500";
 
 
       results =
-        await supabaseRequest(nameUrl);
-
-
-      /*
-       * Kompakte Schreibweise:
-       *
-       * 2x4
-       *
-       * statt
-       *
-       * 2 x 4
-       */
-
-      if (
-        (
-          !results ||
-          results.length === 0
-        ) &&
-        normalized.includes(" x ")
-      ) {
-
-        const compact =
-          normalized.replace(
-            /\s*x\s*/gi,
-            "x"
-          );
-
-
-        const compactUrl =
-
-          LEGO_PARTS_URL +
-
-          "?name=ilike." +
-
-          encodeURIComponent(
-            "%" + compact + "%"
-          ) +
-
-          "&select=part_num,name,category" +
-
-          "&limit=200";
-
-
-        results =
-          await supabaseRequest(
-            compactUrl
-          );
-
-      }
+        await supabaseRequest(
+          compactUrl
+        );
 
     }
 
+  }
+
+
+  /*
+   * =====================================================
+   * DOPPELTE TREFFER ENTFERNEN
+   * =====================================================
+   */
+
+  const uniqueParts =
+    new Map();
+
+
+  for (
+    const part of results
+  ) {
+
+    const key =
+      String(
+        part.part_num || ""
+      ).toLowerCase();
+
+
+    if (
+      !uniqueParts.has(
+        key
+      )
+    ) {
+
+      uniqueParts.set(
+        key,
+        part
+      );
+
+    }
+
+  }
+
+
+  results =
+    Array.from(
+      uniqueParts.values()
+    );
+
+}
 
     /*
      * =====================================================
