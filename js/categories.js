@@ -1189,7 +1189,7 @@ const CATEGORY_IMAGES = {
 
   76: {
     part: "2423",
-    color: 10
+    color: 2
   },
 
 
