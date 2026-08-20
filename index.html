@@ -21,19 +21,19 @@
 
     <div class="header-actions">
 
-  <div class="location">
-    📍 Günzburg
-  </div>
+      <div class="location">
+        📍 Günzburg
+      </div>
 
-  <button
-    id="adminLoginButton"
-    class="admin-login-button"
-    onclick="toggleAdminLogin()"
-  >
-    🔒 Admin
-  </button>
+      <button
+        id="adminLoginButton"
+        class="admin-login-button"
+        onclick="toggleAdminLogin()"
+      >
+        🔒 Admin
+      </button>
 
-</div>
+    </div>
 
   </div>
 
@@ -73,6 +73,78 @@
   </section>
 
 
+  <!-- =====================================================
+       TEIL MELDEN
+       Jetzt direkt unter der Suche und ausklappbar
+  ====================================================== -->
+
+  <section
+    class="report-box report-collapsed"
+    id="reportBox"
+  >
+
+    <button
+      id="reportToggleButton"
+      class="report-toggle"
+      type="button"
+      onclick="toggleReportForm()"
+      aria-expanded="false"
+      aria-controls="reportContent"
+    >
+
+      <span class="report-toggle-title">
+        🧱 Teil gesehen?
+      </span>
+
+      <span
+        id="reportToggleIcon"
+        class="report-toggle-icon"
+      >
+        ＋
+      </span>
+
+    </button>
+
+
+    <div
+      id="reportContent"
+      class="report-content"
+      hidden
+    >
+
+      <p>
+        Hilf anderen LEGO-Fans und melde,
+        welche Teile du in der Fabrik gefunden hast.
+      </p>
+
+
+      <button
+        id="reportButton"
+        class="primary"
+        type="button"
+        onclick="openReportForm()"
+      >
+        + Teil melden
+      </button>
+
+
+      <div id="reportArea"></div>
+
+
+      <div
+        id="reportStatus"
+        class="status"
+      ></div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       GEMELDETE TEILE
+  ====================================================== -->
+
   <div class="section-title">
     🟢 Aktuell gemeldete Teile
   </div>
@@ -87,37 +159,110 @@
   </div>
 
 
-  <section class="report-box">
-
-    <h2>
-      🧱 Teil gesehen?
-    </h2>
-
-    <p>
-      Hilf anderen LEGO-Fans und melde,
-      welche Teile du in der Fabrik gefunden hast.
-    </p>
-
-    <button
-      id="reportButton"
-      class="primary"
-      onclick="openReportForm()"
-    >
-      + Teil melden
-    </button>
-
-    <div id="reportArea"></div>
-
-    <div
-      id="reportStatus"
-      class="status"
-    ></div>
-
-  </section>
-
 </main>
 
 
+<!-- =======================================================
+     TEIL MELDEN – AUSKLAPPLOGIK
+======================================================== -->
+
+<script>
+
+function toggleReportForm() {
+
+  const box =
+    document.getElementById("reportBox");
+
+  const content =
+    document.getElementById("reportContent");
+
+  const button =
+    document.getElementById("reportToggleButton");
+
+  const icon =
+    document.getElementById("reportToggleIcon");
+
+
+  if (
+    !box ||
+    !content
+  ) {
+    return;
+  }
+
+
+  const isOpen =
+    !content.hidden;
+
+
+  if (isOpen) {
+
+    content.hidden = true;
+
+    box.classList.remove(
+      "report-open"
+    );
+
+    box.classList.add(
+      "report-collapsed"
+    );
+
+
+    if (button) {
+
+      button.setAttribute(
+        "aria-expanded",
+        "false"
+      );
+
+    }
+
+
+    if (icon) {
+
+      icon.textContent = "＋";
+
+    }
+
+    return;
+  }
+
+
+  content.hidden = false;
+
+  box.classList.remove(
+    "report-collapsed"
+  );
+
+  box.classList.add(
+    "report-open"
+  );
+
+
+  if (button) {
+
+    button.setAttribute(
+      "aria-expanded",
+      "true"
+    );
+
+  }
+
+
+  if (icon) {
+
+    icon.textContent = "−";
+
+  }
+
+}
+
+</script>
+
+
+<!-- =======================================================
+     JAVASCRIPT
+======================================================== -->
 
 <script src="js/config.js"></script>
 <script src="js/state.js"></script>
