@@ -63,3 +63,18 @@ async function req(url, opt = {}) {
 ========================================================= */
 
 const supabaseRequest = req;
+/* =========================================================
+   KOMPATIBILITÄT ZU ÄLTEREN PARTS-VERSIONEN
+========================================================= */
+
+async function req(
+  url,
+  options = {}
+) {
+
+  return supabaseRequest(
+    url,
+    options
+  );
+
+}
