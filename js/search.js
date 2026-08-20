@@ -1676,98 +1676,280 @@ async function fetchLegoPartSuggestions(query) {
        SORTIEREN
     ===================================================== */
 
-    results.sort(
-      (
-        a,
-        b
-      ) => {
+    /* =====================================================
+   SORTIEREN
+   -----------------------------------------------------
+   STANDARDTEILE HABEN ABSOLUTE PRIORITÄT
+   ===================================================== */
 
-        const priorityA =
-          getPartPriority(
-            a
-          );
+results.sort(
+  (
+    a,
+    b
+  ) => {
 
-
-        const priorityB =
-          getPartPriority(
-            b
-          );
-
-
-        if (
-          priorityA !==
-          priorityB
-        ) {
-
-          return (
-            priorityA -
-            priorityB
-          );
-
-        }
+    const numberA =
+      String(
+        a.part_num || ""
+      )
+        .toLowerCase()
+        .trim();
 
 
-        /* -----------------------------------------------
-           Bei gleicher Priorität:
-           numerische Teilenummer bevorzugen
-        ------------------------------------------------ */
-
-        const numberA =
-          String(
-            a.part_num || ""
-          );
+    const numberB =
+      String(
+        b.part_num || ""
+      )
+        .toLowerCase()
+        .trim();
 
 
-        const numberB =
-          String(
-            b.part_num || ""
-          );
+    const nameA =
+      String(
+        a.name || ""
+      )
+        .toLowerCase()
+        .replace(
+          /\s+/g,
+          " "
+        )
+        .trim();
 
 
-        const numericA =
-          /^\d+$/.test(
-            numberA
-          );
+    const nameB =
+      String(
+        b.name || ""
+      )
+        .toLowerCase()
+        .replace(
+          /\s+/g,
+          " "
+        )
+        .trim();
 
 
-        const numericB =
-          /^\d+$/.test(
-            numberB
-          );
+    /* =================================================
+       STANDARDTEILE ERKENNEN
+       ================================================= */
+
+    const standardBrickA =
+      /^brick\s+\d+\s*x\s*\d+$/i.test(
+        nameA
+      );
+
+    const standardBrickB =
+      /^brick\s+\d+\s*x\s*\d+$/i.test(
+        nameB
+      );
 
 
-        if (
-          numericA &&
-          numericB
-        ) {
+    const standardPlateA =
+      /^plate\s+\d+\s*x\s*\d+$/i.test(
+        nameA
+      );
 
-          return (
-            Number(numberA) -
-            Number(numberB)
-          );
-
-        }
+    const standardPlateB =
+      /^plate\s+\d+\s*x\s*\d+$/i.test(
+        nameB
+      );
 
 
-        if (
-          numericA !==
-          numericB
-        ) {
+    const standardTileA =
+      /^tile\s+\d+\s*x\s*\d+(?:\s*x\s*\d+)?$/i.test(
+        nameA
+      );
 
-          return numericA
-            ? -1
-            : 1;
+    const standardTileB =
+      /^tile\s+\d+\s*x\s*\d+(?:\s*x\s*\d+)?$/i.test(
+        nameB
+      );
 
-        }
+
+    const isStandardA =
+      standardBrickA ||
+      standardPlateA ||
+      standardTileA;
 
 
-        return numberA.localeCompare(
-          numberB
+    const isStandardB =
+      standardBrickB ||
+      standardPlateB ||
+      standardTileB;
+
+
+    /* =================================================
+       BEI BRICK / PLATE / TILE:
+       STANDARDTEIL IMMER VORNE
+       ================================================= */
+
+    const baseSearch =
+      search === "brick" ||
+      search === "bricks" ||
+      search === "plate" ||
+      search === "plates" ||
+      search === "tile" ||
+      search === "tiles";
+
+
+    if (
+      baseSearch &&
+      isStandardA !== isStandardB
+    ) {
+
+      return isStandardA
+        ? -1
+        : 1;
+
+    }
+
+
+    /* =================================================
+       DIMENSION BEVORZUGEN
+       ================================================= */
+
+    if (
+      dimension
+    ) {
+
+      const dimensionA =
+        extractDimension(
+          normalizeDimensionQuery(
+            nameA
+          )
         );
 
+
+      const dimensionB =
+        extractDimension(
+          normalizeDimensionQuery(
+            nameB
+          )
+        );
+
+
+      const exactA =
+        dimensionA ===
+        dimension;
+
+
+      const exactB =
+        dimensionB ===
+        dimension;
+
+
+      if (
+        exactA !== exactB
+      ) {
+
+        return exactA
+          ? -1
+          : 1;
+
       }
+
+    }
+
+
+    /* =================================================
+       NORMALE PRIORITÄT
+       ================================================= */
+
+    const priorityA =
+      getPartPriority(
+        a
+      );
+
+
+    const priorityB =
+      getPartPriority(
+        b
+      );
+
+
+    if (
+      priorityA !==
+      priorityB
+    ) {
+
+      return (
+        priorityA -
+        priorityB
+      );
+
+    }
+
+
+    /* =================================================
+       EXAKTE TEILENUMMER
+       ================================================= */
+
+    if (
+      numberA === search &&
+      numberB !== search
+    ) {
+
+      return -1;
+
+    }
+
+
+    if (
+      numberB === search &&
+      numberA !== search
+    ) {
+
+      return 1;
+
+    }
+
+
+    /* =================================================
+       NUMERISCHE TEILENUMMERN
+       ================================================= */
+
+    const numericA =
+      /^\d+$/.test(
+        numberA
+      );
+
+
+    const numericB =
+      /^\d+$/.test(
+        numberB
+      );
+
+
+    if (
+      numericA &&
+      numericB
+    ) {
+
+      return (
+        Number(numberA) -
+        Number(numberB)
+      );
+
+    }
+
+
+    if (
+      numericA !==
+      numericB
+    ) {
+
+      return numericA
+        ? -1
+        : 1;
+
+    }
+
+
+    return numberA.localeCompare(
+      numberB
     );
 
+  }
+);
 
     /* =====================================================
        MAXIMAL 20 TREFFER
