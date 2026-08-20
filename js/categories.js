@@ -569,7 +569,7 @@ const CATEGORY_IMAGES = {
 
   14: {
     part: "3023",
-    color: 25
+    color: 191
   },
 
 
