@@ -833,7 +833,7 @@ button:disabled {
     flex-direction: column;
     gap: 4px;
   }
-
+}
 
   /* =======================================================
      TEIL MELDEN AUF KLEINEN BILDSCHIRMEN
@@ -848,4 +848,4 @@ button:disabled {
     font-size: 17px;
   }
 
-}
+
