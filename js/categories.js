@@ -459,7 +459,7 @@ const CATEGORY_IMAGES = {
 
   1: {
     part: "3867",
-    color: 6
+    color: 2
   },
 
 
@@ -469,7 +469,7 @@ const CATEGORY_IMAGES = {
 
   3: {
     part: "3040b",
-    color: 72
+    color: 28
   },
 
 
@@ -479,7 +479,7 @@ const CATEGORY_IMAGES = {
 
   4: {
     part: "3011",
-    color: 3
+    color: 14
   },
 
 
@@ -489,7 +489,7 @@ const CATEGORY_IMAGES = {
 
   5: {
     part: "11211",
-    color: 28
+    color: 71
   },
 
 
