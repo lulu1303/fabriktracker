@@ -684,7 +684,7 @@ function addPartResults(
 ========================================================= */
 
 async function fetchLegoPartSuggestions(query) {
-
+   alert("NEUE FETCH-FUNKTION AKTIV: " + query);
   const suggestions =
     document.getElementById("partSuggestions");
 
