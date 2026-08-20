@@ -621,6 +621,12 @@ async function loadWeightsForParts() {
 
 async function loadParts() {
 
+  /*
+   * =====================================================
+   * DOPPELTE LADE-VORGÄNGE VERHINDERN
+   * =====================================================
+   */
+
   if (
     partsLoading
   ) {
@@ -661,9 +667,26 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * TEILE AUS SUPABASE LADEN
+     * 1. NUR DIE TEILE LADEN
      * =====================================================
+     *
+     * DAS IST DER WICHTIGE PUNKT:
+     *
+     * Wir warten hier ausschließlich auf die
+     * eigentliche parts-Abfrage.
+     *
+     * Farben
+     * Bilder
+     * Kategorie-Bilder
+     * Gewichte
+     *
+     * dürfen das Anzeigen NICHT blockieren.
      */
+
+    console.log(
+      "Lade Teile aus Supabase..."
+    );
+
 
     const data =
       await supabaseRequest(
@@ -683,178 +706,358 @@ async function loadParts() {
         : [];
 
 
-    /*
-     * =====================================================
-     * FARBEN LADEN
-     * =====================================================
-     */
-
-    if (
-      parts.length > 0
-    ) {
-
-      const colorIds = [
-
-        ...new Set(
-
-          parts
-
-            .map(
-              part =>
-                part.color_id
-            )
-
-            .filter(
-              id =>
-                id !== null &&
-                id !== undefined
-            )
-
-        )
-
-      ];
-
-
-      if (
-        colorIds.length > 0
-      ) {
-
-        const colorsUrl =
-
-          SUPABASE_URL +
-          "/rest/v1/lego_colors" +
-
-          "?id=in.(" +
-          colorIds.join(",") +
-          ")" +
-
-          "&select=id,name";
-
-
-        const colors =
-          await supabaseRequest(
-            colorsUrl
-          );
-
-
-        const colorMap = {};
-
-
-        (
-          colors || []
-        ).forEach(
-          color => {
-
-            colorMap[
-              color.id
-            ] =
-              color.name;
-
-          }
-        );
-
-
-        parts.forEach(
-          part => {
-
-            if (
-              Number(
-                part.color_id
-              ) === 9999
-            ) {
-
-              part.color_name =
-                "Not Applicable";
-
-            } else {
-
-              part.color_name =
-                colorMap[
-                  part.color_id
-                ] || "";
-
-            }
-
-          }
-        );
-
-      }
-
-    }
+    console.log(
+      "Teile geladen:",
+      parts.length
+    );
 
 
     /*
      * =====================================================
-     * TEILE-BILDER
+     * 2. TEILE SOFORT ANZEIGEN
      * =====================================================
-     */
-
-    if (
-      typeof loadImagesForParts ===
-      "function"
-    ) {
-
-      await loadImagesForParts();
-
-    }
-
-
-    /*
-     * =====================================================
-     * KATEGORIE-BILDER
-     * =====================================================
-     */
-
-    if (
-      typeof loadCategoryImages ===
-      "function"
-    ) {
-
-      await loadCategoryImages();
-
-    }
-
-
-    /*
-     * =====================================================
-     * GEWICHTE
-     * =====================================================
-     */
-
-    if (
-      typeof loadWeightsForParts ===
-      "function"
-    ) {
-
-      await loadWeightsForParts();
-
-    }
-
-
-    /*
-     * =====================================================
-     * KATEGORIEN
-     * =====================================================
-     */
-
-    if (
-      typeof initializeCategories ===
-      "function"
-    ) {
-
-      await initializeCategories();
-
-    }
-
-
-    /*
-     * =====================================================
-     * ANZEIGE
-     * =====================================================
+     *
+     * Noch OHNE Farben,
+     * OHNE Bilder,
+     * OHNE Gewichte.
      */
 
     displayParts(
       parts
+    );
+
+
+    /*
+     * =====================================================
+     * 3. FARBEN IM HINTERGRUND
+     * =====================================================
+     */
+
+    const colorTask =
+      (async () => {
+
+        try {
+
+          const colorIds = [
+
+            ...new Set(
+
+              parts
+
+                .map(
+                  part =>
+                    part.color_id
+                )
+
+                .filter(
+                  id =>
+                    id !== null &&
+                    id !== undefined
+                )
+
+            )
+
+          ];
+
+
+          if (
+            colorIds.length === 0
+          ) {
+
+            return;
+
+          }
+
+
+          console.log(
+            "Lade Farben:",
+            colorIds.length
+          );
+
+
+          const colorsUrl =
+
+            SUPABASE_URL +
+            "/rest/v1/lego_colors" +
+
+            "?id=in.(" +
+            colorIds.join(",") +
+            ")" +
+
+            "&select=id,name";
+
+
+          const colors =
+            await supabaseRequest(
+              colorsUrl
+            );
+
+
+          const colorMap =
+            {};
+
+
+          (
+            colors || []
+          ).forEach(
+            color => {
+
+              colorMap[
+                color.id
+              ] =
+                color.name;
+
+            }
+          );
+
+
+          parts.forEach(
+            part => {
+
+              if (
+                Number(
+                  part.color_id
+                ) === 9999
+              ) {
+
+                part.color_name =
+                  "Not Applicable";
+
+              } else {
+
+                part.color_name =
+                  colorMap[
+                    part.color_id
+                  ] || "";
+
+              }
+
+            }
+          );
+
+
+          /*
+           * Anzeige mit Farben aktualisieren.
+           */
+
+          displayParts(
+            parts
+          );
+
+
+        } catch (
+          error
+        ) {
+
+          console.warn(
+            "Farben konnten nicht geladen werden:",
+            error
+          );
+
+        }
+
+      })();
+
+
+    /*
+     * =====================================================
+     * 4. BILDER
+     * =====================================================
+     */
+
+    const imageTask =
+      (async () => {
+
+        try {
+
+          if (
+            typeof loadImagesForParts ===
+            "function"
+          ) {
+
+            console.log(
+              "Lade Teile-Bilder..."
+            );
+
+
+            await loadImagesForParts();
+
+
+            console.log(
+              "Teile-Bilder geladen."
+            );
+
+
+            displayParts(
+              parts
+            );
+
+          }
+
+        } catch (
+          error
+        ) {
+
+          console.warn(
+            "Teile-Bilder konnten nicht geladen werden:",
+            error
+          );
+
+        }
+
+      })();
+
+
+    /*
+     * =====================================================
+     * 5. KATEGORIE-BILDER
+     * =====================================================
+     */
+
+    const categoryImageTask =
+      (async () => {
+
+        try {
+
+          if (
+            typeof loadCategoryImages ===
+            "function"
+          ) {
+
+            console.log(
+              "Lade Kategorie-Bilder..."
+            );
+
+
+            await loadCategoryImages();
+
+
+            console.log(
+              "Kategorie-Bilder geladen."
+            );
+
+
+            displayParts(
+              parts
+            );
+
+          }
+
+        } catch (
+          error
+        ) {
+
+          console.warn(
+            "Kategorie-Bilder konnten nicht geladen werden:",
+            error
+          );
+
+        }
+
+      })();
+
+
+    /*
+     * =====================================================
+     * 6. GEWICHTE
+     * =====================================================
+     */
+
+    const weightTask =
+      (async () => {
+
+        try {
+
+          if (
+            typeof loadWeightsForParts ===
+            "function"
+          ) {
+
+            console.log(
+              "Lade Gewichte..."
+            );
+
+
+            await loadWeightsForParts();
+
+
+            console.log(
+              "Gewichte geladen."
+            );
+
+
+            displayParts(
+              parts
+            );
+
+          }
+
+        } catch (
+          error
+        ) {
+
+          console.warn(
+            "Gewichte konnten nicht geladen werden:",
+            error
+          );
+
+        }
+
+      })();
+
+
+    /*
+     * =====================================================
+     * 7. ALLES PARALLEL IM HINTERGRUND
+     * =====================================================
+     *
+     * Wichtig:
+     *
+     * loadParts() wartet NICHT darauf.
+     */
+
+    Promise.allSettled([
+
+      colorTask,
+      imageTask,
+      categoryImageTask,
+      weightTask
+
+    ]).then(
+      () => {
+
+        console.log(
+          "Hintergrunddaten vollständig geladen."
+        );
+
+
+        const searchInput =
+          document.getElementById(
+            "searchInput"
+          );
+
+
+        if (
+          searchInput &&
+          searchInput.value.trim()
+        ) {
+
+          searchParts();
+
+        } else {
+
+          displayParts(
+            parts
+          );
+
+        }
+
+      }
+    );
+
+
+    console.log(
+      "Teile sofort angezeigt."
     );
 
 
@@ -883,8 +1086,6 @@ async function loadParts() {
   }
 
 }
-
-
 /* =========================================================
    TEILE ANZEIGEN
 ========================================================= */
