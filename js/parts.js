@@ -1911,16 +1911,3 @@ window.loadParts =
   loadParts;
 
 
-/* =========================================================
-   AUTOMATISCHES LADEN
-========================================================= */
-
-if (
-  typeof window.loadParts ===
-  "function"
-) {
-
-  window.loadParts();
-
-}
-
