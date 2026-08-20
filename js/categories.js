@@ -402,7 +402,101 @@ const REBRICKABLE_CATEGORIES = [
   }
 
 ];
+/* =========================================================
+   KATEGORIE-BILDER
+   FabrikTracker
+========================================================= */
 
+/*
+ * Hier bestimmst DU, welches LEGO-Teil
+ * die jeweilige Kategorie repräsentiert.
+ *
+ * id = Rebrickable category_id
+ *
+ * part  = Teilenummer
+ * color = LEGO color_id
+ *
+ * Wenn color leer/null ist, wird automatisch
+ * irgendeine verfügbare Farbe dieses Teils verwendet.
+ *
+ * Wenn die gewünschte Farbvariante kein Bild besitzt,
+ * wird ebenfalls automatisch auf eine andere
+ * Bildvariante des Teils zurückgegriffen.
+ */
+
+const CATEGORY_IMAGES = {
+
+  /*
+   * BRICKS
+   * Beispiel: 2x4 Brick
+   */
+  11: {
+    part: "3001",
+    color: null
+  },
+
+
+  /*
+   * PLATES
+   * Beispiel: 1x2 Plate
+   */
+  14: {
+    part: "3024",
+    color: null
+  },
+
+
+  /*
+   * TILES
+   * Beispiel: 2x2 Tile
+   */
+  19: {
+    part: "3068",
+    color: null
+  },
+
+
+  /*
+   * PLANTS & TREES
+   * Beispiel-Pflanze
+   */
+  76: {
+    part: "24866",
+    color: null
+  }
+
+};
+
+
+/* =========================================================
+   KATEGORIE-BILD KONFIGURATION
+========================================================= */
+
+function getCategoryImageConfig(
+  categoryId
+) {
+
+  const id =
+    Number(
+      categoryId
+    );
+
+
+  if (
+    !Number.isFinite(id)
+  ) {
+
+    return null;
+
+  }
+
+
+  return (
+    CATEGORY_IMAGES[id] ||
+    null
+  );
+
+}
 
 /* =========================================================
    CACHE
