@@ -13,6 +13,42 @@ let partsLoading = false;
 let categoryImagesLoaded = false;
 
 
+/*
+ * =========================================================
+ * BILD-CACHE
+ * =========================================================
+ *
+ * Die Bilder werden nach
+ *
+ *     Teilenummer + Farbe
+ *
+ * zwischengespeichert.
+ *
+ * Dadurch müssen sie beim erneuten Laden der
+ * Teile nicht noch einmal aus Supabase geladen werden.
+ */
+
+const partImageCache = {};
+
+
+/*
+ * =========================================================
+ * GEWICHT-CACHE
+ * =========================================================
+ */
+
+const partWeightCache = {};
+
+
+/*
+ * =========================================================
+ * FARB-CACHE
+ * =========================================================
+ */
+
+const partColorCache = {};
+
+
 /* =========================================================
    BILDER LADEN
 ========================================================= */
@@ -23,41 +59,61 @@ async function loadImagesForParts() {
     !Array.isArray(parts) ||
     parts.length === 0
   ) {
+
     return;
+
   }
 
 
+  /*
+   * =====================================================
+   * BENÖTIGTE KOMBINATIONEN ERMITTELN
+   * =====================================================
+   */
+
   const combinations = [
     ...new Map(
+
       parts
+
         .filter(
           part =>
             part.part_number &&
             part.color_id !== null &&
             part.color_id !== undefined
         )
+
         .map(
           part => {
 
             const key =
-              String(part.part_number) +
+              String(
+                part.part_number
+              ) +
               "_" +
-              String(part.color_id);
+              String(
+                part.color_id
+              );
 
 
             return [
               key,
               {
                 part_num:
-                  String(part.part_number),
+                  String(
+                    part.part_number
+                  ),
 
                 color_id:
-                  Number(part.color_id)
+                  Number(
+                    part.color_id
+                  )
               }
             ];
 
           }
         )
+
     ).values()
   ];
 
@@ -65,88 +121,49 @@ async function loadImagesForParts() {
   if (
     combinations.length === 0
   ) {
+
     return;
+
   }
 
 
-  const imageMap = {};
+  /*
+   * =====================================================
+   * BEREITS GE-CACHTE BILDER DIREKT VERWENDEN
+   * =====================================================
+   */
 
-  const batchSize = 100;
+  const missingCombinations =
+    combinations.filter(
+      item => {
 
-
-  try {
-
-    const partNumbers = [
-      ...new Set(
-        combinations.map(
-          item =>
+        const key =
+          String(
             item.part_num
-        )
-      )
-    ];
+          ) +
+          "_" +
+          String(
+            item.color_id
+          );
 
 
-    for (
-      let i = 0;
-      i < partNumbers.length;
-      i += batchSize
-    ) {
-
-      const batch =
-        partNumbers.slice(
-          i,
-          i + batchSize
+        return !Object.prototype.hasOwnProperty.call(
+          partImageCache,
+          key
         );
 
-
-      const encodedNumbers =
-        batch
-          .map(
-            number =>
-              `"${String(number)
-                .replace(
-                  /"/g,
-                  '\\"'
-                )}"`
-          )
-          .join(",");
+      }
+    );
 
 
-      const url =
-        SUPABASE_URL +
-        "/rest/v1/lego_part_colors" +
-        "?part_num=in.(" +
-        encodedNumbers +
-        ")" +
-        "&select=part_num,color_id,image_url";
+  /*
+   * Wenn alles bereits im Cache ist,
+   * müssen wir überhaupt keinen Request machen.
+   */
 
-
-      const rows =
-        await req(url);
-
-
-      (rows || []).forEach(
-        row => {
-
-          const key =
-            String(
-              row.part_num
-            ) +
-            "_" +
-            String(
-              row.color_id
-            );
-
-
-          imageMap[key] =
-            row.image_url ||
-            null;
-
-        }
-      );
-
-    }
-
+  if (
+    missingCombinations.length === 0
+  ) {
 
     parts.forEach(
       part => {
@@ -162,8 +179,180 @@ async function loadImagesForParts() {
 
 
         part.image_url =
-          imageMap[key] ||
+          partImageCache[key] ||
           null;
+
+      }
+    );
+
+
+    return;
+
+  }
+
+
+  /*
+   * =====================================================
+   * EINDEUTIGE TEILENUMMERN
+   * =====================================================
+   */
+
+  const missingPartNumbers = [
+    ...new Set(
+      missingCombinations.map(
+        item =>
+          item.part_num
+      )
+    )
+  ];
+
+
+  /*
+   * =====================================================
+   * BATCHES
+   * =====================================================
+   *
+   * Maximal 100 Teilenummern pro Request.
+   *
+   * Die einzelnen Batches laufen PARALLEL.
+   */
+
+  const batchSize =
+    100;
+
+
+  const batches = [];
+
+
+  for (
+    let i = 0;
+    i < missingPartNumbers.length;
+    i += batchSize
+  ) {
+
+    batches.push(
+      missingPartNumbers.slice(
+        i,
+        i + batchSize
+      )
+    );
+
+  }
+
+
+  try {
+
+    /*
+     * ===================================================
+     * ALLE BATCHES PARALLEL ABFRAGEN
+     * ===================================================
+     */
+
+    const batchRequests =
+      batches.map(
+        async batch => {
+
+          const encodedNumbers =
+            batch
+
+              .map(
+                number =>
+                  `"${String(number)
+                    .replace(
+                      /"/g,
+                      '\\"'
+                    )}"`
+              )
+
+              .join(",");
+
+
+          const url =
+            SUPABASE_URL +
+            "/rest/v1/lego_part_colors" +
+            "?part_num=in.(" +
+            encodedNumbers +
+            ")" +
+            "&select=part_num,color_id,image_url";
+
+
+          return req(
+            url
+          );
+
+        }
+      );
+
+
+    const batchResults =
+      await Promise.all(
+        batchRequests
+      );
+
+
+    /*
+     * ===================================================
+     * CACHE AUFBAUEN
+     * ===================================================
+     */
+
+    batchResults.forEach(
+      rows => {
+
+        (
+          rows || []
+        ).forEach(
+          row => {
+
+            const key =
+              String(
+                row.part_num
+              ) +
+              "_" +
+              String(
+                row.color_id
+              );
+
+
+            partImageCache[key] =
+              row.image_url ||
+              null;
+
+          }
+        );
+
+      }
+    );
+
+
+    /*
+     * ===================================================
+     * TEILE MIT CACHE VERKNÜPFEN
+     * ===================================================
+     */
+
+    parts.forEach(
+      part => {
+
+        const key =
+          String(
+            part.part_number || ""
+          ) +
+          "_" +
+          String(
+            part.color_id ?? ""
+          );
+
+
+        part.image_url =
+          Object.prototype.hasOwnProperty.call(
+            partImageCache,
+            key
+          )
+
+            ? partImageCache[key]
+
+            : null;
 
       }
     );
@@ -179,11 +368,41 @@ async function loadImagesForParts() {
     );
 
 
+    /*
+     * Nur fehlende Werte auf null setzen.
+     *
+     * Bereits gecachte Bilder bleiben erhalten.
+     */
+
     parts.forEach(
       part => {
 
-        part.image_url =
-          null;
+        const key =
+          String(
+            part.part_number || ""
+          ) +
+          "_" +
+          String(
+            part.color_id ?? ""
+          );
+
+
+        if (
+          Object.prototype.hasOwnProperty.call(
+            partImageCache,
+            key
+          )
+        ) {
+
+          part.image_url =
+            partImageCache[key];
+
+        } else {
+
+          part.image_url =
+            null;
+
+        }
 
       }
     );
@@ -201,21 +420,31 @@ async function loadImagesForParts() {
  * Die Auswahl der Kategorie-Bilder erfolgt
  * ausschließlich über CATEGORY_IMAGES in categories.js.
  *
+ * WICHTIG:
+ *
+ * Deine komplette manuelle CATEGORY_IMAGES-Konfiguration
+ * bleibt in categories.js erhalten.
+ *
+ *
  * Die Bilder werden:
  *
  * 1. Nur EINMAL geladen
- * 2. Parallel abgefragt
- * 3. Danach im Speicher behalten
+ * 2. Alle benötigten Teilenummern werden gesammelt
+ * 3. Maximal 100 Teilenummern pro Request
+ * 4. Die Requests laufen parallel
+ * 5. Die gewünschte Farbe wird anschließend lokal
+ *    ausgewählt
  *
- * Dadurch werden beim erneuten Laden der Teile
- * keine 76+ einzelnen Requests mehr ausgeführt.
+ * Dadurch gibt es NICHT mehr für jede Kategorie
+ * einen eigenen Supabase-Request.
  */
 
 async function loadCategoryImages() {
 
   /*
-   * Bereits geladen?
-   * Dann nichts mehr machen.
+   * =====================================================
+   * BEREITS GELADEN
+   * =====================================================
    */
 
   if (
@@ -229,8 +458,9 @@ async function loadCategoryImages() {
 
 
   /*
-   * Falls categories.js noch keine
-   * CATEGORY_IMAGES enthält, einfach nichts tun.
+   * =====================================================
+   * CATEGORY_IMAGES VORHANDEN?
+   * =====================================================
    */
 
   if (
@@ -238,9 +468,11 @@ async function loadCategoryImages() {
     "undefined"
   ) {
 
-    window.categoryImageMap = {};
+    window.categoryImageMap =
+      {};
 
-    categoryImagesLoaded = true;
+    categoryImagesLoaded =
+      true;
 
     return;
 
@@ -257,181 +489,167 @@ async function loadCategoryImages() {
     configs.length === 0
   ) {
 
-    window.categoryImageMap = {};
+    window.categoryImageMap =
+      {};
 
-    categoryImagesLoaded = true;
+    categoryImagesLoaded =
+      true;
 
     return;
 
   }
 
 
-  const imageMap = {};
+  /*
+   * =====================================================
+   * GÜLTIGE KONFIGURATIONEN SAMMELN
+   * =====================================================
+   */
+
+  const validConfigs =
+    configs.filter(
+      (
+        [
+          categoryId,
+          config
+        ]
+      ) => {
+
+        return (
+          config &&
+          config.part
+        );
+
+      }
+    );
+
+
+  if (
+    validConfigs.length === 0
+  ) {
+
+    window.categoryImageMap =
+      {};
+
+    categoryImagesLoaded =
+      true;
+
+    return;
+
+  }
+
+
+  /*
+   * =====================================================
+   * EINDEUTIGE TEILENUMMERN
+   * =====================================================
+   */
+
+  const partNumbers = [
+    ...new Set(
+      validConfigs.map(
+        (
+          [
+            categoryId,
+            config
+          ]
+        ) =>
+          String(
+            config.part
+          )
+      )
+    )
+  ];
+
+
+  const imageRows = [];
+
+
+  /*
+   * =====================================================
+   * BATCHES
+   * =====================================================
+   */
+
+  const batchSize =
+    100;
+
+
+  const batches = [];
+
+
+  for (
+    let i = 0;
+    i < partNumbers.length;
+    i += batchSize
+  ) {
+
+    batches.push(
+      partNumbers.slice(
+        i,
+        i + batchSize
+      )
+    );
+
+  }
 
 
   try {
 
     /*
-     * =====================================================
-     * ALLE KATEGORIEN PARALLEL LADEN
-     * =====================================================
+     * ===================================================
+     * ALLE BATCHES PARALLEL
+     * ===================================================
      */
 
     const requests =
-      configs.map(
-        async (
-          [
-            categoryId,
-            config
-          ]
-        ) => {
+      batches.map(
+        async batch => {
 
-          if (
-            !config ||
-            !config.part
+          const encodedNumbers =
+            batch
+
+              .map(
+                number =>
+                  `"${String(number)
+                    .replace(
+                      /"/g,
+                      '\\"'
+                    )}"`
+              )
+
+              .join(",");
+
+
+          const url =
+            SUPABASE_URL +
+            "/rest/v1/lego_part_colors" +
+            "?part_num=in.(" +
+            encodedNumbers +
+            ")" +
+            "&image_url=not.is.null" +
+            "&select=part_num,color_id,image_url";
+
+
+          try {
+
+            return await req(
+              url
+            );
+
+          } catch (
+            error
           ) {
 
-            return null;
-
-          }
-
-
-          const partNumber =
-            String(
-              config.part
+            console.warn(
+              "Kategorie-Bild-Batch konnte nicht geladen werden:",
+              error
             );
 
 
-          let rows = [];
-
-
-          /*
-           * =================================================
-           * EXAKTE FARBE
-           * =================================================
-           */
-
-          if (
-            config.color !== null &&
-            config.color !== undefined &&
-            config.color !== ""
-          ) {
-
-            const exactUrl =
-              SUPABASE_URL +
-              "/rest/v1/lego_part_colors" +
-              "?part_num=eq." +
-              encodeURIComponent(
-                partNumber
-              ) +
-              "&color_id=eq." +
-              encodeURIComponent(
-                String(
-                  config.color
-                )
-              ) +
-              "&select=part_num,color_id,image_url" +
-              "&limit=1";
-
-
-            try {
-
-              rows =
-                await req(
-                  exactUrl
-                );
-
-            } catch (
-              error
-            ) {
-
-              console.warn(
-                "Exaktes Kategorie-Bild konnte nicht geladen werden:",
-                categoryId,
-                error
-              );
-
-              rows = [];
-
-            }
+            return [];
 
           }
-
-
-          /*
-           * =================================================
-           * FALLBACK
-           * =================================================
-           */
-
-          /*
-           * Wenn keine Farbe angegeben wurde
-           * oder die gewünschte Farbvariante
-           * kein Bild besitzt:
-           *
-           * irgendeine vorhandene Bildvariante
-           * desselben Teils nehmen.
-           */
-
-          if (
-            !Array.isArray(rows) ||
-            rows.length === 0 ||
-            !rows[0].image_url
-          ) {
-
-            const fallbackUrl =
-              SUPABASE_URL +
-              "/rest/v1/lego_part_colors" +
-              "?part_num=eq." +
-              encodeURIComponent(
-                partNumber
-              ) +
-              "&image_url=not.is.null" +
-              "&select=part_num,color_id,image_url" +
-              "&limit=1";
-
-
-            try {
-
-              rows =
-                await req(
-                  fallbackUrl
-                );
-
-            } catch (
-              error
-            ) {
-
-              console.warn(
-                "Fallback-Kategorie-Bild konnte nicht geladen werden:",
-                categoryId,
-                error
-              );
-
-              rows = [];
-
-            }
-
-          }
-
-
-          if (
-            Array.isArray(rows) &&
-            rows.length > 0 &&
-            rows[0].image_url
-          ) {
-
-            return [
-              String(
-                categoryId
-              ),
-              rows[0].image_url
-            ];
-
-          }
-
-
-          return null;
 
         }
       );
@@ -444,32 +662,142 @@ async function loadCategoryImages() {
 
 
     /*
-     * Ergebnisse in Map übernehmen.
+     * ===================================================
+     * ERGEBNISSE ZUSAMMENFÜHREN
+     * ===================================================
      */
 
     results.forEach(
-      result => {
+      rows => {
+
+        (
+          rows || []
+        ).forEach(
+          row => {
+
+            imageRows.push(
+              row
+            );
+
+          }
+        );
+
+      }
+    );
+
+
+    /*
+     * ===================================================
+     * BILDER AUSWÄHLEN
+     * ===================================================
+     */
+
+    const imageMap =
+      {};
+
+
+    validConfigs.forEach(
+      (
+        [
+          categoryId,
+          config
+        ]
+      ) => {
+
+        const partNumber =
+          String(
+            config.part
+          );
+
+
+        /*
+         * -------------------------------------------------
+         * ZUERST EXAKTE FARBE
+         * -------------------------------------------------
+         */
+
+        let matchingRow =
+          null;
+
 
         if (
-          !result
+          config.color !== null &&
+          config.color !== undefined &&
+          config.color !== ""
         ) {
 
-          return;
+          matchingRow =
+            imageRows.find(
+              row =>
+
+                String(
+                  row.part_num
+                ) ===
+                partNumber &&
+
+                Number(
+                  row.color_id
+                ) ===
+                Number(
+                  config.color
+                ) &&
+
+                row.image_url
+
+            );
 
         }
 
 
-        const [
-          categoryId,
-          imageUrl
-        ] =
-          result;
+        /*
+         * -------------------------------------------------
+         * FALLBACK
+         * -------------------------------------------------
+         *
+         * Wenn die gewünschte Farbe kein Bild besitzt,
+         * nehmen wir irgendeine vorhandene Bildvariante
+         * desselben Teils.
+         */
+
+        if (
+          !matchingRow
+        ) {
+
+          matchingRow =
+            imageRows.find(
+              row =>
+
+                String(
+                  row.part_num
+                ) ===
+                partNumber &&
+
+                row.image_url
+
+            );
+
+        }
 
 
-        imageMap[
-          categoryId
-        ] =
-          imageUrl;
+        /*
+         * -------------------------------------------------
+         * BILD SPEICHERN
+         * -------------------------------------------------
+         */
+
+        if (
+          matchingRow &&
+          matchingRow.image_url
+        ) {
+
+          imageMap[
+            String(
+              categoryId
+            )
+          ] =
+            matchingRow.image_url;
+
+        }
 
       }
     );
@@ -506,10 +834,8 @@ async function loadCategoryImages() {
 
 
     /*
-     * Bei einem Fehler NICHT dauerhaft
+     * Bei Fehler nicht dauerhaft
      * als erfolgreich geladen markieren.
-     *
-     * So kann später erneut versucht werden.
      */
 
     categoryImagesLoaded =
@@ -530,20 +856,31 @@ async function loadWeightsForParts() {
     !Array.isArray(parts) ||
     parts.length === 0
   ) {
+
     return;
+
   }
 
+
+  /*
+   * =====================================================
+   * EINDEUTIGE TEILENUMMERN
+   * =====================================================
+   */
 
   const numbers = [
     ...new Set(
       parts
+
         .map(
           part =>
             String(
               part.part_number || ""
             )
         )
+
         .filter(Boolean)
+
     )
   ];
 
@@ -551,14 +888,69 @@ async function loadWeightsForParts() {
   if (
     numbers.length === 0
   ) {
+
     return;
+
+  }
+
+
+  /*
+   * =====================================================
+   * BEREITS GE-CACHTE WERTE
+   * =====================================================
+   */
+
+  const missingNumbers =
+    numbers.filter(
+      number =>
+        !Object.prototype.hasOwnProperty.call(
+          partWeightCache,
+          number
+        )
+    );
+
+
+  /*
+   * Alles bereits vorhanden?
+   */
+
+  if (
+    missingNumbers.length === 0
+  ) {
+
+    parts.forEach(
+      part => {
+
+        const number =
+          String(
+            part.part_number || ""
+          );
+
+
+        part.weight_grams =
+          partWeightCache[number] ??
+          null;
+
+      }
+    );
+
+
+    return;
+
   }
 
 
   try {
 
+    /*
+     * ===================================================
+     * FEHLENDE GEWICHTE LADEN
+     * ===================================================
+     */
+
     const encodedNumbers =
-      numbers
+      missingNumbers
+
         .map(
           number =>
             `"${number.replace(
@@ -566,6 +958,7 @@ async function loadWeightsForParts() {
               '\\"'
             )}"`
         )
+
         .join(",");
 
 
@@ -578,16 +971,23 @@ async function loadWeightsForParts() {
 
 
     const weights =
-      await req(url);
+      await req(
+        url
+      );
 
 
-    const weightMap = {};
+    /*
+     * ===================================================
+     * CACHE AUFBAUEN
+     * ===================================================
+     */
 
-
-    (weights || []).forEach(
+    (
+      weights || []
+    ).forEach(
       row => {
 
-        weightMap[
+        partWeightCache[
           String(
             row.part_num
           )
@@ -600,6 +1000,37 @@ async function loadWeightsForParts() {
     );
 
 
+    /*
+     * Fehlende Werte merken,
+     * damit sie nicht bei jedem Reload
+     * erneut abgefragt werden.
+     */
+
+    missingNumbers.forEach(
+      number => {
+
+        if (
+          !Object.prototype.hasOwnProperty.call(
+            partWeightCache,
+            number
+          )
+        ) {
+
+          partWeightCache[number] =
+            null;
+
+        }
+
+      }
+    );
+
+
+    /*
+     * ===================================================
+     * TEILE AKTUALISIEREN
+     * ===================================================
+     */
+
     parts.forEach(
       part => {
 
@@ -610,9 +1041,8 @@ async function loadWeightsForParts() {
 
 
         part.weight_grams =
-          weightMap[number] !== undefined
-            ? weightMap[number]
-            : null;
+          partWeightCache[number] ??
+          null;
 
       }
     );
@@ -628,16 +1058,204 @@ async function loadWeightsForParts() {
     );
 
 
+    /*
+     * Bereits vorhandene Cache-Werte
+     * trotzdem verwenden.
+     */
+
     parts.forEach(
       part => {
 
+        const number =
+          String(
+            part.part_number || ""
+          );
+
+
         part.weight_grams =
-          null;
+          Object.prototype.hasOwnProperty.call(
+            partWeightCache,
+            number
+          )
+
+            ? partWeightCache[number]
+
+            : null;
 
       }
     );
 
   }
+
+}
+
+
+/* =========================================================
+   FARBEN LADEN
+========================================================= */
+
+async function loadColorsForParts() {
+
+  if (
+    !Array.isArray(parts) ||
+    parts.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  /*
+   * =====================================================
+   * EINDEUTIGE FARBEN
+   * =====================================================
+   */
+
+  const colorIds = [
+
+    ...new Set(
+
+      parts
+
+        .map(
+          part =>
+            part.color_id
+        )
+
+        .filter(
+          id =>
+            id !== null &&
+            id !== undefined
+        )
+
+    )
+
+  ];
+
+
+  if (
+    colorIds.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  /*
+   * =====================================================
+   * FEHLENDE FARBEN
+   * =====================================================
+   */
+
+  const missingColorIds =
+    colorIds.filter(
+      id =>
+        !Object.prototype.hasOwnProperty.call(
+          partColorCache,
+          id
+        )
+    );
+
+
+  /*
+   * =====================================================
+   * NUR FEHLENDE FARBEN LADEN
+   * =====================================================
+   */
+
+  if (
+    missingColorIds.length > 0
+  ) {
+
+    const colorsUrl =
+
+      SUPABASE_URL +
+      "/rest/v1/lego_colors" +
+
+      "?id=in.(" +
+      missingColorIds.join(",") +
+      ")" +
+
+      "&select=id,name";
+
+
+    const colors =
+      await supabaseRequest(
+        colorsUrl
+      );
+
+
+    (
+      colors || []
+    ).forEach(
+      color => {
+
+        partColorCache[
+          color.id
+        ] =
+          color.name;
+
+      }
+    );
+
+
+    /*
+     * Nicht gefundene Farben ebenfalls
+     * als leer markieren.
+     */
+
+    missingColorIds.forEach(
+      id => {
+
+        if (
+          !Object.prototype.hasOwnProperty.call(
+            partColorCache,
+            id
+          )
+        ) {
+
+          partColorCache[id] =
+            "";
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /*
+   * =====================================================
+   * FARBEN DEN TEILEN ZUWEISEN
+   * =====================================================
+   */
+
+  parts.forEach(
+    part => {
+
+      if (
+        Number(
+          part.color_id
+        ) === 9999
+      ) {
+
+        part.color_name =
+          "Not Applicable";
+
+      } else {
+
+        part.color_name =
+          partColorCache[
+            part.color_id
+          ] || "";
+
+      }
+
+    }
+  );
 
 }
 
@@ -718,156 +1336,29 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * FARBEN LADEN
+     * WICHTIG:
+     *
+     * Die Teile werden jetzt SOFORT angezeigt.
+     *
+     * Wir warten NICHT auf:
+     *
+     * - Bilder
+     * - Gewichte
+     *
+     * Dadurch fühlt sich die Seite deutlich schneller an.
      * =====================================================
      */
 
-    if (
-      parts.length > 0
-    ) {
-
-      const colorIds = [
-
-        ...new Set(
-
-          parts
-
-            .map(
-              part =>
-                part.color_id
-            )
-
-            .filter(
-              id =>
-                id !== null &&
-                id !== undefined
-            )
-
-        )
-
-      ];
-
-
-      if (
-        colorIds.length > 0
-      ) {
-
-        const colorsUrl =
-
-          SUPABASE_URL +
-          "/rest/v1/lego_colors" +
-
-          "?id=in.(" +
-          colorIds.join(",") +
-          ")" +
-
-          "&select=id,name";
-
-
-        const colors =
-          await supabaseRequest(
-            colorsUrl
-          );
-
-
-        const colorMap = {};
-
-
-        (
-          colors || []
-        ).forEach(
-          color => {
-
-            colorMap[
-              color.id
-            ] =
-              color.name;
-
-          }
-        );
-
-
-        parts.forEach(
-          part => {
-
-            if (
-              Number(
-                part.color_id
-              ) === 9999
-            ) {
-
-              part.color_name =
-                "Not Applicable";
-
-            } else {
-
-              part.color_name =
-                colorMap[
-                  part.color_id
-                ] || "";
-
-            }
-
-          }
-        );
-
-      }
-
-    }
+    displayParts(
+      parts
+    );
 
 
     /*
      * =====================================================
-     * TEILE-BILDER
+     * KATEGORIEN INITIALISIEREN
      * =====================================================
      */
-
-    if (
-      typeof loadImagesForParts ===
-      "function"
-    ) {
-
-      await loadImagesForParts();
-
-    }
-
-
-    /*
-     * =====================================================
-     * KATEGORIE-BILDER
-     * =====================================================
-     */
-
-    if (
-      typeof loadCategoryImages ===
-      "function"
-    ) {
-
-      await loadCategoryImages();
-
-    }
-
-
-    /*
-     * =====================================================
-     * GEWICHTE
-     * =====================================================
-     */
-
-    if (
-      typeof loadWeightsForParts ===
-      "function"
-    ) {
-
-      await loadWeightsForParts();
-
-    }
-
-
-    /*
-     * =====================================================
-     * KATEGORIEN
-     * ===================================================== */
 
     if (
       typeof initializeCategories ===
@@ -881,8 +1372,84 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * ANZEIGE
+     * FARBEN + BILDER + GEWICHTE
+     * PARALLEL LADEN
      * =====================================================
+     */
+
+    const backgroundTasks = [];
+
+
+    if (
+      typeof loadColorsForParts ===
+      "function"
+    ) {
+
+      backgroundTasks.push(
+        loadColorsForParts()
+      );
+
+    }
+
+
+    if (
+      typeof loadImagesForParts ===
+      "function"
+    ) {
+
+      backgroundTasks.push(
+        loadImagesForParts()
+      );
+
+    }
+
+
+    if (
+      typeof loadCategoryImages ===
+      "function"
+    ) {
+
+      backgroundTasks.push(
+        loadCategoryImages()
+      );
+
+    }
+
+
+    if (
+      typeof loadWeightsForParts ===
+      "function"
+    ) {
+
+      backgroundTasks.push(
+        loadWeightsForParts()
+      );
+
+    }
+
+
+    /*
+     * Alle Hintergrunddaten gleichzeitig laden.
+     */
+
+    await Promise.all(
+      backgroundTasks
+    );
+
+
+    /*
+     * =====================================================
+     * NOCH EINMAL DARSTELLEN
+     * =====================================================
+     *
+     * Jetzt sind:
+     *
+     * - Farben
+     * - Bilder
+     * - Kategorie-Bilder
+     * - Gewichte
+     *
+     * vorhanden.
      */
 
     displayParts(
@@ -1047,9 +1614,11 @@ function displayParts(
 
           const safeCategoryImage =
             categoryImage
+
               ? escapeHTML(
                   categoryImage
                 )
+
               : "";
 
 
@@ -1124,13 +1693,16 @@ function displayParts(
 
                 ${
                   group.parts
+
                     .map(
                       part =>
                         renderPart(
                           part
                         )
                     )
+
                     .join("")
+
                 }
 
               </div>
@@ -1733,8 +2305,60 @@ function showError(
 
 
 /* =========================================================
+   CACHE DEBUG
+========================================================= */
+
+/*
+ * Kann später in der Browser-Konsole benutzt werden:
+ *
+ * getPartsCacheStatus()
+ *
+ * Damit können wir sehen, wie viel bereits
+ * zwischengespeichert wurde.
+ */
+
+function getPartsCacheStatus() {
+
+  return {
+
+    images:
+      Object.keys(
+        partImageCache
+      ).length,
+
+    weights:
+      Object.keys(
+        partWeightCache
+      ).length,
+
+    colors:
+      Object.keys(
+        partColorCache
+      ).length,
+
+    categoryImages:
+      window.categoryImageMap
+        ? Object.keys(
+            window.categoryImageMap
+          ).length
+        : 0
+
+  };
+
+}
+
+
+/* =========================================================
    GLOBAL VERFÜGBAR MACHEN
 ========================================================= */
 
 window.loadParts =
   loadParts;
+
+
+/* =========================================================
+   DEBUG GLOBAL
+========================================================= */
+
+window.getPartsCacheStatus =
+  getPartsCacheStatus;
