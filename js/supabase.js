@@ -2,7 +2,10 @@
    SUPABASE
 ========================================================= */
 
-async function req(url, opt = {}) {
+async function req(
+  url,
+  opt = {}
+) {
 
   let r =
     await fetch(
@@ -11,6 +14,7 @@ async function req(url, opt = {}) {
         ...opt,
 
         headers: {
+
           apikey:
             SUPABASE_KEY,
 
@@ -22,20 +26,34 @@ async function req(url, opt = {}) {
             "application/json",
 
           ...(opt.headers || {})
+
         }
+
       }
     );
 
 
-  let d = null;
+  let d =
+    null;
 
 
   try {
-    d = await r.json();
-  } catch {}
+
+    d =
+      await r.json();
+
+  } catch (
+    error
+  ) {
+
+    // Antwort enthält kein JSON.
+
+  }
 
 
-  if (!r.ok) {
+  if (
+    !r.ok
+  ) {
 
     let e =
       new Error(
@@ -52,29 +70,18 @@ async function req(url, opt = {}) {
 
 
     throw e;
+
   }
 
 
   return d;
+
 }
+
 
 /* =========================================================
    KOMPATIBILITÄTS-ALIAS
 ========================================================= */
 
-const supabaseRequest = req;
-/* =========================================================
-   KOMPATIBILITÄT ZU ÄLTEREN PARTS-VERSIONEN
-========================================================= */
-
-async function req(
-  url,
-  options = {}
-) {
-
-  return supabaseRequest(
-    url,
-    options
-  );
-
-}
+const supabaseRequest =
+  req;
