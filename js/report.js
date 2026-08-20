@@ -10,13 +10,11 @@ function relevance(
   const q =
     norm(query);
 
-
   const name =
     String(
       part.name || ""
     )
       .toLowerCase();
-
 
   const number =
     String(
@@ -24,17 +22,14 @@ function relevance(
     )
       .toLowerCase();
 
-
   const category =
     String(
       part.category || ""
     )
       .toLowerCase();
 
-
   let score =
     1000;
-
 
   if (
     number === q
@@ -45,16 +40,13 @@ function relevance(
 
   }
 
-
   const words =
     q
       .split(/\s+/)
       .filter(Boolean);
 
-
   let matches =
     0;
-
 
   words.forEach(
     word => {
@@ -72,10 +64,8 @@ function relevance(
     }
   );
 
-
   score -=
     matches * 80;
-
 
   if (
     name.includes("brick") ||
@@ -86,7 +76,6 @@ function relevance(
 
   }
 
-
   if (
     name.includes("plate") ||
     category.includes("plate")
@@ -95,7 +84,6 @@ function relevance(
     score -= 150;
 
   }
-
 
   if (
     name.includes("tile") ||
@@ -106,7 +94,6 @@ function relevance(
 
   }
 
-
   const cleanName =
     name
       .replace(
@@ -115,7 +102,6 @@ function relevance(
       )
       .trim();
 
-
   const normalizedQuery =
     norm(q)
       .replace(
@@ -123,7 +109,6 @@ function relevance(
         " "
       )
       .trim();
-
 
   if (
     cleanName ===
@@ -135,18 +120,13 @@ function relevance(
 
   }
 
-
   const d =
     dims(q);
 
-
-  if (
-    d
-  ) {
+  if (d) {
 
     const pd =
       dims(name);
-
 
     if (
       pd &&
@@ -161,7 +141,6 @@ function relevance(
 
   }
 
-
   if (
     /^brick\s+\d+\s*x\s*\d+$/i.test(
       cleanName
@@ -172,7 +151,6 @@ function relevance(
       600;
 
   }
-
 
   if (
     /^plate\s+\d+\s*x\s*\d+$/i.test(
@@ -185,7 +163,6 @@ function relevance(
 
   }
 
-
   if (
     /^tile\s+\d+\s*x\s*\d+/i.test(
       cleanName
@@ -197,7 +174,6 @@ function relevance(
 
   }
 
-
   if (
     name.includes("modified")
   ) {
@@ -205,7 +181,6 @@ function relevance(
     score += 500;
 
   }
-
 
   if (
     name.includes("special")
@@ -215,7 +190,6 @@ function relevance(
 
   }
 
-
   if (
     name.includes("assembly")
   ) {
@@ -224,7 +198,6 @@ function relevance(
 
   }
 
-
   if (
     name.includes("with ")
   ) {
@@ -232,7 +205,6 @@ function relevance(
     score += 450;
 
   }
-
 
   if (
     name.includes("printed") ||
@@ -246,7 +218,6 @@ function relevance(
 
   }
 
-
   if (
     name.includes("legoland") ||
     name.includes("resort") ||
@@ -257,7 +228,6 @@ function relevance(
 
   }
 
-
   if (
     name.includes("duplo") ||
     category.includes("duplo")
@@ -267,7 +237,6 @@ function relevance(
 
   }
 
-
   if (
     name.includes("education") ||
     category.includes("education")
@@ -276,7 +245,6 @@ function relevance(
     score += 1200;
 
   }
-
 
   return score;
 
@@ -290,7 +258,6 @@ function openReportForm() {
       "reportArea"
     );
 
-
   if (a.innerHTML) {
 
     a.innerHTML = "";
@@ -298,7 +265,6 @@ function openReportForm() {
     return;
 
   }
-
 
   a.innerHTML = `
     <div class="report-form">
@@ -331,7 +297,6 @@ function openReportForm() {
 
       </div>
 
-
       <div class="field">
 
         <label>
@@ -349,7 +314,6 @@ function openReportForm() {
 
       </div>
 
-
       <div class="form-buttons">
 
         <button
@@ -361,7 +325,6 @@ function openReportForm() {
         >
           Abbrechen
         </button>
-
 
         <button
           id="submitReportButton"
@@ -381,369 +344,35 @@ function openReportForm() {
 
 
 /* =========================================================
-   LEGO-TEILE SUCHEN
+   WICHTIG
+   ---------------------------------------------------------
+   KEINE zweite searchLegoParts()
+   KEINE zweite fetchLegoPartSuggestions()
+   KEINE zweite selectLegoPart()
+   
+   Diese Funktionen befinden sich ausschließlich
+   in search.js.
 ========================================================= */
-
-function searchLegoParts() {
-
-  clearTimeout(
-    searchTimer
-  );
-
-
-  let q =
-    document
-      .getElementById(
-        "partSearchInput"
-      )
-      .value
-      .trim();
-
-
-  selectedPart =
-    null;
-
-
-  document.getElementById(
-    "selectedPart"
-  ).innerHTML =
-    "";
-
-
-  document.getElementById(
-    "colorSelect"
-  ).disabled =
-    true;
-
-
-  document.getElementById(
-    "submitReportButton"
-  ).disabled =
-    true;
-
-
-  if (
-    q.length < 2
-  ) {
-
-    document.getElementById(
-      "partSuggestions"
-    ).style.display =
-      "none";
-
-    return;
-
-  }
-
-
-  searchTimer =
-    setTimeout(
-      () =>
-        fetchSuggestions(q),
-      250
-    );
-
-}
-
-
-/* =========================================================
-   VORSCHLÄGE LADEN
-========================================================= */
-
-async function fetchSuggestions(q) {
-
-  let box =
-    document.getElementById(
-      "partSuggestions"
-    );
-
-
-  let err =
-    document.getElementById(
-      "partSearchError"
-    );
-
-
-  box.style.display =
-    "block";
-
-
-  box.innerHTML =
-    '<div class="suggestion">🔎 Suche Teile...</div>';
-
-
-  err.textContent =
-    "";
-
-
-  try {
-
-    let results = [];
-
-
-    let s =
-      norm(q);
-
-
-    let looks =
-      /^[a-z0-9._-]+$/i.test(s) &&
-      !dimensionQuery(s);
-
-
-    /*
-      Exakte Teilenummer
-    */
-
-    if (looks) {
-
-      results =
-        await req(
-          LEGO_PARTS_URL +
-          "?part_num=eq." +
-          encodeURIComponent(q) +
-          "&select=part_num,name,category" +
-          "&limit=20"
-        ) || [];
-
-    }
-
-
-    /*
-      Teilenummer enthält Suchbegriff
-    */
-
-    if (
-      !results.length &&
-      looks
-    ) {
-
-      results =
-        await req(
-          LEGO_PARTS_URL +
-          "?part_num=ilike." +
-          encodeURIComponent(
-            "%" + q + "%"
-          ) +
-          "&select=part_num,name,category" +
-          "&limit=100"
-        ) || [];
-
-    }
-
-
-    /*
-      Suche über Namen
-    */
-
-    if (
-      !results.length
-    ) {
-
-      let n =
-        s
-          .replace(
-            /\s*x\s*/g,
-            " x "
-          )
-          .replace(
-            /\s+/g,
-            " "
-          )
-          .trim();
-
-
-      results =
-        await req(
-          LEGO_PARTS_URL +
-          "?name=ilike." +
-          encodeURIComponent(
-            "%" + n + "%"
-          ) +
-          "&select=part_num,name,category" +
-          "&limit=1000"
-        ) || [];
-
-    }
-
-
-    /*
-      Maßsuche
-    */
-
-    if (
-      dimensionQuery(q)
-    ) {
-
-      results =
-        results.filter(
-          p =>
-            exactDims(
-              p,
-              q
-            )
-        );
-
-    }
-
-
-    /*
-      Relevanzsortierung
-    */
-
-    results.sort(
-      (a, b) =>
-        relevance(
-          a,
-          q
-        ) -
-        relevance(
-          b,
-          q
-        )
-    );
-
-
-    /*
-      Maximal 30 Vorschläge
-    */
-
-    results =
-      results.slice(
-        0,
-        30
-      );
-
-
-    if (
-      !results.length
-    ) {
-
-      box.innerHTML =
-        '<div class="suggestion">❌ Kein passendes LEGO Teil gefunden.</div>';
-
-      return;
-
-    }
-
-
-    box.innerHTML =
-      results
-        .map(
-          p =>
-            `
-              <div
-                class="suggestion"
-                onclick='selectLegoPart(${JSON.stringify(p)})'
-              >
-
-                <div class="suggestion-number">
-                  LEGO ${esc(
-                    p.part_num
-                  )}
-                </div>
-
-                <div class="suggestion-name">
-                  ${esc(
-                    p.name
-                  )}
-                  ·
-                  ${esc(
-                    cat(
-                      p.category,
-                      p.name
-                    ).name
-                  )}
-                </div>
-
-              </div>
-            `
-        )
-        .join("");
-
-
-  } catch (e) {
-
-    box.innerHTML =
-      "";
-
-
-    err.textContent =
-      "❌ Fehler bei der Teilesuche: " +
-      e.message;
-
-  }
-
-}
-
-
-/* =========================================================
-   TEIL AUSWÄHLEN
-========================================================= */
-
-async function selectLegoPart(p) {
-
-  selectedPart =
-    p;
-
-
-  document.getElementById(
-    "partSearchInput"
-  ).value =
-    p.part_num +
-    " – " +
-    p.name;
-
-
-  document.getElementById(
-    "partSuggestions"
-  ).style.display =
-    "none";
-
-
-  document.getElementById(
-    "selectedPart"
-  ).innerHTML =
-
-    `
-      <div class="selected-part">
-
-        ✅ LEGO
-        ${esc(p.part_num)}
-        –
-        ${esc(p.name)}
-
-      </div>
-    `;
-
-
-  await loadColors(
-    p.part_num
-  );
-
-}
 
 
 /* =========================================================
    FARBEN LADEN
 ========================================================= */
 
-async function loadColors(num) {
+async function loadColorsForPart(num) {
 
   let sel =
     document.getElementById(
       "colorSelect"
     );
 
-
   let btn =
     document.getElementById(
       "submitReportButton"
     );
 
-
   sel.disabled =
     true;
-
 
   sel.innerHTML =
     `
@@ -752,10 +381,8 @@ async function loadColors(num) {
       </option>
     `;
 
-
   btn.disabled =
     true;
-
 
   try {
 
@@ -767,7 +394,6 @@ async function loadColors(num) {
         "&part_num=eq." +
         encodeURIComponent(num)
       ) || [];
-
 
     let ids =
       [
@@ -784,7 +410,6 @@ async function loadColors(num) {
         )
       ];
 
-
     if (
       !ids.length
     ) {
@@ -800,7 +425,6 @@ async function loadColors(num) {
 
     }
 
-
     let colors =
       await req(
         SUPABASE_URL +
@@ -814,13 +438,6 @@ async function loadColors(num) {
         "&select=id,name" +
         "&order=id.asc"
       ) || [];
-
-
-    /*
-      Not Applicable immer hinzufügen,
-      falls ID 9999 vorhanden ist,
-      aber noch nicht aus der DB kam.
-    */
 
     if (
       ids.some(
@@ -842,14 +459,12 @@ async function loadColors(num) {
 
     }
 
-
     sel.innerHTML =
       `
         <option value="">
           Farbe auswählen...
         </option>
       `;
-
 
     colors
       .sort(
@@ -869,16 +484,13 @@ async function loadColors(num) {
               "option"
             );
 
-
           o.value =
             c.id;
-
 
           o.textContent =
             Number(c.id) === 9999
               ? "Not Applicable"
               : c.name;
-
 
           sel.appendChild(
             o
@@ -887,16 +499,13 @@ async function loadColors(num) {
         }
       );
 
-
     sel.disabled =
       false;
-
 
     sel.onchange =
       () =>
         btn.disabled =
           !sel.value;
-
 
   } catch (e) {
 
@@ -923,12 +532,10 @@ async function submitReport() {
       "submitReportButton"
     );
 
-
   let sel =
     document.getElementById(
       "colorSelect"
     );
-
 
   if (
     !selectedPart
@@ -942,7 +549,6 @@ async function submitReport() {
 
   }
 
-
   if (
     !sel.value
   ) {
@@ -955,14 +561,11 @@ async function submitReport() {
 
   }
 
-
   btn.disabled =
     true;
 
-
   btn.textContent =
     "Wird gespeichert...";
-
 
   try {
 
@@ -1005,24 +608,19 @@ async function submitReport() {
       }
     );
 
-
     alert(
       "Danke! Das Teil wurde erfolgreich gemeldet. 🧱"
     );
-
 
     document.getElementById(
       "reportArea"
     ).innerHTML =
       "";
 
-
     selectedPart =
       null;
 
-
     await window.loadParts();
-
 
   } catch (e) {
 
@@ -1031,12 +629,10 @@ async function submitReport() {
       e.message
     );
 
-
   } finally {
 
     btn.disabled =
       false;
-
 
     btn.textContent =
       "Teil melden";
@@ -1059,7 +655,6 @@ async function reportUnavailable(id) {
         String(id)
     );
 
-
   if (
     !p ||
     !confirm(
@@ -1071,7 +666,6 @@ async function reportUnavailable(id) {
     )
   )
     return;
-
 
   try {
 
@@ -1097,15 +691,12 @@ async function reportUnavailable(id) {
       }
     );
 
-
     p.is_available =
       false;
-
 
     displayParts(
       parts
     );
-
 
   } catch (e) {
 
@@ -1135,15 +726,12 @@ async function confirmPart(
         String(id)
     );
 
-
   if (!p)
     return;
-
 
   let now =
     new Date()
       .toISOString();
-
 
   try {
 
@@ -1172,19 +760,15 @@ async function confirmPart(
       }
     );
 
-
     p.is_available =
       true;
-
 
     p.last_seen_at =
       now;
 
-
     displayParts(
       parts
     );
-
 
   } catch (e) {
 
