@@ -5,387 +5,6 @@
 
 
 /* =========================================================
-   KATEGORIE-BILDER
-========================================================= */
-
-/*
- * Repräsentative LEGO-Teilenummern für die Kategorien.
- *
- * Wenn diese Teilenummer in lego_part_colors vorhanden ist,
- * wird deren Bild für die Kategorie verwendet.
- *
- * Falls nicht vorhanden, wird automatisch das erste vorhandene
- * Bild aus der jeweiligen Kategorie verwendet.
- */
-
-const CATEGORY_REPRESENTATIVE_PARTS = {
-
-  /* Grundkategorien */
-
-  1: "3865",       // Baseplates
-  3: "3039",       // Bricks Sloped
-  4: "3437",       // Duplo / Quatro / Primo
-  5: "87079",      // Bricks Special
-  6: "43722",      // Bricks Wedged
-  7: "3002",       // Containers
-  8: "3700",       // Technic Bricks
-  9: "3795",       // Plates Special
-
-  11: "3001",      // Bricks – 2x4
-  12: "3673",      // Technic Connectors
-  13: "3626",      // Minifigs
-  14: "3024",      // Plates – 1x1
-  15: "87087",     // Tiles Special
-  16: "60596",     // Windows and Doors
-  17: "65803",     // Gear Parts
-  18: "2429",      // Hinges / Arms / Turntables
-  19: "3070b",     // Tiles
-  20: "3062b",     // Bricks Round and Cones
-  21: "2654",      // Plates Round / Curved / Dishes
-  22: "19475",     // Pneumatics
-  23: "60474",     // Panels
-  24: "3069b",     // Other
-  25: "32294",     // Technic Steering / Suspension / Engine
-  26: "22961",     // Technic Special
-  27: "970c00",     // Minifig Accessories
-  28: "30167",      // Animals / Creatures
-  29: "11214",      // Wheels and Tyres
-  30: "79c11",      // Tubes and Hoses
-  31: "25269",      // String / Bands / Reels
-  32: "30136",      // Bars / Ladders / Fences
-  33: "30153",      // Rock
-  34: "64567",      // Supports / Girders / Cranes
-  35: "2540",       // Transportation - Sea and Air
-  36: "30064",      // Transportation - Land
-  37: "30602",      // Bricks Curved
-  38: "2335",       // Flags / Banners / Signs
-  39: "57878",      // Magnets and Holders
-  40: "32555",      // Technic Panels
-  41: "45300",      // Large Buildable Figures
-  42: "6265",       // Belville / Scala / Fabuland
-  43: "Znap",       // Znap
-  44: "65803",      // Mechanical
-  45: "5590",       // Electronics
-  46: "3707",       // Technic Axles
-  47: "4744",       // Windscreens / Fuselage
-  48: "Clikits",     // Clikits
-  49: "41765",      // Plates Wedged
-  50: "HO",         // HO Scale
-  51: "32524",      // Technic Beams
-  52: "6589",       // Technic Gears
-  53: "3673",       // Technic Pins
-  54: "3713",       // Technic Bushes
-  55: "32001",      // Technic Beams Special
-  56: "48729",      // Tools
-  57: "4024",       // Non-Buildable Figures
-  58: "3958",       // Stickers
-  59: "6141",       // Minifig Heads
-  60: "973",         // Minifig Upper Body
-  61: "970c00",      // Minifig Lower Body
-  62: "35038",       // Minidoll Heads
-  63: "9225",        // Minidoll Upper Body
-  64: "9226",        // Minidoll Lower Body
-  65: "30165",       // Minifig Headwear
-  66: "Modulex",
-  67: "6143",        // Tiles Round / Curved
-  68: "18654",       // Projectiles / Launchers
-  69: "64647",       // Energy Effects
-  70: "970c00",      // Minifig Hipwear
-  71: "10167",       // Minifig Neckwear
-  72: "18866",       // Minifig Headwear Accessories
-  73: "6157",        // Minifig Shields / Weapons / Tools
-  74: "64648",       // Animal / Creature Accessories
-  75: "98165",       // Animal / Creature Body Parts
-
-  /*
-   * Besonders wichtig:
-   *
-   * Plants & Trees
-   */
-  76: "24866",
-
-  77: "99781",       // Non-System Parts
-  78: "Pen & Watch"
-
-};
-
-
-/* =========================================================
-   KATEGORIE-BILD CACHE
-========================================================= */
-
-let categoryImageMap = {};
-
-
-/* =========================================================
-   HILFSFUNKTION:
-   BILD AUS TEILEN SUCHEN
-========================================================= */
-
-function findPartImage(
-  partNumber
-) {
-
-  if (
-    !partNumber
-  ) {
-
-    return null;
-
-  }
-
-
-  const target =
-    String(
-      partNumber
-    ).toLowerCase();
-
-
-  /*
-   * Zuerst exakte Teilenummer suchen.
-   */
-
-  const found =
-    parts.find(
-      part => {
-
-        return (
-          String(
-            part.part_number || ""
-          ).toLowerCase() ===
-          target
-        ) &&
-        part.image_url
-      }
-    );
-
-
-  if (
-    found &&
-    found.image_url
-  ) {
-
-    return found.image_url;
-
-  }
-
-
-  return null;
-
-}
-
-
-/* =========================================================
-   KATEGORIE-BILDER LADEN
-========================================================= */
-
-async function loadCategoryImages() {
-
-  categoryImageMap = {};
-
-
-  /*
-   * Keine Teile vorhanden.
-   */
-  if (
-    !Array.isArray(parts) ||
-    parts.length === 0
-  ) {
-
-    return;
-
-  }
-
-
-  /*
-   * =====================================================
-   * 1. ZUERST BILDER AUS DEN BEREITS GELADENEN TEILEN
-   * =====================================================
-   */
-
-  Object.keys(
-    CATEGORY_REPRESENTATIVE_PARTS
-  ).forEach(
-    categoryId => {
-
-      const representative =
-        CATEGORY_REPRESENTATIVE_PARTS[
-          categoryId
-        ];
-
-
-      /*
-       * Nur echte Teilenummern verwenden.
-       *
-       * Sonderkategorien wie Znap / Clikits /
-       * Modulex / HO bekommen später einen Fallback.
-       */
-
-      const image =
-        findPartImage(
-          representative
-        );
-
-
-      if (
-        image
-      ) {
-
-        categoryImageMap[
-          categoryId
-        ] =
-          image;
-
-      }
-
-    }
-  );
-
-
-  /*
-   * =====================================================
-   * 2. FALLBACK:
-   * ERSTES BILD AUS DER JEWEILIGEN KATEGORIE
-   * =====================================================
-   */
-
-  if (
-    typeof groupPartsByRebrickableCategory !==
-    "function"
-  ) {
-
-    return;
-
-  }
-
-
-  const groups =
-    groupPartsByRebrickableCategory(
-      parts
-    );
-
-
-  groups.forEach(
-    group => {
-
-      if (
-        group.id === null ||
-        group.id === undefined
-      ) {
-
-        return;
-
-      }
-
-
-      const categoryId =
-        String(
-          group.id
-        );
-
-
-      /*
-       * Haben wir bereits ein
-       * repräsentatives Bild?
-       */
-
-      if (
-        categoryImageMap[
-          categoryId
-        ]
-      ) {
-
-        return;
-
-      }
-
-
-      /*
-       * Erstes Teil mit Bild suchen.
-       */
-
-      const partWithImage =
-        group.parts.find(
-          part =>
-            part.image_url
-        );
-
-
-      if (
-        partWithImage &&
-        partWithImage.image_url
-      ) {
-
-        categoryImageMap[
-          categoryId
-        ] =
-          partWithImage.image_url;
-
-      }
-
-    });
-
-}
-
-
-/* =========================================================
-   KATEGORIE-BILD HTML
-========================================================= */
-
-function renderCategoryImage(
-  categoryId
-) {
-
-  const image =
-    categoryImageMap[
-      String(
-        categoryId
-      )
-    ] || "";
-
-
-  if (
-    image
-  ) {
-
-    return `
-
-      <span class="category-icon">
-
-        <img
-          src="${escapeHTML(
-            image
-          )}"
-          alt=""
-          class="category-image"
-          loading="lazy"
-        >
-
-      </span>
-
-    `;
-
-  }
-
-
-  /*
-   * Fallback, wenn kein Bild vorhanden ist.
-   */
-
-  return `
-
-    <span class="category-icon">
-
-      🧱
-
-    </span>
-
-  `;
-
-}
-
-
-/* =========================================================
    BILDER LADEN
 ========================================================= */
 
@@ -395,9 +14,7 @@ async function loadImagesForParts() {
     !Array.isArray(parts) ||
     parts.length === 0
   ) {
-
     return;
-
   }
 
 
@@ -439,9 +56,7 @@ async function loadImagesForParts() {
   if (
     combinations.length === 0
   ) {
-
     return;
-
   }
 
 
@@ -570,6 +185,206 @@ async function loadImagesForParts() {
 
 
 /* =========================================================
+   KATEGORIE-BILDER LADEN
+========================================================= */
+
+/*
+ * Die Auswahl der Kategorie-Bilder erfolgt
+ * ausschließlich über CATEGORY_IMAGES in categories.js.
+ *
+ * Beispiel:
+ *
+ * 11: {
+ *   part: "3001",
+ *   color: 4
+ * }
+ *
+ * Wenn die gewünschte Farbe kein Bild besitzt,
+ * wird automatisch eine andere vorhandene
+ * Bildvariante desselben Teils verwendet.
+ */
+
+async function loadCategoryImages() {
+
+  /*
+   * Falls categories.js noch keine
+   * CATEGORY_IMAGES enthält, einfach nichts tun.
+   */
+
+  if (
+    typeof CATEGORY_IMAGES ===
+    "undefined"
+  ) {
+
+    window.categoryImageMap = {};
+
+    return;
+
+  }
+
+
+  const configs =
+    Object.entries(
+      CATEGORY_IMAGES
+    );
+
+
+  if (
+    configs.length === 0
+  ) {
+
+    window.categoryImageMap = {};
+
+    return;
+
+  }
+
+
+  const imageMap = {};
+
+
+  try {
+
+    for (
+      const [
+        categoryId,
+        config
+      ] of configs
+    ) {
+
+      if (
+        !config ||
+        !config.part
+      ) {
+
+        continue;
+
+      }
+
+
+      const partNumber =
+        String(
+          config.part
+        );
+
+
+      let rows = [];
+
+
+      /* =====================================================
+         EXAKTE FARBE
+      ===================================================== */
+
+      if (
+        config.color !== null &&
+        config.color !== undefined &&
+        config.color !== ""
+      ) {
+
+        const exactUrl =
+          SUPABASE_URL +
+          "/rest/v1/lego_part_colors" +
+          "?part_num=eq." +
+          encodeURIComponent(
+            partNumber
+          ) +
+          "&color_id=eq." +
+          encodeURIComponent(
+            String(
+              config.color
+            )
+          ) +
+          "&select=part_num,color_id,image_url" +
+          "&limit=1";
+
+
+        rows =
+          await req(
+            exactUrl
+          );
+
+      }
+
+
+      /* =====================================================
+         FALLBACK
+      ===================================================== */
+
+      /*
+       * Wenn keine Farbe angegeben wurde
+       * oder die gewünschte Farbvariante
+       * kein Bild besitzt:
+       *
+       * irgendeine Bildvariante des Teils nehmen.
+       */
+
+      if (
+        !Array.isArray(rows) ||
+        rows.length === 0 ||
+        !rows[0].image_url
+      ) {
+
+        const fallbackUrl =
+          SUPABASE_URL +
+          "/rest/v1/lego_part_colors" +
+          "?part_num=eq." +
+          encodeURIComponent(
+            partNumber
+          ) +
+          "&image_url=not.is.null" +
+          "&select=part_num,color_id,image_url" +
+          "&limit=1";
+
+
+        rows =
+          await req(
+            fallbackUrl
+          );
+
+      }
+
+
+      if (
+        Array.isArray(rows) &&
+        rows.length > 0 &&
+        rows[0].image_url
+      ) {
+
+        imageMap[
+          String(
+            categoryId
+          )
+        ] =
+          rows[0].image_url;
+
+      }
+
+    }
+
+
+    window.categoryImageMap =
+      imageMap;
+
+
+  } catch (
+    error
+  ) {
+
+    console.warn(
+      "Kategorie-Bilder konnten nicht geladen werden:",
+      error
+    );
+
+
+    window.categoryImageMap =
+      {};
+
+  }
+
+}
+
+
+/* =========================================================
    GEWICHTE LADEN
 ========================================================= */
 
@@ -579,9 +394,7 @@ async function loadWeightsForParts() {
     !Array.isArray(parts) ||
     parts.length === 0
   ) {
-
     return;
-
   }
 
 
@@ -602,9 +415,7 @@ async function loadWeightsForParts() {
   if (
     numbers.length === 0
   ) {
-
     return;
-
   }
 
 
@@ -723,7 +534,9 @@ async function loadParts() {
   try {
 
     /*
-     * Alle vorhandenen gemeldeten Teile laden.
+     * =====================================================
+     * TEILE AUS SUPABASE LADEN
+     * =====================================================
      */
 
     const data =
@@ -846,7 +659,7 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * BILDER
+     * TEILE-BILDER
      * =====================================================
      */
 
@@ -856,6 +669,22 @@ async function loadParts() {
     ) {
 
       await loadImagesForParts();
+
+    }
+
+
+    /*
+     * =====================================================
+     * KATEGORIE-BILDER
+     * =====================================================
+     */
+
+    if (
+      typeof loadCategoryImages ===
+      "function"
+    ) {
+
+      await loadCategoryImages();
 
     }
 
@@ -888,22 +717,6 @@ async function loadParts() {
     ) {
 
       await initializeCategories();
-
-    }
-
-
-    /*
-     * =====================================================
-     * KATEGORIE-BILDER
-     * =====================================================
-     */
-
-    if (
-      typeof loadCategoryImages ===
-      "function"
-    ) {
-
-      await loadCategoryImages();
 
     }
 
@@ -1013,6 +826,7 @@ function displayParts(
       "Rebrickable-Kategorien sind nicht verfügbar."
     );
 
+
     groups = [];
 
   }
@@ -1048,6 +862,33 @@ function displayParts(
               : "other";
 
 
+          /*
+           * =================================================
+           * KATEGORIE-BILD
+           * =================================================
+           */
+
+          const categoryImage =
+            window.categoryImageMap &&
+            window.categoryImageMap[
+              categoryId
+            ]
+
+              ? window.categoryImageMap[
+                  categoryId
+                ]
+
+              : "";
+
+
+          const safeCategoryImage =
+            categoryImage
+              ? escapeHTML(
+                  categoryImage
+                )
+              : "";
+
+
           return `
 
             <div
@@ -1064,9 +905,30 @@ function displayParts(
 
                 <div class="category-left">
 
-                  ${renderCategoryImage(
-                    categoryId
-                  )}
+                  <span class="category-icon">
+
+                    ${
+                      safeCategoryImage
+
+                        ? `
+
+                          <img
+                            class="category-image"
+                            src="${safeCategoryImage}"
+                            alt="${categoryName}"
+                            loading="lazy"
+                          >
+
+                        `
+
+                        : `
+
+                          🧱
+
+                        `
+                    }
+
+                  </span>
 
 
                   <span class="category-name">
