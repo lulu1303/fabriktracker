@@ -835,20 +835,25 @@ function searchLegoParts() {
 
 }
 
-
 /* =========================================================
    LEGO TEILE SUCHEN
+   ---------------------------------------------------------
+   Suche berücksichtigt:
+   - exakte Teilenummer
+   - Teilnummer teilweise
+   - Name
+   - Kategorie
+   - Dimensionen
+   - Standardteile
+   - Sonderteile
 ========================================================= */
 
-async function fetchLegoPartSuggestions(
-  query
-) {
+async function fetchLegoPartSuggestions(query) {
 
   const suggestions =
     document.getElementById(
       "partSuggestions"
     );
-
 
   const errorBox =
     document.getElementById(
@@ -857,60 +862,107 @@ async function fetchLegoPartSuggestions(
 
 
   if (!suggestions) {
-
     return;
-
   }
 
 
-  suggestions.style.display =
-    "block";
-
+  suggestions.style.display = "block";
 
   suggestions.innerHTML = `
-
     <div class="suggestion">
-
       🔎 Suche Teile...
-
     </div>
-
   `;
 
 
   if (errorBox) {
-
-    errorBox.textContent =
-      "";
-
+    errorBox.textContent = "";
   }
 
 
   try {
 
     const search =
-      query
+      String(query || "")
         .trim()
         .toLowerCase();
-
-
-    let results = [];
 
 
     if (!search) {
 
       legoSearchResults = [];
 
-      suggestions.innerHTML =
-        "";
+      suggestions.innerHTML = "";
 
       return;
+    }
+
+
+    /* =====================================================
+       NORMALISIEREN
+    ===================================================== */
+
+    const normalizedSearch =
+      normalizeDimensionQuery(
+        search
+      );
+
+
+    const dimension =
+      extractDimension(
+        normalizedSearch
+      );
+
+
+    /* =====================================================
+       ERGEBNISSE SAMMELN
+    ===================================================== */
+
+    let results = [];
+
+
+    /* =====================================================
+       1. EXAKTE TEILENUMMER
+       
+       Beispiel:
+       Suche 3001
+       → LEGO 3001
+    ===================================================== */
+
+    const exactNumberUrl =
+      LEGO_PARTS_URL +
+      "?part_num=eq." +
+      encodeURIComponent(search) +
+      "&select=part_num,name,category_id,category" +
+      "&limit=50";
+
+
+    const exactNumberResults =
+      await supabaseRequest(
+        exactNumberUrl
+      );
+
+
+    if (
+      Array.isArray(
+        exactNumberResults
+      )
+    ) {
+
+      results =
+        results.concat(
+          exactNumberResults
+        );
 
     }
 
 
     /* =====================================================
-       TEILENUMMER ODER NAMENSSUCHE
+       2. TEILENUMMER TEILWEISE
+       
+       Beispiel:
+       Suche 300
+       → 3001, 3002, ...
     ===================================================== */
 
     const looksLikePartNumber =
@@ -919,523 +971,311 @@ async function fetchLegoPartSuggestions(
       );
 
 
-    /* =====================================================
-       DIREKTE TEILENUMMERNSUCHE
-    ===================================================== */
-
     if (
-      looksLikePartNumber
-    ) {
-
-      const exactUrl =
-
-        LEGO_PARTS_URL +
-
-        "?part_num=eq." +
-
-        encodeURIComponent(
-          search
-        ) +
-
-        "&select=part_num,name,category_id,category" +
-
-        "&limit=20";
-
-
-      results =
-        await supabaseRequest(
-          exactUrl
-        );
-
-    }
-
-
-    /* =====================================================
-       TEILENUMMER TEILWEISE
-    ===================================================== */
-
-    if (
-      results.length === 0 &&
       looksLikePartNumber
     ) {
 
       const numberUrl =
-
         LEGO_PARTS_URL +
-
         "?part_num=ilike." +
-
         encodeURIComponent(
           "%" +
           search +
           "%"
         ) +
-
         "&select=part_num,name,category_id,category" +
+        "&limit=200";
 
-        "&limit=100";
 
-
-      results =
+      const numberResults =
         await supabaseRequest(
           numberUrl
+        );
+
+
+      if (
+        Array.isArray(
+          numberResults
+        )
+      ) {
+
+        results =
+          results.concat(
+            numberResults
+          );
+
+      }
+
+    }
+
+
+    /* =====================================================
+       3. NAME-SUCHE
+       
+       Beispiel:
+       LEGO 3001
+       Door
+       Window
+       Brick
+    ===================================================== */
+
+    const nameUrl =
+      LEGO_PARTS_URL +
+      "?name=ilike." +
+      encodeURIComponent(
+        "%" +
+        normalizedSearch +
+        "%"
+      ) +
+      "&select=part_num,name,category_id,category" +
+      "&limit=500";
+
+
+    const nameResults =
+      await supabaseRequest(
+        nameUrl
+      );
+
+
+    if (
+      Array.isArray(
+        nameResults
+      )
+    ) {
+
+      results =
+        results.concat(
+          nameResults
         );
 
     }
 
 
     /* =====================================================
-       NAMENSSUCHE
+       4. KATEGORIE-SUCHE
+       
+       DAS IST DER WICHTIGE TEIL.
+       
+       Wenn der Datensatz z.B. so aussieht:
+       
+       part_num = 3001
+       name     = LEGO 3001
+       category = Bricks
+       
+       findet "Brick" den 3001 jetzt trotzdem.
     ===================================================== */
 
+    const categoryUrl =
+      LEGO_PARTS_URL +
+      "?category=ilike." +
+      encodeURIComponent(
+        "%" +
+        search +
+        "%"
+      ) +
+      "&select=part_num,name,category_id,category" +
+      "&limit=500";
+
+
+    const categoryResults =
+      await supabaseRequest(
+        categoryUrl
+      );
+
+
     if (
-      results.length === 0
+      Array.isArray(
+        categoryResults
+      )
     ) {
 
-      const normalized =
-        normalizeDimensionQuery(
-          search
+      results =
+        results.concat(
+          categoryResults
         );
 
+    }
 
-      let standardResults = [];
 
+    /* =====================================================
+       5. SPEZIELLE KATEGORIEN
+       
+       Bei "brick", "plate", "tile" holen wir zusätzlich
+       gezielt die komplette Kategorie.
+    ===================================================== */
 
-      /* ===================================================
-         STANDARD-BRICK
-         
-         Nur wenn wirklich nach "brick" gesucht wird.
-         
-         Dadurch holen wir gezielt:
-         
-         Brick 1 x 2
-         Brick 1 x 4
-         Brick 2 x 2
-         Brick 2 x 3
-         Brick 2 x 4
-         ...
-         
-         und nicht nur die ersten 500 allgemeinen
-         "brick"-Treffer wie brickslot0001 usw.
-      =================================================== */
+    const categoryWords = [];
 
-      if (
-        normalized === "brick" ||
-        normalized === "bricks"
-      ) {
 
-        const standardBrickUrl =
+    if (
+      normalizedSearch === "brick" ||
+      normalizedSearch === "bricks"
+    ) {
 
-          LEGO_PARTS_URL +
+      categoryWords.push(
+        "brick"
+      );
 
-          "?name=ilike." +
+    }
 
-          encodeURIComponent(
-            "Brick %"
-          ) +
 
-          "&select=part_num,name,category_id,category" +
+    if (
+      normalizedSearch === "plate" ||
+      normalizedSearch === "plates"
+    ) {
 
-          "&limit=500";
+      categoryWords.push(
+        "plate"
+      );
 
+    }
 
-        const brickResults =
-          await supabaseRequest(
-            standardBrickUrl
-          );
 
+    if (
+      normalizedSearch === "tile" ||
+      normalizedSearch === "tiles"
+    ) {
 
-        if (
-          Array.isArray(
-            brickResults
-          )
-        ) {
+      categoryWords.push(
+        "tile"
+      );
 
-          standardResults =
-            standardResults.concat(
-              brickResults.filter(
-                part => {
+    }
 
-                  const partName =
-                    String(
-                      part.name || ""
-                    )
-                      .toLowerCase()
-                      .replace(
-                        /\s+/g,
-                        " "
-                      )
-                      .trim();
 
+    for (
+      const categoryWord of categoryWords
+    ) {
 
-                  const partNumber =
-                    String(
-                      part.part_num || ""
-                    )
-                      .toLowerCase()
-                      .trim();
-
-
-                  if (
-                    partNumber.startsWith(
-                      "brickslot"
-                    )
-                  ) {
-
-                    return false;
-
-                  }
-
-
-                  return /^brick\s+\d+\s*x\s*\d+$/i.test(
-                    partName
-                  );
-
-                }
-              )
-            );
-
-        }
-
-      }
-
-
-      /* ===================================================
-         STANDARD-PLATE
-      =================================================== */
-
-      if (
-        normalized === "plate" ||
-        normalized === "plates"
-      ) {
-
-        const standardPlateUrl =
-
-          LEGO_PARTS_URL +
-
-          "?name=ilike." +
-
-          encodeURIComponent(
-            "Plate %"
-          ) +
-
-          "&select=part_num,name,category_id,category" +
-
-          "&limit=500";
-
-
-        const plateResults =
-          await supabaseRequest(
-            standardPlateUrl
-          );
-
-
-        if (
-          Array.isArray(
-            plateResults
-          )
-        ) {
-
-          standardResults =
-            standardResults.concat(
-              plateResults.filter(
-                part => {
-
-                  const partName =
-                    String(
-                      part.name || ""
-                    )
-                      .toLowerCase()
-                      .replace(
-                        /\s+/g,
-                        " "
-                      )
-                      .trim();
-
-
-                  return /^plate\s+\d+\s*x\s*\d+$/i.test(
-                    partName
-                  );
-
-                }
-              )
-            );
-
-        }
-
-      }
-
-
-      /* ===================================================
-         STANDARD-TILE
-      =================================================== */
-
-      if (
-        normalized === "tile" ||
-        normalized === "tiles"
-      ) {
-
-        const standardTileUrl =
-
-          LEGO_PARTS_URL +
-
-          "?name=ilike." +
-
-          encodeURIComponent(
-            "Tile %"
-          ) +
-
-          "&select=part_num,name,category_id,category" +
-
-          "&limit=500";
-
-
-        const tileResults =
-          await supabaseRequest(
-            standardTileUrl
-          );
-
-
-        if (
-          Array.isArray(
-            tileResults
-          )
-        ) {
-
-          standardResults =
-            standardResults.concat(
-              tileResults.filter(
-                part => {
-
-                  const partName =
-                    String(
-                      part.name || ""
-                    )
-                      .toLowerCase()
-                      .replace(
-                        /\s+/g,
-                        " "
-                      )
-                      .trim();
-
-
-                  return /^tile\s+\d+\s*x\s*\d+(?:\s+x\s*\d+)?$/i.test(
-                    partName
-                  );
-
-                }
-              )
-            );
-
-        }
-
-      }
-
-
-      /* ===================================================
-         EXAKTER NAME
-         
-         Besonders wichtig für:
-         
-         Brick 2 x 4
-         Plate 2 x 4
-         Tile 2 x 2
-      =================================================== */
-
-      const exactNameUrl =
-
+      const specialCategoryUrl =
         LEGO_PARTS_URL +
-
-        "?name=ilike." +
-
-        encodeURIComponent(
-          normalized
-        ) +
-
-        "&select=part_num,name,category_id,category" +
-
-        "&limit=20";
-
-
-      const exactResults =
-        await supabaseRequest(
-          exactNameUrl
-        );
-
-
-      if (
-        Array.isArray(
-          exactResults
-        )
-      ) {
-
-        results =
-          exactResults;
-
-      }
-
-
-      /* ===================================================
-         BREITE NAMENSSUCHE
-         
-         Nur als Ergänzung.
-      =================================================== */
-
-      const nameUrl =
-
-        LEGO_PARTS_URL +
-
-        "?name=ilike." +
-
+        "?category=ilike." +
         encodeURIComponent(
           "%" +
-          normalized +
+          categoryWord +
           "%"
         ) +
-
         "&select=part_num,name,category_id,category" +
+        "&limit=1000";
 
-        "&limit=500";
 
-
-      const broadResults =
+      const specialResults =
         await supabaseRequest(
-          nameUrl
+          specialCategoryUrl
         );
 
 
       if (
         Array.isArray(
-          broadResults
+          specialResults
         )
       ) {
 
         results =
           results.concat(
-            broadResults
+            specialResults
           );
 
       }
 
+    }
 
-      /* ===================================================
-         STANDARDERGEBNISSE VORANSTELLEN
-      =================================================== */
+
+    /* =====================================================
+       6. KOMPAKTE DIMENSIONSSUCHE
+       
+       Brick 2x4
+       Brick 2 x 4
+       
+       Falls der Name die Dimension enthält.
+    ===================================================== */
+
+    if (
+      dimension
+    ) {
+
+      const compactDimension =
+        dimension.replace(
+          /\s*x\s*/gi,
+          "x"
+        );
+
+
+      const dimensionUrl =
+        LEGO_PARTS_URL +
+        "?name=ilike." +
+        encodeURIComponent(
+          "%" +
+          compactDimension +
+          "%"
+        ) +
+        "&select=part_num,name,category_id,category" +
+        "&limit=500";
+
+
+      const dimensionResults =
+        await supabaseRequest(
+          dimensionUrl
+        );
+
 
       if (
-        standardResults.length > 0
-      ) {
-
-        results =
-          standardResults.concat(
-            results
-          );
-
-      }
-
-
-      /* ===================================================
-         KOMPAKTE SCHREIBWEISE
-         
-         Brick 2x4
-         Brick 2 x 4
-      =================================================== */
-
-      if (
-        normalized.includes(
-          " x "
+        Array.isArray(
+          dimensionResults
         )
       ) {
 
-        const compact =
-          normalized.replace(
-            /\s*x\s*/gi,
-            "x"
+        results =
+          results.concat(
+            dimensionResults
           );
-
-
-        const compactUrl =
-
-          LEGO_PARTS_URL +
-
-          "?name=ilike." +
-
-          encodeURIComponent(
-            "%" +
-            compact +
-            "%"
-          ) +
-
-          "&select=part_num,name,category_id,category" +
-
-          "&limit=500";
-
-
-        const compactResults =
-          await supabaseRequest(
-            compactUrl
-          );
-
-
-        if (
-          Array.isArray(
-            compactResults
-          )
-        ) {
-
-          results =
-            results.concat(
-              compactResults
-            );
-
-        }
 
       }
-
-
-      /* ===================================================
-         DOPPELTE TREFFER ENTFERNEN
-      =================================================== */
-
-      const uniqueParts =
-        new Map();
-
-
-      for (
-        const part of results
-      ) {
-
-        const key =
-          String(
-            part.part_num || ""
-          )
-            .toLowerCase()
-            .trim();
-
-
-        if (
-          key &&
-          !uniqueParts.has(
-            key
-          )
-        ) {
-
-          uniqueParts.set(
-            key,
-            part
-          );
-
-        }
-
-      }
-
-
-      results =
-        Array.from(
-          uniqueParts.values()
-        );
 
     }
+
+
+    /* =====================================================
+       DUPLIKATE ENTFERNEN
+    ===================================================== */
+
+    const uniqueParts =
+      new Map();
+
+
+    for (
+      const part of results
+    ) {
+
+      const key =
+        String(
+          part.part_num || ""
+        )
+          .toLowerCase()
+          .trim();
+
+
+      if (
+        key &&
+        !uniqueParts.has(
+          key
+        )
+      ) {
+
+        uniqueParts.set(
+          key,
+          part
+        );
+
+      }
+
+    }
+
+
+    results =
+      Array.from(
+        uniqueParts.values()
+      );
 
 
     /* =====================================================
@@ -1443,72 +1283,18 @@ async function fetchLegoPartSuggestions(
     ===================================================== */
 
     if (
-      !results ||
       results.length === 0
     ) {
 
       legoSearchResults = [];
 
       suggestions.innerHTML = `
-
         <div class="suggestion">
-
           ❌ Kein passendes LEGO Teil gefunden.
-
         </div>
-
       `;
 
       return;
-
-    }
-
-
-    /* =====================================================
-       DIMENSIONSFILTER
-       
-       2 x 4 darf NICHT automatisch
-       mit 2 x 4 x 3 gleichgesetzt werden.
-    ===================================================== */
-
-    const dimension =
-      extractDimension(
-        search
-      );
-
-
-    if (
-      dimension
-    ) {
-
-      const filteredResults =
-        results.filter(
-          part => {
-
-            const partName =
-              String(
-                part.name || ""
-              );
-
-
-            return hasExactDimension(
-              partName,
-              dimension
-            );
-
-          }
-        );
-
-
-      if (
-        filteredResults.length > 0
-      ) {
-
-        results =
-          filteredResults;
-
-      }
-
     }
 
 
@@ -1524,45 +1310,88 @@ async function fetchLegoPartSuggestions(
         String(
           part.part_num || ""
         )
-        .toLowerCase()
-        .trim();
+          .toLowerCase()
+          .trim();
 
 
       const name =
         String(
           part.name || ""
         )
-        .toLowerCase()
-        .replace(
-          /\s+/g,
-          " "
-        )
-        .trim();
+          .toLowerCase()
+          .replace(
+            /\s+/g,
+            " "
+          )
+          .trim();
 
 
       const category =
+        String(
+          part.category || ""
+        )
+          .toLowerCase()
+          .trim();
+
+
+      const categoryName =
         String(
           getCategoryName(
             part.category_id,
             part.category || ""
           )
         )
-        .toLowerCase();
+          .toLowerCase()
+          .trim();
 
 
-      let priority =
-        1000;
+      let priority = 10000;
 
 
       /* ===================================================
          EXAKTE TEILENUMMER
+         
+         HÖCHSTE PRIORITÄT
+         
+         Suche 3001
+         → 3001 steht ganz oben
       =================================================== */
 
       if (
         number === search
       ) {
 
-        priority -= 5000;
+        priority -= 100000;
+
+      }
+
+
+      /* ===================================================
+         TEILENUMMER BEGINNT MIT SUCHE
+      =================================================== */
+
+      if (
+        number.startsWith(
+          search
+        )
+      ) {
+
+        priority -= 10000;
+
+      }
+
+
+      /* ===================================================
+         TEILENUMMER ENTHÄLT SUCHE
+      =================================================== */
+
+      if (
+        number.includes(
+          search
+        )
+      ) {
+
+        priority -= 3000;
 
       }
 
@@ -1571,26 +1400,10 @@ async function fetchLegoPartSuggestions(
          EXAKTER NAME
       =================================================== */
 
-      const normalizedSearch =
-        normalizeDimensionQuery(
-          search
-        )
-        .replace(
-          /\s+/g,
-          " "
-        )
-        .trim();
-
-
       const normalizedName =
         normalizeDimensionQuery(
           name
-        )
-        .replace(
-          /\s+/g,
-          " "
-        )
-        .trim();
+        );
 
 
       if (
@@ -1598,13 +1411,102 @@ async function fetchLegoPartSuggestions(
         normalizedSearch
       ) {
 
-        priority -= 3000;
+        priority -= 15000;
 
       }
 
 
       /* ===================================================
-         STANDARDTEIL
+         NAME BEGINNT MIT SUCHE
+      =================================================== */
+
+      if (
+        name.startsWith(
+          search
+        )
+      ) {
+
+        priority -= 5000;
+
+      }
+
+
+      /* ===================================================
+         NAME ENTHÄLT SUCHE
+      =================================================== */
+
+      if (
+        name.includes(
+          search
+        )
+      ) {
+
+        priority -= 1500;
+
+      }
+
+
+      /* ===================================================
+         KATEGORIE
+         
+         WICHTIG:
+         "Brick" findet Kategorie "Bricks"
+      =================================================== */
+
+      if (
+        category.includes(
+          search
+        )
+      ) {
+
+        priority -= 12000;
+
+      }
+
+
+      if (
+        categoryName.includes(
+          search
+        )
+      ) {
+
+        priority -= 12000;
+
+      }
+
+
+      /* ===================================================
+         DIMENSION
+      =================================================== */
+
+      if (
+        dimension
+      ) {
+
+        const partDimension =
+          extractDimension(
+            normalizeDimensionQuery(
+              name
+            )
+          );
+
+
+        if (
+          partDimension ===
+          dimension
+        ) {
+
+          priority -= 8000;
+
+        }
+
+      }
+
+
+      /* ===================================================
+         STANDARD BRICK
+         
+         Falls die Dimension im Namen steht.
       =================================================== */
 
       if (
@@ -1613,10 +1515,14 @@ async function fetchLegoPartSuggestions(
         )
       ) {
 
-        priority -= 3000;
+        priority -= 5000;
 
       }
 
+
+      /* ===================================================
+         STANDARD PLATE
+      =================================================== */
 
       if (
         /^plate\s+\d+\s*x\s*\d+$/i.test(
@@ -1624,147 +1530,22 @@ async function fetchLegoPartSuggestions(
         )
       ) {
 
-        priority -= 3000;
+        priority -= 5000;
 
       }
 
 
+      /* ===================================================
+         STANDARD TILE
+      =================================================== */
+
       if (
-        /^tile\s+\d+\s*x\s*\d+(?:\s+x\s*\d+)?$/i.test(
+        /^tile\s+\d+\s*x\s*\d+(?:\s*x\s*\d+)?$/i.test(
           name
         )
       ) {
 
-        priority -= 3000;
-
-      }
-
-
-      /* ===================================================
-         NAME BEGINNT MIT SUCHBEGRIFF
-      =================================================== */
-
-      if (
-        name.startsWith(
-          search + " "
-        )
-      ) {
-
-        priority -= 1200;
-
-      }
-
-
-      if (
-        name.startsWith(
-          search
-        )
-      ) {
-
-        priority -= 700;
-
-      }
-
-
-      /* ===================================================
-         SUCHWÖRTER
-      =================================================== */
-
-      const searchWords =
-        search
-          .split(
-            /\s+/
-          )
-          .filter(
-            Boolean
-          );
-
-
-      searchWords.forEach(
-        word => {
-
-          if (
-            name.includes(
-              word
-            )
-          ) {
-
-            priority -= 100;
-
-          }
-
-        }
-      );
-
-
-      /* ===================================================
-         DIMENSION
-      =================================================== */
-
-      if (
-        dimension &&
-        hasExactDimension(
-          name,
-          dimension
-        )
-      ) {
-
-        priority -= 1000;
-
-      }
-
-
-      /* ===================================================
-         KATEGORIE
-      =================================================== */
-
-      if (
-        category.includes(
-          "brick"
-        )
-      ) {
-
-        priority -= 250;
-
-      }
-
-
-      if (
-        category.includes(
-          "plate"
-        )
-      ) {
-
-        priority -= 250;
-
-      }
-
-
-      if (
-        category.includes(
-          "tile"
-        )
-      ) {
-
-        priority -= 250;
-
-      }
-
-
-      /* ===================================================
-         BRICKSLOT NICHT BEVORZUGEN
-      =================================================== */
-
-      if (
-        number.startsWith(
-          "brickslot"
-        ) ||
-        name.startsWith(
-          "brickslot"
-        )
-      ) {
-
-        priority += 4000;
+        priority -= 5000;
 
       }
 
@@ -1774,21 +1555,32 @@ async function fetchLegoPartSuggestions(
       =================================================== */
 
       if (
-        name.includes(
-          "basic"
-        ) ||
-        name.includes(
-          "standard"
-        )
+        name.includes("basic") ||
+        name.includes("standard")
       ) {
 
-        priority -= 150;
+        priority -= 500;
 
       }
 
 
       /* ===================================================
-         MODIFIED / SPECIAL / ASSEMBLY
+         BRICKSLOT NACH HINTEN
+      =================================================== */
+
+      if (
+        number.startsWith(
+          "brickslot"
+        )
+      ) {
+
+        priority += 30000;
+
+      }
+
+
+      /* ===================================================
+         MODIFIED
       =================================================== */
 
       if (
@@ -1797,10 +1589,14 @@ async function fetchLegoPartSuggestions(
         )
       ) {
 
-        priority += 900;
+        priority += 10000;
 
       }
 
+
+      /* ===================================================
+         SPECIAL
+      =================================================== */
 
       if (
         name.includes(
@@ -1808,10 +1604,14 @@ async function fetchLegoPartSuggestions(
         )
       ) {
 
-        priority += 900;
+        priority += 10000;
 
       }
 
+
+      /* ===================================================
+         ASSEMBLY
+      =================================================== */
 
       if (
         name.includes(
@@ -1819,10 +1619,14 @@ async function fetchLegoPartSuggestions(
         )
       ) {
 
-        priority += 900;
+        priority += 10000;
 
       }
 
+
+      /* ===================================================
+         WITH ...
+      =================================================== */
 
       if (
         name.includes(
@@ -1830,7 +1634,7 @@ async function fetchLegoPartSuggestions(
         )
       ) {
 
-        priority += 750;
+        priority += 7000;
 
       }
 
@@ -1840,51 +1644,29 @@ async function fetchLegoPartSuggestions(
       =================================================== */
 
       if (
-        name.includes(
-          "printed"
-        ) ||
-
-        name.includes(
-          "print"
-        ) ||
-
-        name.includes(
-          "pattern"
-        ) ||
-
-        name.includes(
-          "decorated"
-        ) ||
-
-        name.includes(
-          "decoration"
-        )
+        name.includes("printed") ||
+        name.includes("print") ||
+        name.includes("pattern") ||
+        name.includes("decorated") ||
+        name.includes("decoration")
       ) {
 
-        priority += 1200;
+        priority += 15000;
 
       }
 
 
       /* ===================================================
-         LEGO LAND / RESORT / FABRIK
+         LEGOLAND / RESORT / FABRIK
       =================================================== */
 
       if (
-        name.includes(
-          "legoland"
-        ) ||
-
-        name.includes(
-          "resort"
-        ) ||
-
-        name.includes(
-          "fabrik"
-        )
+        name.includes("legoland") ||
+        name.includes("resort") ||
+        name.includes("fabrik")
       ) {
 
-        priority += 1500;
+        priority += 18000;
 
       }
 
@@ -1894,16 +1676,12 @@ async function fetchLegoPartSuggestions(
       =================================================== */
 
       if (
-        name.includes(
-          "duplo"
-        ) ||
-
-        category.includes(
-          "duplo"
-        )
+        name.includes("duplo") ||
+        category.includes("duplo") ||
+        categoryName.includes("duplo")
       ) {
 
-        priority += 2500;
+        priority += 25000;
 
       }
 
@@ -1913,16 +1691,12 @@ async function fetchLegoPartSuggestions(
       =================================================== */
 
       if (
-        name.includes(
-          "education"
-        ) ||
-
-        category.includes(
-          "education"
-        )
+        name.includes("education") ||
+        category.includes("education") ||
+        categoryName.includes("education")
       ) {
 
-        priority += 2000;
+        priority += 20000;
 
       }
 
@@ -1967,37 +1741,62 @@ async function fetchLegoPartSuggestions(
         }
 
 
-        /* Kürzere Namen zuerst */
+        /* -----------------------------------------------
+           Bei gleicher Priorität:
+           numerische Teilenummer bevorzugen
+        ------------------------------------------------ */
 
-        const nameA =
+        const numberA =
           String(
-            a.name || ""
+            a.part_num || ""
           );
 
 
-        const nameB =
+        const numberB =
           String(
-            b.name || ""
+            b.part_num || ""
+          );
+
+
+        const numericA =
+          /^\d+$/.test(
+            numberA
+          );
+
+
+        const numericB =
+          /^\d+$/.test(
+            numberB
           );
 
 
         if (
-          nameA.length !==
-          nameB.length
+          numericA &&
+          numericB
         ) {
 
           return (
-            nameA.length -
-            nameB.length
+            Number(numberA) -
+            Number(numberB)
           );
 
         }
 
 
-        /* Alphabetisch */
+        if (
+          numericA !==
+          numericB
+        ) {
 
-        return nameA.localeCompare(
-          nameB
+          return numericA
+            ? -1
+            : 1;
+
+        }
+
+
+        return numberA.localeCompare(
+          numberB
         );
 
       }
@@ -2005,7 +1804,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       MAXIMAL 20 ERGEBNISSE
+       MAXIMAL 20 TREFFER
     ===================================================== */
 
     results =
@@ -2024,11 +1823,10 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       ERGEBNISSE ANZEIGEN
+       ANZEIGEN
     ===================================================== */
 
     suggestions.innerHTML =
-
       results
         .map(
           (
@@ -2058,34 +1856,33 @@ async function fetchLegoPartSuggestions(
 
 
             return `
-
               <div
                 class="suggestion"
                 role="button"
                 tabindex="0"
                 onclick="selectLegoPartByIndex(${index})"
-                onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectLegoPartByIndex(${index}); }"
+                onkeydown="
+                  if (
+                    event.key === 'Enter' ||
+                    event.key === ' '
+                  ) {
+                    event.preventDefault();
+                    selectLegoPartByIndex(${index});
+                  }
+                "
               >
 
                 <div class="suggestion-number">
-
                   LEGO ${number}
-
                 </div>
 
-
                 <div class="suggestion-name">
-
                   ${name}
-
                   ·
-
                   ${category}
-
                 </div>
 
               </div>
-
             `;
 
           }
@@ -2103,12 +1900,10 @@ async function fetchLegoPartSuggestions(
     );
 
 
-    legoSearchResults =
-      [];
+    legoSearchResults = [];
 
 
-    suggestions.innerHTML =
-      "";
+    suggestions.innerHTML = "";
 
 
     if (
@@ -2127,8 +1922,6 @@ async function fetchLegoPartSuggestions(
   }
 
 }
-
-
 /* =========================================================
    TEIL ÜBER INDEX AUSWÄHLEN
 ========================================================= */
