@@ -19,12 +19,31 @@ document.addEventListener(
 async function initializeApp() {
 
   /*
-   * Teile direkt beim Laden abrufen.
+   * Report-Formular initialisieren
+   */
+
+  initializeReportForm();
+
+
+  /*
+   * Teile laden
+   *
+   * WICHTIG:
+   * loadParts() wird hier genau EINMAL aufgerufen.
+   * Der zusätzliche window.load-Aufruf aus parts.js
+   * muss entfernt werden.
    */
 
   try {
 
-    await window.loadParts();
+    if (
+      typeof window.loadParts ===
+      "function"
+    ) {
+
+      await window.loadParts();
+
+    }
 
   } catch (
     error
@@ -321,17 +340,3 @@ function initializeReportForm() {
   updateReportSubmitState();
 
 }
-
-
-/* =========================================================
-   APP NACH DOM LADEN
-========================================================= */
-
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    initializeReportForm();
-
-  }
-);
