@@ -842,11 +842,7 @@ async function loadCategoryImages() {
       false;
 
   }
-
-}
-
-
-/* =========================================================
+   /* =========================================================
    GEWICHTE LADEN
 ========================================================= */
 
@@ -1258,6 +1254,8 @@ async function loadColorsForParts() {
   );
 
 }
+
+
 /* =========================================================
    TEILE LADEN
 ========================================================= */
@@ -1305,8 +1303,15 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * 1. TEILE AUS SUPABASE LADEN
+     * 1. TEILE SOFORT AUS SUPABASE LADEN
      * =====================================================
+     *
+     * WICHTIG:
+     * Sobald diese Abfrage fertig ist, zeigen wir die
+     * Teile sofort an.
+     *
+     * Bilder, Gewichte usw. dürfen das Anzeigen NICHT
+     * mehr blockieren.
      */
 
     console.log(
@@ -1338,67 +1343,11 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * 2. KATEGORIEN ZUERST INITIALISIEREN
-     * =====================================================
-     *
-     * WICHTIG:
-     *
-     * displayParts() verwendet
-     *
-     * groupPartsByRebrickableCategory()
-     *
-     * Deshalb müssen die Kategorien VOR dem ersten
-     * displayParts() initialisiert sein.
-     */
-
-    try {
-
-      if (
-        typeof initializeCategories ===
-        "function"
-      ) {
-
-        console.log(
-          "Initialisiere Kategorien..."
-        );
-
-
-        await initializeCategories();
-
-
-        console.log(
-          "Kategorien initialisiert."
-        );
-
-      } else {
-
-        console.warn(
-          "initializeCategories() nicht gefunden."
-        );
-
-      }
-
-    } catch (
-      error
-    ) {
-
-      console.error(
-        "Kategorien konnten nicht initialisiert werden:",
-        error
-      );
-
-    }
-
-
-    /*
-     * =====================================================
-     * 3. LEERE ERGEBNISSE
+     * 2. LEERE ERGEBNISSE SOFORT ANZEIGEN
      * =====================================================
      */
 
-    if (
-      parts.length === 0
-    ) {
+    if (parts.length === 0) {
 
       displayParts(
         parts
@@ -1411,11 +1360,15 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * 4. TEILE SOFORT ANZEIGEN
+     * 3. TEILE SOFORT ANZEIGEN
      * =====================================================
      *
-     * Ab hier dürfen Bilder, Gewichte usw. die Anzeige
-     * NICHT mehr blockieren.
+     * Noch bevor Farben, Bilder oder Gewichte geladen
+     * werden.
+     *
+     * Dadurch kann die Seite niemals wegen eines
+     * langsamen Bildimports bei "Teile werden geladen..."
+     * hängen bleiben.
      */
 
     console.log(
@@ -1430,131 +1383,121 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * 5. FARBEN
+     * AB HIER:
+     * ZUSATZDATEN IM HINTERGRUND
+     * =====================================================
+     *
+     * Die eigentliche Teileliste ist bereits sichtbar.
+     */
+
+
+    /*
+     * =====================================================
+     * 4. FARBEN LADEN
      * =====================================================
      */
 
     try {
 
+      const colorIds = [
+
+        ...new Set(
+
+          parts
+
+            .map(
+              part =>
+                part.color_id
+            )
+
+            .filter(
+              id =>
+                id !== null &&
+                id !== undefined
+            )
+
+        )
+
+      ];
+
+
       if (
-        typeof loadColorsForParts ===
-        "function"
+        colorIds.length > 0
       ) {
 
         console.log(
-          "Lade Farben..."
+          "Lade Farben:",
+          colorIds.length
         );
 
 
-        await loadColorsForParts();
+        const colorsUrl =
+
+          SUPABASE_URL +
+          "/rest/v1/lego_colors" +
+
+          "?id=in.(" +
+          colorIds.join(",") +
+          ")" +
+
+          "&select=id,name";
+
+
+        const colors =
+          await supabaseRequest(
+            colorsUrl
+          );
+
+
+        const colorMap = {};
+
+
+        (
+          colors || []
+        ).forEach(
+          color => {
+
+            colorMap[
+              color.id
+            ] =
+              color.name;
+
+          }
+        );
+
+
+        parts.forEach(
+          part => {
+
+            if (
+              Number(
+                part.color_id
+              ) === 9999
+            ) {
+
+              part.color_name =
+                "Not Applicable";
+
+            } else {
+
+              part.color_name =
+                colorMap[
+                  part.color_id
+                ] || "";
+
+            }
+
+          }
+        );
 
 
         /*
-         * Anzeige mit Farbnamen aktualisieren.
+         * Anzeige aktualisieren.
          */
 
         displayParts(
           parts
         );
-
-      } else {
-
-        /*
-         * Fallback für den Fall, dass die neue
-         * loadColorsForParts()-Funktion nicht vorhanden ist.
-         */
-
-        const colorIds = [
-
-          ...new Set(
-
-            parts
-
-              .map(
-                part =>
-                  part.color_id
-              )
-
-              .filter(
-                id =>
-                  id !== null &&
-                  id !== undefined
-              )
-
-          )
-
-        ];
-
-
-        if (
-          colorIds.length > 0
-        ) {
-
-          const colorsUrl =
-
-            SUPABASE_URL +
-            "/rest/v1/lego_colors" +
-
-            "?id=in.(" +
-            colorIds.join(",") +
-            ")" +
-
-            "&select=id,name";
-
-
-          const colors =
-            await supabaseRequest(
-              colorsUrl
-            );
-
-
-          const colorMap = {};
-
-
-          (
-            colors || []
-          ).forEach(
-            color => {
-
-              colorMap[
-                color.id
-              ] =
-                color.name;
-
-            }
-          );
-
-
-          parts.forEach(
-            part => {
-
-              if (
-                Number(
-                  part.color_id
-                ) === 9999
-              ) {
-
-                part.color_name =
-                  "Not Applicable";
-
-              } else {
-
-                part.color_name =
-                  colorMap[
-                    part.color_id
-                  ] || "";
-
-              }
-
-            }
-          );
-
-
-          displayParts(
-            parts
-          );
-
-        }
 
       }
 
@@ -1572,7 +1515,7 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * 6. TEILE-BILDER
+     * 5. TEILE-BILDER IM HINTERGRUND
      * =====================================================
      */
 
@@ -1597,7 +1540,8 @@ async function loadParts() {
 
 
         /*
-         * Bilder anzeigen.
+         * Bilder jetzt in die bereits angezeigten
+         * Teile übernehmen.
          */
 
         displayParts(
@@ -1620,8 +1564,15 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * 7. KATEGORIE-BILDER
+     * 6. KATEGORIE-BILDER
      * =====================================================
+     *
+     * WICHTIG:
+     * CATEGORY_IMAGES aus categories.js bleibt
+     * vollständig erhalten.
+     *
+     * Deine händisch ausgewählten Teile + Farben
+     * werden weiterhin verwendet.
      */
 
     try {
@@ -1645,6 +1596,10 @@ async function loadParts() {
         );
 
 
+        /*
+         * Kategorien jetzt mit den Bildern neu zeichnen.
+         */
+
         displayParts(
           parts
         );
@@ -1665,7 +1620,7 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * 8. GEWICHTE
+     * 7. GEWICHTE
      * =====================================================
      */
 
@@ -1690,7 +1645,7 @@ async function loadParts() {
 
 
         /*
-         * Preise und Gewichte aktualisieren.
+         * Preise/Gewichte aktualisieren.
          */
 
         displayParts(
@@ -1713,7 +1668,36 @@ async function loadParts() {
 
     /*
      * =====================================================
-     * 9. FINALE ANZEIGE
+     * 8. KATEGORIEN INITIALISIEREN
+     * =====================================================
+     */
+
+    try {
+
+      if (
+        typeof initializeCategories ===
+        "function"
+      ) {
+
+        await initializeCategories();
+
+      }
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        "Kategorien konnten nicht initialisiert werden:",
+        error
+      );
+
+    }
+
+
+    /*
+     * =====================================================
+     * FINALE ANZEIGE
      * =====================================================
      */
 
@@ -2480,8 +2464,7 @@ function renderPart(
 
 }
 
-
-/* =========================================================
+   /* =========================================================
    KATEGORIE ÖFFNEN / SCHLIESSEN
 ========================================================= */
 
@@ -2630,3 +2613,4 @@ window.loadParts =
 
 window.getPartsCacheStatus =
   getPartsCacheStatus;
+}
