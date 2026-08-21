@@ -1,23 +1,23 @@
 /* =========================================================
-   GEMEINSAME LEGO-SUCHLOGIK
-   ---------------------------------------------------------
-   Diese Logik wird von:
+   FABRIKTRACKER – GEMEINSAME LEGO-SUCHLOGIK
 
-   1. der HAUPTSUCHE
-   2. der "TEIL MELDEN"-SUCHE
+   Diese Datei enthält die komplette Suchlogik für:
 
-   verwendet.
+   1. Hauptsuche
+   2. „Teil melden“-Suche
 
-   WICHTIG:
-   Die Teilenummer bestimmt NICHT mehr die eigentliche
-   Reihenfolge.
-
-   Hauptkriterien:
-   - Name
-   - Kategorie
-   - Dimension
-   - Standardteil vor Sonderteil
-   - Größe
+   Abhängigkeiten aus der Hauptanwendung:
+   - parts
+   - displayParts()
+   - getCategoryName()
+   - supabaseRequest()
+   - escapeHTML()
+   - loadColorsForPart()
+   - hideSuggestions()
+   - LEGO_PARTS_URL
+   - searchTimer
+   - legoSearchResults
+   - selectedPart
 ========================================================= */
 
 
@@ -37,7 +37,7 @@ function normalizeSearchText(value) {
 
 /* =========================================================
    DIMENSION NORMALISIEREN
-   ---------------------------------------------------------
+
    Beispiele:
 
    1x2
@@ -47,7 +47,7 @@ function normalizeSearchText(value) {
    1,2
    1 , 2
 
-   werden alle zu:
+   werden zu:
 
    1x2
 ========================================================= */
@@ -69,8 +69,6 @@ function normalizeDimensionQuery(value) {
 
 /* =========================================================
    KOMPAKTE SUCHANFRAGE
-   ---------------------------------------------------------
-   Entfernt Leerzeichen und vereinheitlicht Dimensionen.
 ========================================================= */
 
 function compactSearchText(value) {
@@ -82,7 +80,7 @@ function compactSearchText(value) {
 
 
 /* =========================================================
-   DIMENSION AUS TEXT EXTRAHIEREN
+   ERSTE DIMENSION EXTRAHIEREN
 ========================================================= */
 
 function extractDimension(value) {
@@ -96,7 +94,9 @@ function extractDimension(value) {
     );
 
   if (!match) {
+
     return null;
+
   }
 
   return (
@@ -123,7 +123,9 @@ function extractAllDimensions(value) {
     );
 
   if (!matches) {
+
     return [];
+
   }
 
   return matches.map(
@@ -139,10 +141,8 @@ function extractAllDimensions(value) {
 
 /* =========================================================
    DIMENSION OHNE REIHENFOLGE
-   ---------------------------------------------------------
-   1x2 == 2x1
 
-   Dadurch ist die Suchrichtung egal.
+   1x2 == 2x1
 ========================================================= */
 
 function normalizeDimensionOrder(
@@ -150,7 +150,9 @@ function normalizeDimensionOrder(
 ) {
 
   if (!dimension) {
+
     return null;
+
   }
 
   const numbers =
@@ -186,10 +188,7 @@ function normalizeDimensionOrder(
 
 function getPartDimensions(name) {
 
-  const dimensions =
-    extractAllDimensions(name);
-
-  return dimensions
+  return extractAllDimensions(name)
     .map(
       dimension => {
 
@@ -243,16 +242,11 @@ function getPrimaryPartDimension(name) {
 
 /* =========================================================
    DIMENSION PASST ZUR SUCHE
-   ---------------------------------------------------------
+
    1x2 findet:
 
    1x2
    2x1
-
-   aber NICHT:
-
-   1x3
-   2x2
 ========================================================= */
 
 function partHasDimension(
@@ -261,7 +255,9 @@ function partHasDimension(
 ) {
 
   if (!requestedDimension) {
+
     return false;
+
   }
 
   const wanted =
@@ -270,7 +266,9 @@ function partHasDimension(
     );
 
   if (!wanted) {
+
     return false;
+
   }
 
   const dimensions =
@@ -288,20 +286,6 @@ function partHasDimension(
 
 /* =========================================================
    GRÖSSENVERGLEICH
-   ---------------------------------------------------------
-   Sortierung:
-
-   1x1
-   1x2
-   1x3
-   1x4
-   ...
-   1x16
-   2x2
-   2x3
-   2x4
-   ...
-   4x4
 ========================================================= */
 
 function comparePartDimensions(
@@ -631,9 +615,7 @@ function partNameMatchesSearch(
     );
 
 
-  /* -----------------------------------------
-     Direkte Suche
-  ----------------------------------------- */
+  /* Direkte Suche */
 
   if (
     name.includes(
@@ -646,9 +628,7 @@ function partNameMatchesSearch(
   }
 
 
-  /* -----------------------------------------
-     Normalisierte Dimension
-  ----------------------------------------- */
+  /* Normalisierte Dimension */
 
   if (
     normalizedName.includes(
@@ -661,9 +641,7 @@ function partNameMatchesSearch(
   }
 
 
-  /* -----------------------------------------
-     Ohne Leerzeichen
-  ----------------------------------------- */
+  /* Ohne Leerzeichen */
 
   if (
     compactName.includes(
@@ -676,9 +654,7 @@ function partNameMatchesSearch(
   }
 
 
-  /* -----------------------------------------
-     Jedes Suchwort muss vorkommen
-  ----------------------------------------- */
+  /* Suchwörter */
 
   const tokens =
     getSearchTokens(query);
@@ -704,24 +680,19 @@ function partNameMatchesSearch(
 
 
 /* =========================================================
-   DIMENSIONS-SUCHE MIT TEILWEISER GRÖSSE
-   ---------------------------------------------------------
+   TEILWEISE DIMENSION
+
    Beispiel:
 
-   "brick 1"
+   brick 1
 
-   soll alle Brick-Größen mit 1 als einer
-   Dimension finden.
-
-   Also:
+   findet:
 
    1x1
    1x2
    1x3
+   1x4
    ...
-   1x16
-
-   sowie ggf. 2x1, 3x1 usw.
 ========================================================= */
 
 function partMatchesPartialDimension(
@@ -741,7 +712,9 @@ function partMatchesPartialDimension(
 
 
   if (!match) {
+
     return false;
+
   }
 
 
@@ -814,9 +787,7 @@ function getLegoSearchPriority(
   let priority = 0;
 
 
-  /* =========================================
-     STANDARDTEIL
-  ========================================= */
+  /* Standardteil */
 
   if (
     isStandardPartName(name)
@@ -827,9 +798,7 @@ function getLegoSearchPriority(
   }
 
 
-  /* =========================================
-     EXAKTE DIMENSION
-  ========================================= */
+  /* Exakte Dimension */
 
   if (
     dimension &&
@@ -844,9 +813,7 @@ function getLegoSearchPriority(
   }
 
 
-  /* =========================================
-     EXAKTER NAME
-  ========================================= */
+  /* Exakter Name */
 
   if (
     normalizeDimensionQuery(name) ===
@@ -858,9 +825,7 @@ function getLegoSearchPriority(
   }
 
 
-  /* =========================================
-     NAME BEGINNT MIT SUCHE
-  ========================================= */
+  /* Name beginnt mit Suche */
 
   if (
     name.startsWith(
@@ -873,9 +838,7 @@ function getLegoSearchPriority(
   }
 
 
-  /* =========================================
-     NAMENSTREFFER
-  ========================================= */
+  /* Namenstreffer */
 
   if (
     partNameMatchesSearch(
@@ -889,9 +852,7 @@ function getLegoSearchPriority(
   }
 
 
-  /* =========================================
-     TEILWEISE DIMENSION
-  ========================================= */
+  /* Teilweise Dimension */
 
   if (
     partMatchesPartialDimension(
@@ -905,11 +866,7 @@ function getLegoSearchPriority(
   }
 
 
-  /* =========================================
-     TEILENUMMER
-     ------------------------------------------------
-     Nur noch leichte Relevanz.
-  ========================================= */
+  /* Teilenummer */
 
   if (
     number === search
@@ -949,9 +906,7 @@ function sortLegoParts(
       b
     ) => {
 
-      /* =========================================
-         1. SUCHRELEVANZ
-      ========================================= */
+      /* Suchrelevanz */
 
       const priorityA =
         getLegoSearchPriority(
@@ -990,9 +945,7 @@ function sortLegoParts(
         );
 
 
-      /* =========================================
-         2. STANDARD / NORMAL / SONDER
-      ========================================= */
+      /* Standard / Normal / Sonder */
 
       const typePriorityA =
         getPartTypePriority(a);
@@ -1014,9 +967,7 @@ function sortLegoParts(
       }
 
 
-      /* =========================================
-         3. DIMENSION
-      ========================================= */
+      /* Dimension */
 
       const dimensionResult =
         comparePartDimensions(
@@ -1034,16 +985,7 @@ function sortLegoParts(
       }
 
 
-      /* =========================================
-         4. NAME
-         ------------------------------------------------
-         Numeric = true sorgt dafür, dass:
-
-         1x2
-         1x10
-
-         sinnvoll sortiert werden.
-      ========================================= */
+      /* Name */
 
       const nameCompare =
         nameA.localeCompare(
@@ -1065,25 +1007,14 @@ function sortLegoParts(
       }
 
 
-      /* =========================================
-         5. TEILENUMMER
-         ------------------------------------------------
-         Nur letzter Tie-Breaker.
-      ========================================= */
+      /* Teilenummer */
 
-      const numberA =
-        normalizeSearchText(
-          a.part_num
-        );
-
-      const numberB =
+      return normalizeSearchText(
+        a.part_num
+      ).localeCompare(
         normalizeSearchText(
           b.part_num
-        );
-
-
-      return numberA.localeCompare(
-        numberB,
+        ),
         undefined,
         {
           numeric: true,
@@ -1102,10 +1033,6 @@ function sortLegoParts(
 
 /* =========================================================
    HAUPTSUCHE
-   ---------------------------------------------------------
-   Sucht in den bereits geladenen / gemeldeten Teilen.
-
-   Genau dieselbe Logik wie bei der LEGO-Teilesuche.
 ========================================================= */
 
 function searchParts() {
@@ -1117,7 +1044,9 @@ function searchParts() {
 
 
   if (!input) {
+
     return;
+
   }
 
 
@@ -1181,31 +1110,22 @@ function searchParts() {
           );
 
 
-        /* =====================================
-           EXAKTE DIMENSION
-        ===================================== */
+        /* Exakte Dimension */
 
         if (
-          dimension
+          dimension &&
+          !partHasDimension(
+            name,
+            dimension
+          )
         ) {
 
-          if (
-            !partHasDimension(
-              name,
-              dimension
-            )
-          ) {
-
-            return false;
-
-          }
+          return false;
 
         }
 
 
-        /* =====================================
-           NAME
-        ===================================== */
+        /* Name */
 
         if (
           partNameMatchesSearch(
@@ -1219,9 +1139,7 @@ function searchParts() {
         }
 
 
-        /* =====================================
-           TEILWEISE DIMENSION
-        ===================================== */
+        /* Teilweise Dimension */
 
         if (
           partMatchesPartialDimension(
@@ -1235,9 +1153,7 @@ function searchParts() {
         }
 
 
-        /* =====================================
-           KATEGORIE
-        ===================================== */
+        /* Kategorie */
 
         if (
           category.includes(query) ||
@@ -1249,9 +1165,7 @@ function searchParts() {
         }
 
 
-        /* =====================================
-           FARBE
-        ===================================== */
+        /* Farbe */
 
         if (
           color.includes(query)
@@ -1262,9 +1176,7 @@ function searchParts() {
         }
 
 
-        /* =====================================
-           TEILENUMMER
-        ===================================== */
+        /* Teilenummer */
 
         if (
           number.includes(query)
@@ -1295,7 +1207,7 @@ function searchParts() {
 
 
 /* =========================================================
-   LEGO TEILESUCHE
+   „TEIL MELDEN“-SUCHE
 ========================================================= */
 
 function searchLegoParts() {
@@ -1312,7 +1224,9 @@ function searchLegoParts() {
 
 
   if (!input) {
+
     return;
+
   }
 
 
@@ -1469,7 +1383,9 @@ async function fetchLegoPartSuggestions(
 
 
   if (!suggestions) {
+
     return;
+
   }
 
 
@@ -1583,7 +1499,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       KATEGORIE "BRICK"
+       KATEGORIE BRICK
     ===================================================== */
 
     if (
@@ -1613,7 +1529,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       KATEGORIE "PLATE"
+       KATEGORIE PLATE
     ===================================================== */
 
     if (
@@ -1643,7 +1559,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       KATEGORIE "TILE"
+       KATEGORIE TILE
     ===================================================== */
 
     if (
@@ -1682,18 +1598,6 @@ async function fetchLegoPartSuggestions(
       );
 
 
-    /*
-       WICHTIG:
-
-       "brick 1"
-
-       darf hier NICHT als Teilenummer
-       behandelt werden.
-
-       Deshalb nur wenn die Suche tatsächlich
-       wie eine Teilenummer aussieht.
-    */
-
     if (
       looksLikePartNumber &&
       !search.includes(" ")
@@ -1729,21 +1633,6 @@ async function fetchLegoPartSuggestions(
        NAMEN
     ===================================================== */
 
-    /*
-       Wir suchen grundsätzlich auch nach Namen.
-
-       Dadurch funktionieren:
-
-       brick
-       brick 1
-       brick 1x2
-       modified brick
-       plate 2x4
-       tile 1x2
-
-       usw.
-    */
-
     const nameSearch =
       compactSearchText(
         normalizedSearch
@@ -1753,22 +1642,6 @@ async function fetchLegoPartSuggestions(
     if (
       nameSearch
     ) {
-
-      /*
-         Supabase bekommt eine grobe Suche.
-
-         Die eigentliche Feinfilterung passiert
-         anschließend lokal.
-
-         Dadurch können wir auch:
-
-         1x2
-         1 x 2
-         1×2
-         1,2
-
-         gleich behandeln.
-      */
 
       const nameUrl =
         LEGO_PARTS_URL +
@@ -1829,15 +1702,7 @@ async function fetchLegoPartSuggestions(
           partsOfDimension[1];
 
 
-        /*
-           Wir holen beide Richtungen:
-
-           1x2
-           2x1
-
-           Danach filtert die lokale Logik
-           endgültig.
-        */
+        /* Richtung A */
 
         const dimensionUrlA =
           LEGO_PARTS_URL +
@@ -1864,6 +1729,8 @@ async function fetchLegoPartSuggestions(
           dimensionResultsA
         );
 
+
+        /* Richtung B */
 
         if (
           a !== b
@@ -1989,11 +1856,7 @@ async function fetchLegoPartSuggestions(
         );
 
 
-      /*
-         Bei einer reinen "Tile"-Suche
-         bleiben weiterhin nur Tiles
-         mit Groove.
-      */
+      /* Nur Tiles with groove */
 
       results =
         results.filter(
@@ -2018,12 +1881,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       WICHTIGER LOKALER FEINFILTER
-       -----------------------------------------------------
-       Hier wird unsere eigentliche Suchlogik angewendet.
-
-       Dadurch kann Supabase ruhig etwas mehr liefern,
-       während wir hier exakt entscheiden.
+       LOKALER FEINFILTER
     ===================================================== */
 
     results =
@@ -2054,9 +1912,7 @@ async function fetchLegoPartSuggestions(
             );
 
 
-          /* =====================================
-             REINE KATEGORIE
-          ===================================== */
+          /* Reine Brick-Suche */
 
           if (
             isBrickSearch
@@ -2071,6 +1927,8 @@ async function fetchLegoPartSuggestions(
           }
 
 
+          /* Reine Plate-Suche */
+
           if (
             isPlateSearch
           ) {
@@ -2083,6 +1941,8 @@ async function fetchLegoPartSuggestions(
 
           }
 
+
+          /* Reine Tile-Suche */
 
           if (
             isTileSearch
@@ -2100,31 +1960,22 @@ async function fetchLegoPartSuggestions(
           }
 
 
-          /* =====================================
-             EXAKTE DIMENSION
-          ===================================== */
+          /* Exakte Dimension */
 
           if (
-            dimension
+            dimension &&
+            !partHasDimension(
+              name,
+              dimension
+            )
           ) {
 
-            if (
-              !partHasDimension(
-                name,
-                dimension
-              )
-            ) {
-
-              return false;
-
-            }
+            return false;
 
           }
 
 
-          /* =====================================
-             NAME
-          ===================================== */
+          /* Name */
 
           if (
             partNameMatchesSearch(
@@ -2138,10 +1989,7 @@ async function fetchLegoPartSuggestions(
           }
 
 
-          /* =====================================
-             TEILWEISE DIMENSION
-             z.B. "brick 1"
-          ===================================== */
+          /* Teilweise Dimension */
 
           if (
             partMatchesPartialDimension(
@@ -2155,9 +2003,7 @@ async function fetchLegoPartSuggestions(
           }
 
 
-          /* =====================================
-             KATEGORIE
-          ===================================== */
+          /* Kategorie */
 
           if (
             category.includes(search) ||
@@ -2169,9 +2015,7 @@ async function fetchLegoPartSuggestions(
           }
 
 
-          /* =====================================
-             TEILENUMMER
-          ===================================== */
+          /* Teilenummer */
 
           if (
             number.includes(search)
@@ -2384,7 +2228,9 @@ async function selectLegoPart(
 ) {
 
   if (!part) {
+
     return;
+
   }
 
 
