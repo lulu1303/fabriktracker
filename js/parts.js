@@ -1,622 +1,270 @@
 /* =========================================================
-   PARTS
-   FabrikTracker
-========================================================= */
-/* =========================================================
-   LADESTATUS
+   FABRIKTRACKER – PARTS
 ========================================================= */
 
 let partsLoading = false;
+let categoryImagesLoaded = false;
+
 
 /* =========================================================
-   BILDER LADEN
+   TEILE-BILDER
 ========================================================= */
 
 async function loadImagesForParts() {
 
-  if (
-    !Array.isArray(parts) ||
-    parts.length === 0
-  ) {
-    return;
-  }
-
+  if (!Array.isArray(parts) || !parts.length) return;
 
   const combinations = [
     ...new Map(
       parts
-        .filter(
-          part =>
-            part.part_number &&
-            part.color_id !== null &&
-            part.color_id !== undefined
+        .filter(p =>
+          p.part_number &&
+          p.color_id !== null &&
+          p.color_id !== undefined
         )
-        .map(
-          part => {
-
-            const key =
-              String(part.part_number) +
-              "_" +
-              String(part.color_id);
-
-
-            return [
-              key,
-              {
-                part_num:
-                  String(part.part_number),
-
-                color_id:
-                  Number(part.color_id)
-              }
-            ];
-
+        .map(p => [
+          `${p.part_number}_${p.color_id}`,
+          {
+            part_num: String(p.part_number),
+            color_id: Number(p.color_id)
           }
-        )
+        ])
     ).values()
   ];
 
-
-  if (
-    combinations.length === 0
-  ) {
-    return;
-  }
-
+  if (!combinations.length) return;
 
   const imageMap = {};
-
   const batchSize = 100;
-
 
   try {
 
-    const partNumbers = [
+    const numbers = [
       ...new Set(
-        combinations.map(
-          item =>
-            item.part_num
-        )
+        combinations.map(x => x.part_num)
       )
     ];
 
+    for (let i = 0; i < numbers.length; i += batchSize) {
 
-    for (
-      let i = 0;
-      i < partNumbers.length;
-      i += batchSize
-    ) {
+      const batch = numbers.slice(i, i + batchSize);
 
-      const batch =
-        partNumbers.slice(
-          i,
-          i + batchSize
-        );
-
-
-      const encodedNumbers =
-        batch
-          .map(
-            number =>
-              `"${String(number)
-                .replace(
-                  /"/g,
-                  '\\"'
-                )}"`
-          )
-          .join(",");
-
+      const encoded = batch
+        .map(n => `"${String(n).replace(/"/g, '\\"')}"`)
+        .join(",");
 
       const url =
-        SUPABASE_URL +
-        "/rest/v1/lego_part_colors" +
-        "?part_num=in.(" +
-        encodedNumbers +
-        ")" +
-        "&select=part_num,color_id,image_url";
+        `${SUPABASE_URL}/rest/v1/lego_part_colors` +
+        `?part_num=in.(${encoded})` +
+        `&select=part_num,color_id,image_url`;
 
+      const rows = await req(url);
 
-      const rows =
-        await req(url);
+      (rows || []).forEach(row => {
 
+        imageMap[
+          `${row.part_num}_${row.color_id}`
+        ] = row.image_url || null;
 
-      (rows || []).forEach(
-        row => {
-
-          const key =
-            String(
-              row.part_num
-            ) +
-            "_" +
-            String(
-              row.color_id
-            );
-
-
-          imageMap[key] =
-            row.image_url ||
-            null;
-
-        }
-      );
-
+      });
     }
 
+    parts.forEach(part => {
 
-    parts.forEach(
-      part => {
+      const key =
+        `${part.part_number || ""}_${part.color_id ?? ""}`;
 
-        const key =
-          String(
-            part.part_number || ""
-          ) +
-          "_" +
-          String(
-            part.color_id ?? ""
-          );
+      part.image_url =
+        imageMap[key] || null;
 
+    });
 
-        part.image_url =
-          imageMap[key] ||
-          null;
-
-      }
-    );
-
-
-  } catch (
-    error
-  ) {
+  } catch (error) {
 
     console.warn(
-      "Farbabhängige LEGO-Bilder konnten nicht geladen werden:",
+      "LEGO-Bilder konnten nicht geladen werden:",
       error
     );
 
-
-    parts.forEach(
-      part => {
-
-        part.image_url =
-          null;
-
-      }
-    );
-
+    parts.forEach(p => p.image_url = null);
   }
-
 }
 
 
 /* =========================================================
-   KATEGORIE-BILDER LADEN
+   KATEGORIE-BILDER
 ========================================================= */
 
-/*
- * Die Auswahl der Kategorie-Bilder erfolgt
- * ausschließlich über CATEGORY_IMAGES in categories.js.
- *
- * Die Bilder werden:
- *
- * 1. Nur EINMAL geladen
- * 2. Parallel abgefragt
- * 3. Danach im Speicher behalten
- *
- * Dadurch werden beim erneuten Laden der Teile
- * keine 76+ einzelnen Requests mehr ausgeführt.
- */
-
-let categoryImagesLoaded = false;
-
-
 async function loadCategoryImages() {
-
-  /*
-   * Bereits geladen?
-   * Dann nichts mehr machen.
-   */
 
   if (
     categoryImagesLoaded &&
     window.categoryImageMap
-  ) {
+  ) return;
 
-    return;
-
-  }
-
-
-  /*
-   * Falls categories.js noch keine
-   * CATEGORY_IMAGES enthält, einfach nichts tun.
-   */
-
-  if (
-    typeof CATEGORY_IMAGES ===
-    "undefined"
-  ) {
-
+  if (typeof CATEGORY_IMAGES === "undefined") {
     window.categoryImageMap = {};
-
     categoryImagesLoaded = true;
-
     return;
-
   }
 
-
-  const configs =
-    Object.entries(
-      CATEGORY_IMAGES
-    );
-
-
-  if (
-    configs.length === 0
-  ) {
-
-    window.categoryImageMap = {};
-
-    categoryImagesLoaded = true;
-
-    return;
-
-  }
-
-
+  const configs = Object.entries(CATEGORY_IMAGES);
   const imageMap = {};
 
+  if (!configs.length) {
+    window.categoryImageMap = {};
+    categoryImagesLoaded = true;
+    return;
+  }
 
   try {
 
-    /*
-     * =====================================================
-     * ALLE KATEGORIEN PARALLEL LADEN
-     * =====================================================
-     */
+    const results = await Promise.all(
+      configs.map(async ([categoryId, config]) => {
 
-    const requests =
-      configs.map(
-        async (
-          [
-            categoryId,
-            config
-          ]
-        ) => {
+        if (!config?.part) return null;
 
-          if (
-            !config ||
-            !config.part
-          ) {
-
-            return null;
-
-          }
-
-
-          const partNumber =
-            String(
-              config.part
-            );
-
-
-          let rows = [];
-
-
-          /*
-           * =================================================
-           * EXAKTE FARBE
-           * =================================================
-           */
-
-          if (
-            config.color !== null &&
-            config.color !== undefined &&
-            config.color !== ""
-          ) {
-
-            const exactUrl =
-              SUPABASE_URL +
-              "/rest/v1/lego_part_colors" +
-              "?part_num=eq." +
-              encodeURIComponent(
-                partNumber
-              ) +
-              "&color_id=eq." +
-              encodeURIComponent(
-                String(
-                  config.color
-                )
-              ) +
-              "&select=part_num,color_id,image_url" +
-              "&limit=1";
-
-
-            try {
-
-              rows =
-                await req(
-                  exactUrl
-                );
-
-            } catch (
-              error
-            ) {
-
-              console.warn(
-                "Exaktes Kategorie-Bild konnte nicht geladen werden:",
-                categoryId,
-                error
-              );
-
-              rows = [];
-
-            }
-
-          }
-
-
-          /*
-           * =================================================
-           * FALLBACK
-           * =================================================
-           */
-
-          if (
-            !Array.isArray(rows) ||
-            rows.length === 0 ||
-            !rows[0].image_url
-          ) {
-
-            const fallbackUrl =
-              SUPABASE_URL +
-              "/rest/v1/lego_part_colors" +
-              "?part_num=eq." +
-              encodeURIComponent(
-                partNumber
-              ) +
-              "&image_url=not.is.null" +
-              "&select=part_num,color_id,image_url" +
-              "&limit=1";
-
-
-            try {
-
-              rows =
-                await req(
-                  fallbackUrl
-                );
-
-            } catch (
-              error
-            ) {
-
-              console.warn(
-                "Fallback-Kategorie-Bild konnte nicht geladen werden:",
-                categoryId,
-                error
-              );
-
-              rows = [];
-
-            }
-
-          }
-
-
-          if (
-            Array.isArray(rows) &&
-            rows.length > 0 &&
-            rows[0].image_url
-          ) {
-
-            return [
-              String(
-                categoryId
-              ),
-              rows[0].image_url
-            ];
-
-          }
-
-
-          return null;
-
-        }
-      );
-
-
-    const results =
-      await Promise.all(
-        requests
-      );
-
-
-    results.forEach(
-      result => {
+        const partNumber = String(config.part);
+        let rows = [];
 
         if (
-          !result
+          config.color !== null &&
+          config.color !== undefined &&
+          config.color !== ""
         ) {
 
-          return;
+          const exactUrl =
+            `${SUPABASE_URL}/rest/v1/lego_part_colors` +
+            `?part_num=eq.${encodeURIComponent(partNumber)}` +
+            `&color_id=eq.${encodeURIComponent(String(config.color))}` +
+            `&select=part_num,color_id,image_url&limit=1`;
 
+          try {
+            rows = await req(exactUrl);
+          } catch {
+            rows = [];
+          }
         }
 
+        if (
+          !Array.isArray(rows) ||
+          !rows.length ||
+          !rows[0].image_url
+        ) {
 
-        const [
-          categoryId,
-          imageUrl
-        ] =
-        result;
+          const fallbackUrl =
+            `${SUPABASE_URL}/rest/v1/lego_part_colors` +
+            `?part_num=eq.${encodeURIComponent(partNumber)}` +
+            `&image_url=not.is.null` +
+            `&select=part_num,color_id,image_url&limit=1`;
 
+          try {
+            rows = await req(fallbackUrl);
+          } catch {
+            rows = [];
+          }
+        }
 
-        imageMap[
-          categoryId
-        ] =
-          imageUrl;
+        if (rows?.[0]?.image_url) {
+          return [
+            String(categoryId),
+            rows[0].image_url
+          ];
+        }
 
-      }
+        return null;
+      })
     );
 
+    results.forEach(result => {
 
-    window.categoryImageMap =
-      imageMap;
+      if (!result) return;
 
+      imageMap[result[0]] = result[1];
 
-    categoryImagesLoaded =
-      true;
+    });
 
+    window.categoryImageMap = imageMap;
+    categoryImagesLoaded = true;
 
     console.log(
       "Kategorie-Bilder geladen:",
-      Object.keys(
-        imageMap
-      ).length
+      Object.keys(imageMap).length
     );
 
-
-  } catch (
-    error
-  ) {
+  } catch (error) {
 
     console.warn(
       "Kategorie-Bilder konnten nicht geladen werden:",
       error
     );
 
-
-    window.categoryImageMap =
-      {};
-
-
-    categoryImagesLoaded =
-      false;
-
+    window.categoryImageMap = {};
+    categoryImagesLoaded = false;
   }
-
 }
 
 
 /* =========================================================
-   GEWICHTE LADEN
+   GEWICHTE
 ========================================================= */
 
 async function loadWeightsForParts() {
 
-  if (
-    !Array.isArray(parts) ||
-    parts.length === 0
-  ) {
-    return;
-  }
-
+  if (!Array.isArray(parts) || !parts.length) return;
 
   const numbers = [
     ...new Set(
       parts
-        .map(
-          part =>
-            String(
-              part.part_number || ""
-            )
-        )
+        .map(p => String(p.part_number || ""))
         .filter(Boolean)
     )
   ];
 
-
-  if (
-    numbers.length === 0
-  ) {
-    return;
-  }
-
+  if (!numbers.length) return;
 
   try {
 
-    const encodedNumbers =
-      numbers
-        .map(
-          number =>
-            `"${number.replace(
-              /"/g,
-              '\\"'
-            )}"`
-        )
-        .join(",");
-
+    const encoded = numbers
+      .map(n => `"${n.replace(/"/g, '\\"')}"`)
+      .join(",");
 
     const url =
-      WEIGHTS_URL +
-      "?part_num=in.(" +
-      encodedNumbers +
-      ")" +
-      "&select=part_num,weight_grams";
+      `${WEIGHTS_URL}` +
+      `?part_num=in.(${encoded})` +
+      `&select=part_num,weight_grams`;
 
-
-    const weights =
-      await req(url);
-
-
+    const rows = await req(url);
     const weightMap = {};
 
+    (rows || []).forEach(row => {
 
-    (weights || []).forEach(
-      row => {
+      weightMap[String(row.part_num)] =
+        Number(row.weight_grams);
 
-        weightMap[
-          String(
-            row.part_num
-          )
-        ] =
-          Number(
-            row.weight_grams
-          );
+    });
 
-      }
-    );
+    parts.forEach(part => {
 
+      const number =
+        String(part.part_number || "");
 
-    parts.forEach(
-      part => {
+      part.weight_grams =
+        weightMap[number] !== undefined
+          ? weightMap[number]
+          : null;
 
-        const number =
-          String(
-            part.part_number || ""
-          );
+    });
 
-
-        part.weight_grams =
-          weightMap[number] !== undefined
-            ? weightMap[number]
-            : null;
-
-      }
-    );
-
-
-  } catch (
-    error
-  ) {
+  } catch (error) {
 
     console.warn(
       "Gewichte konnten nicht geladen werden:",
       error
     );
 
-
-    parts.forEach(
-      part => {
-
-        part.weight_grams =
-          null;
-
-      }
-    );
-
+    parts.forEach(p => p.weight_grams = null);
   }
-
 }
 
 
@@ -626,470 +274,191 @@ async function loadWeightsForParts() {
 
 async function loadParts() {
 
-  /*
-   * =====================================================
-   * DOPPELTE LADE-VORGÄNGE VERHINDERN
-   * =====================================================
-   */
+  if (partsLoading) return;
 
-  if (
-    partsLoading
-  ) {
-
-    console.log(
-      "loadParts() läuft bereits."
-    );
-
-    return;
-
-  }
-
-
-  partsLoading =
-    true;
-
+  partsLoading = true;
 
   const container =
-    document.getElementById(
-      "results"
-    );
+    document.getElementById("results");
 
-
-  if (
-    container
-  ) {
-
+  if (container) {
     container.innerHTML = `
       <div class="card loading">
         Teile werden geladen...
       </div>
     `;
-
   }
-
 
   try {
 
-    /*
-     * =====================================================
-     * 1. NUR DIE TEILE LADEN
-     * =====================================================
-     *
-     * DAS IST DER WICHTIGE PUNKT:
-     *
-     * Wir warten hier ausschließlich auf die
-     * eigentliche parts-Abfrage.
-     *
-     * Farben
-     * Bilder
-     * Kategorie-Bilder
-     * Gewichte
-     *
-     * dürfen das Anzeigen NICHT blockieren.
-     */
+    console.log("Lade Teile aus Supabase...");
 
-    console.log(
-      "Lade Teile aus Supabase..."
+    const data = await supabaseRequest(
+      PARTS_URL +
+      "?select=*" +
+      "&order=created_at.desc"
     );
 
-
-    const data =
-      await supabaseRequest(
-
-        PARTS_URL +
-        "?select=*" +
-        "&order=created_at.desc"
-
-      );
-
-
     parts =
-      Array.isArray(
-        data
-      )
+      Array.isArray(data)
         ? data
         : [];
 
+    console.log("Teile geladen:", parts.length);
 
-    console.log(
-      "Teile geladen:",
-      parts.length
-    );
-
-
-    /*
-     * =====================================================
-     * 2. TEILE SOFORT ANZEIGEN
-     * =====================================================
-     *
-     * Noch OHNE Farben,
-     * OHNE Bilder,
-     * OHNE Gewichte.
-     */
-
-    displayParts(
-      parts
-    );
+    /* Sofort anzeigen */
+    displayParts(parts);
 
 
-    /*
-     * =====================================================
-     * 3. FARBEN IM HINTERGRUND
-     * =====================================================
-     */
+    /* Farben */
+    const colorTask = (async () => {
 
-    const colorTask =
-      (async () => {
+      try {
 
-        try {
-
-          const colorIds = [
-
-            ...new Set(
-
-              parts
-
-                .map(
-                  part =>
-                    part.color_id
-                )
-
-                .filter(
-                  id =>
-                    id !== null &&
-                    id !== undefined
-                )
-
-            )
-
-          ];
-
-
-          if (
-            colorIds.length === 0
-          ) {
-
-            return;
-
-          }
-
-
-          console.log(
-            "Lade Farben:",
-            colorIds.length
-          );
-
-
-          const colorsUrl =
-
-            SUPABASE_URL +
-            "/rest/v1/lego_colors" +
-
-            "?id=in.(" +
-            colorIds.join(",") +
-            ")" +
-
-            "&select=id,name";
-
-
-          const colors =
-            await supabaseRequest(
-              colorsUrl
-            );
-
-
-          const colorMap =
-            {};
-
-
-          (
-            colors || []
-          ).forEach(
-            color => {
-
-              colorMap[
-                color.id
-              ] =
-                color.name;
-
-            }
-          );
-
-
-          parts.forEach(
-            part => {
-
-              if (
-                Number(
-                  part.color_id
-                ) === 9999
-              ) {
-
-                part.color_name =
-                  "Not Applicable";
-
-              } else {
-
-                part.color_name =
-                  colorMap[
-                    part.color_id
-                  ] || "";
-
-              }
-
-            }
-          );
-
-
-          /*
-           * Anzeige mit Farben aktualisieren.
-           */
-
-          displayParts(
+        const colorIds = [
+          ...new Set(
             parts
-          );
+              .map(p => p.color_id)
+              .filter(
+                id =>
+                  id !== null &&
+                  id !== undefined
+              )
+          )
+        ];
 
+        if (!colorIds.length) return;
 
-        } catch (
+        const url =
+          `${SUPABASE_URL}/rest/v1/lego_colors` +
+          `?id=in.(${colorIds.join(",")})` +
+          `&select=id,name`;
+
+        const colors =
+          await supabaseRequest(url);
+
+        const map = {};
+
+        (colors || []).forEach(color => {
+          map[color.id] = color.name;
+        });
+
+        parts.forEach(part => {
+
+          part.color_name =
+            Number(part.color_id) === 9999
+              ? "Not Applicable"
+              : map[part.color_id] || "";
+
+        });
+
+        displayParts(parts);
+
+      } catch (error) {
+
+        console.warn(
+          "Farben konnten nicht geladen werden:",
           error
-        ) {
+        );
+      }
 
-          console.warn(
-            "Farben konnten nicht geladen werden:",
-            error
-          );
-
-        }
-
-      })();
+    })();
 
 
-    /*
-     * =====================================================
-     * 4. BILDER
-     * =====================================================
-     */
+    /* Bilder */
+    const imageTask = (async () => {
 
-    const imageTask =
-      (async () => {
+      try {
 
-        try {
+        await loadImagesForParts();
+        displayParts(parts);
 
-          if (
-            typeof loadImagesForParts ===
-            "function"
-          ) {
+      } catch (error) {
 
-            console.log(
-              "Lade Teile-Bilder..."
-            );
-
-
-            await loadImagesForParts();
-
-
-            console.log(
-              "Teile-Bilder geladen."
-            );
-
-
-            displayParts(
-              parts
-            );
-
-          }
-
-        } catch (
+        console.warn(
+          "Teile-Bilder konnten nicht geladen werden:",
           error
-        ) {
+        );
+      }
 
-          console.warn(
-            "Teile-Bilder konnten nicht geladen werden:",
-            error
-          );
-
-        }
-
-      })();
+    })();
 
 
-    /*
-     * =====================================================
-     * 5. KATEGORIE-BILDER
-     * =====================================================
-     */
+    /* Kategorie-Bilder */
+    const categoryImageTask = (async () => {
 
-    const categoryImageTask =
-      (async () => {
+      try {
 
-        try {
+        await loadCategoryImages();
+        displayParts(parts);
 
-          if (
-            typeof loadCategoryImages ===
-            "function"
-          ) {
+      } catch (error) {
 
-            console.log(
-              "Lade Kategorie-Bilder..."
-            );
-
-
-            await loadCategoryImages();
-
-
-            console.log(
-              "Kategorie-Bilder geladen."
-            );
-
-
-            displayParts(
-              parts
-            );
-
-          }
-
-        } catch (
+        console.warn(
+          "Kategorie-Bilder konnten nicht geladen werden:",
           error
-        ) {
+        );
+      }
 
-          console.warn(
-            "Kategorie-Bilder konnten nicht geladen werden:",
-            error
-          );
-
-        }
-
-      })();
+    })();
 
 
-    /*
-     * =====================================================
-     * 6. GEWICHTE
-     * =====================================================
-     */
+    /* Gewichte */
+    const weightTask = (async () => {
 
-    const weightTask =
-      (async () => {
+      try {
 
-        try {
+        await loadWeightsForParts();
+        displayParts(parts);
 
-          if (
-            typeof loadWeightsForParts ===
-            "function"
-          ) {
+      } catch (error) {
 
-            console.log(
-              "Lade Gewichte..."
-            );
-
-
-            await loadWeightsForParts();
-
-
-            console.log(
-              "Gewichte geladen."
-            );
-
-
-            displayParts(
-              parts
-            );
-
-          }
-
-        } catch (
+        console.warn(
+          "Gewichte konnten nicht geladen werden:",
           error
-        ) {
+        );
+      }
 
-          console.warn(
-            "Gewichte konnten nicht geladen werden:",
-            error
-          );
+    })();
 
-        }
-
-      })();
-
-
-    /*
-     * =====================================================
-     * 7. ALLES PARALLEL IM HINTERGRUND
-     * =====================================================
-     *
-     * Wichtig:
-     *
-     * loadParts() wartet NICHT darauf.
-     */
 
     Promise.allSettled([
-
       colorTask,
       imageTask,
       categoryImageTask,
       weightTask
+    ]).then(() => {
 
-    ]).then(
-      () => {
+      const searchInput =
+        document.getElementById("searchInput");
 
-        console.log(
-          "Hintergrunddaten vollständig geladen."
-        );
-
-
-        const searchInput =
-          document.getElementById(
-            "searchInput"
-          );
-
-
-        if (
-          searchInput &&
-          searchInput.value.trim()
-        ) {
-
-          searchParts();
-
-        } else {
-
-          displayParts(
-            parts
-          );
-
-        }
-
+      if (
+        searchInput &&
+        searchInput.value.trim()
+      ) {
+        searchParts();
+      } else {
+        displayParts(parts);
       }
-    );
 
+    });
 
-    console.log(
-      "Teile sofort angezeigt."
-    );
-
-
-  } catch (
-    error
-  ) {
+  } catch (error) {
 
     console.error(
       "Teile laden Fehler:",
       error
     );
 
-
     showError(
       "Supabase-Fehler beim Laden",
-      error.message ||
-      "Unbekannter Fehler"
+      error.message || "Unbekannter Fehler"
     );
-
 
   } finally {
 
-    partsLoading =
-      false;
-
+    partsLoading = false;
   }
-
 }
 
 
@@ -1097,304 +466,143 @@ async function loadParts() {
    TEILE ANZEIGEN
 ========================================================= */
 
-function displayParts(
-  list
-) {
+function displayParts(list) {
 
   const container =
-    document.getElementById(
-      "results"
-    );
+    document.getElementById("results");
 
+  if (!container) return;
 
-  if (
-    !container
-  ) {
-
-    return;
-
-  }
-
-
-  if (
-    !Array.isArray(
-      list
-    ) ||
-    list.length === 0
-  ) {
+  if (!Array.isArray(list) || !list.length) {
 
     container.innerHTML = `
-
       <div class="card">
-
         <div class="empty">
-
           Keine Teile gefunden.
-
         </div>
-
       </div>
-
     `;
 
     return;
-
   }
 
-
-  /*
-   * Teile nach Rebrickable-Kategorie gruppieren.
-   */
-
-  let groups = [];
-
-
   if (
-    typeof groupPartsByRebrickableCategory ===
+    typeof groupPartsByRebrickableCategory !==
     "function"
   ) {
 
-    groups =
-      groupPartsByRebrickableCategory(
-        list
-      );
-
-  } else {
-
     console.error(
-      "categories.js wurde nicht geladen. " +
-      "Rebrickable-Kategorien sind nicht verfügbar."
+      "categories.js wurde nicht geladen."
     );
 
-
-    groups = [];
-
+    return;
   }
 
+  const groups =
+    groupPartsByRebrickableCategory(list);
 
   container.innerHTML =
-
-    groups
-
-      .map(
-        group => {
-
-          const categoryName =
-            escapeHTML(
-              group.name ||
-              "Sonstige"
-            );
-
-
-          /*
-           * Rebrickable-ID als
-           * eindeutige Kategorie-ID.
-           */
-
-          const categoryId =
-            group.id !== null &&
-            group.id !== undefined
-
-              ? String(
-                  group.id
-                )
-
-              : "other";
-
-
-          /*
-           * =================================================
-           * KATEGORIE-BILD
-           * =================================================
-           */
-
-          const categoryImage =
-            window.categoryImageMap &&
-            window.categoryImageMap[
-              categoryId
-            ]
-
-              ? window.categoryImageMap[
-                  categoryId
-                ]
-
-              : "";
-
-
-          const safeCategoryImage =
-            categoryImage
-              ? escapeHTML(
-                  categoryImage
-                )
-              : "";
-
-
-          /*
-           * =================================================
-           * TEILE NACH TEILENUMMER GRUPPIEREN
-           * =================================================
-           *
-           * Beispiel:
-           *
-           * 3001
-           *   ├─ Rot
-           *   ├─ Blau
-           *   └─ Weiß
-           *
-           * 3002
-           *   ├─ Rot
-           *   └─ Schwarz
-           *
-           */
-
-          const partGroupsMap =
-            new Map();
-
-
-          group.parts.forEach(
-            part => {
-
-              const partNumber =
-                String(
-                  part.part_number ||
-                  ""
-                );
-
-
-              if (
-                !partGroupsMap.has(
-                  partNumber
-                )
-              ) {
-
-                partGroupsMap.set(
-                  partNumber,
-                  []
-                );
-
-              }
-
-
-              partGroupsMap
-                .get(
-                  partNumber
-                )
-                .push(
-                  part
-                );
-
-            }
-          );
-
-
-          const partGroups =
-            Array.from(
-              partGroupsMap.entries()
-            );
-
-
-          return `
-
-            <div
-              class="category-folder"
-              data-category-id="${escapeHTML(
-                categoryId
-              )}"
-            >
-
-              <button
-                class="category-header"
-                onclick="toggleCategory(this)"
-              >
-
-                <div class="category-left">
-
-                  <span class="category-icon">
-
-                    ${
-                      safeCategoryImage
-
-                        ? `
-
-                          <img
-                            class="category-image"
-                            src="${safeCategoryImage}"
-                            alt="${categoryName}"
-                            loading="lazy"
-                          >
-
-                        `
-
-                        : `
-
-                          🧱
-
-                        `
-                    }
-
-                  </span>
-
-
-                  <span class="category-name">
-
-                    ${categoryName}
-
-                  </span>
-
-
-                  <span class="category-count">
-
-                    ${group.parts.length}
-
-                  </span>
-
-                </div>
-
-
-                <span class="category-arrow">
-
-                  ▶
-
-                </span>
-
-              </button>
-
-
-              <div class="category-content">
-
-                ${
-                  partGroups
-                    .map(
-                      (
-                        [
-                          partNumber,
-                          colorParts
-                        ]
-                      ) =>
-                        renderPartNumberGroup(
-                          partNumber,
-                          colorParts
-                        )
-                    )
-                    .join("")
-                }
-
-              </div>
-
-            </div>
-
-          `;
-
-        }
-      )
-
-      .join("");
-
+    groups.map(renderCategory).join("");
 }
 
 
 /* =========================================================
-   TEILENUMMER-GRUPPE RENDERN
+   KATEGORIE RENDERN
+========================================================= */
+
+function renderCategory(group) {
+
+  const categoryName =
+    escapeHTML(group.name || "Sonstige");
+
+  const categoryId =
+    group.id !== null &&
+    group.id !== undefined
+      ? String(group.id)
+      : "other";
+
+  const categoryImage =
+    window.categoryImageMap?.[categoryId] || "";
+
+  const partGroups = new Map();
+
+  group.parts.forEach(part => {
+
+    const number =
+      String(part.part_number || "");
+
+    if (!partGroups.has(number)) {
+      partGroups.set(number, []);
+    }
+
+    partGroups.get(number).push(part);
+  });
+
+  const content =
+    [...partGroups.entries()]
+      .map(([number, colorParts]) =>
+        renderPartNumberGroup(
+          number,
+          colorParts
+        )
+      )
+      .join("");
+
+  return `
+    <div
+      class="category-folder"
+      data-category-id="${escapeHTML(categoryId)}"
+    >
+
+      <button
+        class="category-header"
+        onclick="toggleCategory(this)"
+      >
+
+        <div class="category-left">
+
+          <span class="category-icon">
+
+            ${
+              categoryImage
+                ? `
+                  <img
+                    class="category-image"
+                    src="${escapeHTML(categoryImage)}"
+                    alt="${categoryName}"
+                    loading="lazy"
+                  >
+                `
+                : `🧱`
+            }
+
+          </span>
+
+          <span class="category-name">
+            ${categoryName}
+          </span>
+
+          <span class="category-count">
+            ${group.parts.length}
+          </span>
+
+        </div>
+
+        <span class="category-arrow">▶</span>
+
+      </button>
+
+      <div class="category-content">
+        ${content}
+      </div>
+
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   TEILENUMMER RENDERN
 ========================================================= */
 
 function renderPartNumberGroup(
@@ -1402,110 +610,26 @@ function renderPartNumberGroup(
   colorParts
 ) {
 
-  /*
-   * Erstes Teil der Gruppe verwenden,
-   * um Bild und allgemeine Informationen
-   * für die Teilenummer anzuzeigen.
-   */
-
   const firstPart =
-    colorParts[0] ||
-    {};
+    colorParts[0] || {};
 
+  const safeNumber =
+    escapeHTML(String(partNumber || ""));
 
-  const safePartNumber =
-    escapeHTML(
-      partNumber ||
-      ""
-    );
+  const name =
+    escapeHTML(firstPart.name || "");
 
+  const imagePart =
+    colorParts.find(p => p.image_url) ||
+    firstPart;
 
-  const partName =
-    escapeHTML(
-      firstPart.name ||
-      ""
-    );
-
-
-  /*
-   * =====================================================
-   * TEILEBILD
-   * =====================================================
-   *
-   * Wir nehmen bevorzugt das vorhandene
-   * farbabhängige Bild.
-   *
-   * Falls das erste Teil kein Bild hat,
-   * wird nach einem anderen Bild innerhalb
-   * derselben Teilenummer gesucht.
-   */
-
-  let partImageUrl =
-    firstPart.image_url ||
-    "";
-
-
-  if (
-    !partImageUrl
-  ) {
-
-    const partWithImage =
-      colorParts.find(
-        part =>
-          part.image_url
-      );
-
-
-    if (
-      partWithImage
-    ) {
-
-      partImageUrl =
-        partWithImage.image_url;
-
-    }
-
-  }
-
-
-  const safePartImageUrl =
-    partImageUrl
-      ? escapeHTML(
-          partImageUrl
-        )
-      : "";
-
-
-  /*
-   * Anzahl der Farben.
-   */
-
-  const colorCount =
-    colorParts.length;
-
-
-  /*
-   * =====================================================
-   * FARBEN RENDERN
-   * =====================================================
-   */
-
-  const colorsHTML =
-    colorParts
-      .map(
-        part =>
-          renderPart(
-            part
-          )
-      )
-      .join("");
-
+  const imageUrl =
+    imagePart.image_url || "";
 
   return `
-
     <div
       class="part-number-folder"
-      data-part-number="${safePartNumber}"
+      data-part-number="${safeNumber}"
     >
 
       <button
@@ -1518,264 +642,159 @@ function renderPartNumberGroup(
           <div class="part-number-image-wrapper">
 
             ${
-              safePartImageUrl
-
+              imageUrl
                 ? `
-
                   <img
                     class="part-number-image"
-                    src="${safePartImageUrl}"
-                    alt="LEGO ${safePartNumber}"
+                    src="${escapeHTML(imageUrl)}"
+                    alt="LEGO ${safeNumber}"
                     loading="lazy"
                   >
-
                 `
-
                 : `
-
                   <div class="part-number-image-placeholder">
-
                     🧱
-
                   </div>
-
                 `
             }
 
           </div>
-
 
           <div class="part-number-info">
 
             <div class="part-number-title">
-
-              LEGO ${safePartNumber}
-
+              LEGO ${safeNumber}
             </div>
 
-
             ${
-              partName
-
+              name
                 ? `
-
                   <div class="part-number-name">
-
-                    ${partName}
-
+                    ${name}
                   </div>
-
                 `
-
                 : ""
-
             }
 
           </div>
 
-
           <span class="part-number-count">
-
-            ${colorCount}
-
-            ${
-              colorCount === 1
-                ? " Farbe"
-                : " Farben"
-            }
-
+            ${colorParts.length}
+            ${colorParts.length === 1 ? " Farbe" : " Farben"}
           </span>
 
         </div>
 
-
-        <span class="part-number-arrow">
-
-          ▶
-
-        </span>
+        <span class="part-number-arrow">▶</span>
 
       </button>
 
-
       <div class="part-number-content">
 
-        ${colorsHTML}
+        ${
+          colorParts
+            .map(renderPart)
+            .join("")
+        }
 
       </div>
 
     </div>
-
   `;
-
 }
 
 
 /* =========================================================
-   TEIL RENDERN
+   EINZELNES TEIL
 ========================================================= */
 
-function renderPart(
-  part
-) {
+function renderPart(part) {
 
   const number =
-    escapeHTML(
-      part.part_number ||
-      ""
-    );
-
+    escapeHTML(part.part_number || "");
 
   const name =
-    escapeHTML(
-      part.name ||
-      ""
-    );
-
+    escapeHTML(part.name || "");
 
   const color =
-    escapeHTML(
-      part.color_name ||
-      ""
-    );
+    escapeHTML(part.color_name || "");
 
+  let categoryName = "Sonstige";
 
-  /*
-   * =====================================================
-   * KATEGORIE
-   * =====================================================
-   */
-
-  let categoryName =
-    "Sonstige";
-
-
-  if (
-    typeof getCategoryName ===
-    "function"
-  ) {
-
+  if (typeof getCategoryName === "function") {
     categoryName =
       getCategoryName(
         part.category_id,
         "Sonstige"
       );
-
   }
 
-
-  /*
-   * =====================================================
-   * GEWICHT
-   * =====================================================
-   */
-
   const weight =
-    Number(
-      part.weight_grams
-    );
-
+    Number(part.weight_grams);
 
   const hasWeight =
-    Number.isFinite(
-      weight
-    ) &&
+    Number.isFinite(weight) &&
     weight > 0;
 
-
-  let normalPrice =
-    null;
-
-
-  let discountPrice =
-    null;
-
+  let normalPrice = null;
+  let discountPrice = null;
 
   if (
     hasWeight &&
-    typeof PRICE_PER_GRAM !==
-    "undefined"
+    typeof PRICE_PER_GRAM !== "undefined"
   ) {
 
     normalPrice =
-      weight *
-      PRICE_PER_GRAM;
+      weight * PRICE_PER_GRAM;
 
-
-    if (
-      typeof DISCOUNT !==
-      "undefined"
-    ) {
-
+    if (typeof DISCOUNT !== "undefined") {
       discountPrice =
-        normalPrice *
-        (
-          1 -
-          DISCOUNT
-        );
-
+        normalPrice * (1 - DISCOUNT);
     }
-
   }
 
-
-  /*
-   * =====================================================
-   * VERFÜGBARKEIT
-   * =====================================================
-   */
-
-  const isAvailable =
+  const available =
     part.is_available !== false;
-
 
   const lastSeen =
     part.last_seen_at ||
     part.created_at ||
     null;
 
-
   const lastSeenFormatted =
-    typeof formatDate ===
-    "function"
-
-      ? formatDate(
-          lastSeen
-        )
-
+    typeof formatDate === "function"
+      ? formatDate(lastSeen)
       : "";
-
-
-  /*
-   * =====================================================
-   * BILD
-   * =====================================================
-   */
 
   const imageUrl =
-    part.image_url ||
-    "";
+    part.image_url || "";
 
+  let adminHTML = "";
 
-  const safeImageUrl =
-    imageUrl
+  if (
+    typeof adminAuthenticated !== "undefined" &&
+    adminAuthenticated
+  ) {
 
-      ? escapeHTML(
-          imageUrl
-        )
+    adminHTML = `
+      <div class="part-admin-actions">
 
-      : "";
+        <button
+          class="admin-delete-button"
+          onclick="adminDeletePart(
+            '${escapeHTML(String(part.id))}',
+            '${escapeHTML(String(part.part_number || ""))}',
+            '${escapeHTML(String(part.name || ""))}'
+          )"
+        >
+          🗑️ Löschen
+        </button>
 
+      </div>
+    `;
+  }
 
-  /*
-   * =====================================================
-   * PREIS
-   * =====================================================
-   */
-
-  let priceHTML =
-    "";
-
+  let priceHTML = "";
 
   if (
     hasWeight &&
@@ -1783,467 +802,214 @@ function renderPart(
   ) {
 
     priceHTML = `
-
       <div class="part-price">
 
         ${
           discountPrice !== null
-
             ? `
-
               <span class="price-normal">
-
                 ${normalPrice.toFixed(2)} €
-
               </span>
 
               <span class="price-discount">
-
                 ${discountPrice.toFixed(2)} €
-
               </span>
-
             `
-
             : `
-
               <span>
-
                 ${normalPrice.toFixed(2)} €
-
               </span>
-
             `
         }
 
       </div>
-
     `;
-
   }
-
-
-  /*
-   * =====================================================
-   * ADMIN
-   * =====================================================
-   */
-
-  let adminHTML =
-    "";
-
-
-  if (
-    typeof adminAuthenticated !==
-    "undefined" &&
-    adminAuthenticated
-  ) {
-
-    adminHTML = `
-
-      <div class="part-admin-actions">
-
-        <button
-          class="admin-delete-button"
-          onclick="adminDeletePart(
-            '${escapeHTML(
-              String(
-                part.id
-              )
-            )}',
-            '${escapeHTML(
-              String(
-                part.part_number ||
-                ""
-              )
-            )}',
-            '${escapeHTML(
-              String(
-                part.name ||
-                ""
-              )
-            )}'
-          )"
-        >
-
-          🗑️ Löschen
-
-        </button>
-
-      </div>
-
-    `;
-
-  }
-
-
-  /*
-   * =====================================================
-   * HTML
-   * =====================================================
-   */
 
   return `
-
-    <div
-      class="part-card ${
-        isAvailable
-          ? ""
-          : "unavailable"
-      }"
-    >
+    <div class="part-card ${available ? "" : "unavailable"}">
 
       <div class="part-main">
-
 
         <div class="part-image-wrapper">
 
           ${
-            safeImageUrl
-
+            imageUrl
               ? `
-
                 <img
                   class="part-image"
-                  src="${safeImageUrl}"
+                  src="${escapeHTML(imageUrl)}"
                   alt="LEGO ${number}"
                   loading="lazy"
                 >
-
               `
-
               : `
-
                 <div class="part-image-placeholder">
-
                   🧱
-
                 </div>
-
               `
           }
 
         </div>
-
 
         <div class="part-info">
 
-
           <div class="part-number">
-
             LEGO ${number}
-
           </div>
-
 
           <div class="part-name">
-
             ${name}
-
           </div>
-
 
           ${
             color
-
               ? `
-
                 <div class="part-color">
-
                   ${color}
-
                 </div>
-
               `
-
               : ""
-
           }
 
-
           <div class="part-category">
-
-            ${escapeHTML(
-              categoryName
-            )}
-
+            ${escapeHTML(categoryName)}
           </div>
-
 
           ${
             hasWeight
-
               ? `
-
                 <div class="part-weight">
-
                   ${weight.toFixed(2)} g
-
                 </div>
-
               `
-
               : ""
-
           }
-
 
           ${
             lastSeenFormatted
-
               ? `
-
                 <div class="part-last-seen">
-
                   Zuletzt gesehen:
-                  ${escapeHTML(
-                    lastSeenFormatted
-                  )}
-
+                  ${escapeHTML(lastSeenFormatted)}
                 </div>
-
               `
-
               : ""
-
           }
-
 
           ${priceHTML}
 
-
         </div>
 
-
       </div>
-
 
       <div class="part-status">
 
         ${
-          isAvailable
-
+          available
             ? `
-
               <span class="status-available">
-
                 🟢 Verfügbar
-
               </span>
-
             `
-
             : `
-
               <span class="status-unavailable">
-
                 🔴 Nicht verfügbar
-
               </span>
-
             `
         }
 
       </div>
 
-
       ${adminHTML}
 
-
       ${
-        isAvailable
-
+        available
           ? `
-
             <button
               class="report-button"
               onclick="reportUnavailable(
-                '${escapeHTML(
-                  String(
-                    part.id
-                  )
-                )}'
+                '${escapeHTML(String(part.id))}'
               )"
             >
-
               Nicht mehr da
-
             </button>
-
           `
-
           : `
-
             <button
               class="confirm-button"
               onclick="confirmPart(
-                '${escapeHTML(
-                  String(
-                    part.part_number ||
-                    ""
-                  )
-                )}',
-                '${escapeHTML(
-                  String(
-                    part.id
-                  )
-                )}'
+                '${escapeHTML(String(part.part_number || ""))}',
+                '${escapeHTML(String(part.id))}'
               )"
             >
-
               Wieder verfügbar
-
             </button>
-
           `
       }
 
     </div>
-
   `;
-
 }
 
 
 /* =========================================================
-   KATEGORIE ÖFFNEN / SCHLIESSEN
+   AUF / ZU
 ========================================================= */
 
-function toggleCategory(
-  button
-) {
-
-  if (
-    !button
-  ) {
-
-    return;
-
-  }
-
+function toggleCategory(button) {
 
   const folder =
-    button.closest(
-      ".category-folder"
-    );
+    button?.closest(".category-folder");
 
+  if (!folder) return;
 
-  if (
-    !folder
-  ) {
-
-    return;
-
-  }
-
-
-  folder.classList.toggle(
-    "open"
-  );
-
+  folder.classList.toggle("open");
 }
 
 
-/* =========================================================
-   TEILENUMMER ÖFFNEN / SCHLIESSEN
-========================================================= */
-
-function togglePartNumber(
-  button
-) {
-
-  if (
-    !button
-  ) {
-
-    return;
-
-  }
-
+function togglePartNumber(button) {
 
   const folder =
-    button.closest(
-      ".part-number-folder"
-    );
+    button?.closest(".part-number-folder");
 
+  if (!folder) return;
 
-  if (
-    !folder
-  ) {
-
-    return;
-
-  }
-
-
-  folder.classList.toggle(
-    "open"
-  );
-
+  folder.classList.toggle("open");
 }
 
 
 /* =========================================================
-   FEHLERANZEIGE
+   FEHLER
 ========================================================= */
 
-function showError(
-  title,
-  message
-) {
+function showError(title, message) {
 
   const container =
-    document.getElementById(
-      "results"
-    );
+    document.getElementById("results");
 
-
-  if (
-    !container
-  ) {
-
-    return;
-
-  }
-
+  if (!container) return;
 
   container.innerHTML = `
-
     <div class="card error">
 
       <div class="error-title">
-
-        ${escapeHTML(
-          title
-        )}
-
+        ${escapeHTML(title)}
       </div>
 
-
       <div>
-
-        ${escapeHTML(
-          message
-        )}
-
+        ${escapeHTML(message)}
       </div>
 
     </div>
-
   `;
-
 }
 
 
 /* =========================================================
-   GLOBAL VERFÜGBAR MACHEN
+   GLOBAL
 ========================================================= */
 
-window.loadParts =
-  loadParts;
-
-window.toggleCategory =
-  toggleCategory;
-
-window.togglePartNumber =
-  togglePartNumber;
+window.loadParts = loadParts;
+window.toggleCategory = toggleCategory;
+window.togglePartNumber = togglePartNumber;
