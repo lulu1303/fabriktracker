@@ -929,10 +929,10 @@ function renderPart(part) {
         <button
           class="admin-delete-button"
           onclick="adminDeletePart(
-            '${escapeHTML(String(part.id))}',
-            '${escapeHTML(String(part.part_number || ""))}',
-            '${escapeHTML(String(part.name || ""))}'
-          )"
+  ${JSON.stringify(String(part.id))},
+  ${JSON.stringify(String(part.part_number || ""))},
+  ${JSON.stringify(String(part.name || ""))}
+)"
         >
           🗑️ Löschen
         </button>
