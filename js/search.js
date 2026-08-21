@@ -1362,8 +1362,24 @@ function addPartResults(
 }
 
 
+
+
 /* =========================================================
    LEGO TEILE SUCHEN
+   ---------------------------------------------------------
+   KORRIGIERT:
+
+   Die Datenbank-Suche verwendet NICHT mehr compactSearchText()
+   für die Namenssuche.
+
+   Dadurch funktionieren z.B.:
+
+   Brick 1 x 4
+   Brick 1x4
+   Brick 1 × 4
+   Brick 1,4
+
+   Die Feinfilterung erfolgt anschließend lokal.
 ========================================================= */
 
 async function fetchLegoPartSuggestions(
@@ -1410,6 +1426,10 @@ async function fetchLegoPartSuggestions(
 
   try {
 
+    /* =====================================================
+       GRUNDWERTE
+    ===================================================== */
+
     const search =
       normalizeSearchText(
         query
@@ -1440,6 +1460,10 @@ async function fetchLegoPartSuggestions(
         normalizedSearch
       );
 
+
+    /* =====================================================
+       KATEGORIEN
+    ===================================================== */
 
     const CATEGORY_BRICK =
       11;
@@ -1473,7 +1497,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       EXAKTE TEILENUMMER
+       1. EXAKTE TEILENUMMER
     ===================================================== */
 
     const exactNumberUrl =
@@ -1499,7 +1523,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       KATEGORIE BRICK
+       2. REINE BRICK-SUCHE
     ===================================================== */
 
     if (
@@ -1529,7 +1553,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       KATEGORIE PLATE
+       3. REINE PLATE-SUCHE
     ===================================================== */
 
     if (
@@ -1559,7 +1583,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       KATEGORIE TILE
+       4. REINE TILE-SUCHE
     ===================================================== */
 
     if (
@@ -1589,7 +1613,10 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       TEILENUMMER TEILWEISE
+       5. TEILENUMMER TEILWEISE
+       -----------------------------------------------------
+       Nur wenn die Eingabe tatsächlich wie eine
+       Teilenummer aussieht.
     ===================================================== */
 
     const looksLikePartNumber =
@@ -1630,13 +1657,30 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       NAMEN
+       6. NAMENSSUCHE
+       -----------------------------------------------------
+       WICHTIG:
+
+       NICHT mehr:
+
+       compactSearchText()
+
+       Denn daraus würde:
+
+       Brick 1 x 4
+       ↓
+       brick1x4
+
+       Unsere Datenbank enthält aber:
+
+       Brick 1 x 4
+
+       Deshalb verwenden wir hier die normale,
+       normalisierte Schreibweise.
     ===================================================== */
 
     const nameSearch =
-      compactSearchText(
-        normalizedSearch
-      );
+      normalizedSearch;
 
 
     if (
@@ -1670,39 +1714,47 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       DIMENSIONSSUCHE
+       7. ZUSÄTZLICHE NAMENSSUCHE FÜR DIMENSIONEN
+       -----------------------------------------------------
+       Dadurch funktionieren auch:
+
+       Brick 1x4
+       Brick 1 x 4
+       Brick 1×4
+       Brick 1,4
+
+       unabhängig davon, wie die Dimension
+       in der Datenbank geschrieben ist.
     ===================================================== */
 
     if (
       dimension
     ) {
 
-      const dimensions =
-        extractAllDimensions(
+      const dimensionParts =
+        normalizeDimensionOrder(
           dimension
         );
 
 
       if (
-        dimensions.length > 0
+        dimensionParts
       ) {
 
-        const requested =
-          dimensions[0];
-
-
-        const partsOfDimension =
-          requested.split("x");
+        const numbers =
+          dimensionParts.split("x");
 
 
         const a =
-          partsOfDimension[0];
+          numbers[0];
 
         const b =
-          partsOfDimension[1];
+          numbers[1];
 
 
-        /* Richtung A */
+        /* ---------------------------------------------
+           A → B
+        --------------------------------------------- */
 
         const dimensionUrlA =
           LEGO_PARTS_URL +
@@ -1710,12 +1762,12 @@ async function fetchLegoPartSuggestions(
           encodeURIComponent(
             "%" +
             a +
-            "x" +
+            " x " +
             b +
             "%"
           ) +
           "&select=part_num,name,category_id,category" +
-          "&limit=500";
+          "&limit=1000";
 
 
         const dimensionResultsA =
@@ -1730,7 +1782,40 @@ async function fetchLegoPartSuggestions(
         );
 
 
-        /* Richtung B */
+        /* ---------------------------------------------
+           A → B ohne Leerzeichen
+        --------------------------------------------- */
+
+        const dimensionUrlACompact =
+          LEGO_PARTS_URL +
+          "?name=ilike." +
+          encodeURIComponent(
+            "%" +
+            a +
+            "x" +
+            b +
+            "%"
+          ) +
+          "&select=part_num,name,category_id,category" +
+          "&limit=1000";
+
+
+        const dimensionResultsACompact =
+          await supabaseRequest(
+            dimensionUrlACompact
+          );
+
+
+        addPartResults(
+          results,
+          dimensionResultsACompact
+        );
+
+
+        /* ---------------------------------------------
+           B → A
+           Nur bei unterschiedlichen Dimensionen
+        --------------------------------------------- */
 
         if (
           a !== b
@@ -1742,12 +1827,12 @@ async function fetchLegoPartSuggestions(
             encodeURIComponent(
               "%" +
               b +
-              "x" +
+              " x " +
               a +
               "%"
             ) +
             "&select=part_num,name,category_id,category" +
-            "&limit=500";
+            "&limit=1000";
 
 
           const dimensionResultsB =
@@ -1761,6 +1846,36 @@ async function fetchLegoPartSuggestions(
             dimensionResultsB
           );
 
+
+          /* -------------------------------------------
+             B → A ohne Leerzeichen
+          ------------------------------------------- */
+
+          const dimensionUrlBCompact =
+            LEGO_PARTS_URL +
+            "?name=ilike." +
+            encodeURIComponent(
+              "%" +
+              b +
+              "x" +
+              a +
+              "%"
+            ) +
+            "&select=part_num,name,category_id,category" +
+            "&limit=1000";
+
+
+          const dimensionResultsBCompact =
+            await supabaseRequest(
+              dimensionUrlBCompact
+            );
+
+
+          addPartResults(
+            results,
+            dimensionResultsBCompact
+          );
+
         }
 
       }
@@ -1769,7 +1884,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       DUPLIKATE ENTFERNEN
+       8. DUPLIKATE ENTFERNEN
     ===================================================== */
 
     const uniqueParts =
@@ -1810,7 +1925,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       KATEGORIEN FILTERN
+       9. KATEGORIEN FILTERN
     ===================================================== */
 
     if (
@@ -1856,7 +1971,7 @@ async function fetchLegoPartSuggestions(
         );
 
 
-      /* Nur Tiles with groove */
+      /* Nur Tiles mit Groove */
 
       results =
         results.filter(
@@ -1881,7 +1996,9 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       LOKALER FEINFILTER
+       10. LOKALER FEINFILTER
+       -----------------------------------------------------
+       Hier entscheidet die eigentliche Suchlogik.
     ===================================================== */
 
     results =
@@ -1893,15 +2010,18 @@ async function fetchLegoPartSuggestions(
               part.name
             );
 
+
           const number =
             normalizeSearchText(
               part.part_num
             );
 
+
           const category =
             normalizeSearchText(
               part.category
             );
+
 
           const categoryName =
             normalizeSearchText(
@@ -1912,7 +2032,9 @@ async function fetchLegoPartSuggestions(
             );
 
 
-          /* Reine Brick-Suche */
+          /* ---------------------------------------------
+             REINE BRICK-SUCHE
+          --------------------------------------------- */
 
           if (
             isBrickSearch
@@ -1927,7 +2049,9 @@ async function fetchLegoPartSuggestions(
           }
 
 
-          /* Reine Plate-Suche */
+          /* ---------------------------------------------
+             REINE PLATE-SUCHE
+          --------------------------------------------- */
 
           if (
             isPlateSearch
@@ -1942,7 +2066,9 @@ async function fetchLegoPartSuggestions(
           }
 
 
-          /* Reine Tile-Suche */
+          /* ---------------------------------------------
+             REINE TILE-SUCHE
+          --------------------------------------------- */
 
           if (
             isTileSearch
@@ -1960,7 +2086,9 @@ async function fetchLegoPartSuggestions(
           }
 
 
-          /* Exakte Dimension */
+          /* ---------------------------------------------
+             EXAKTE DIMENSION
+          --------------------------------------------- */
 
           if (
             dimension &&
@@ -1975,7 +2103,9 @@ async function fetchLegoPartSuggestions(
           }
 
 
-          /* Name */
+          /* ---------------------------------------------
+             NAME
+          --------------------------------------------- */
 
           if (
             partNameMatchesSearch(
@@ -1989,7 +2119,15 @@ async function fetchLegoPartSuggestions(
           }
 
 
-          /* Teilweise Dimension */
+          /* ---------------------------------------------
+             TEILWEISE DIMENSION
+
+             z.B.
+
+             brick 1
+             plate 2
+             tile 4
+          --------------------------------------------- */
 
           if (
             partMatchesPartialDimension(
@@ -2003,7 +2141,9 @@ async function fetchLegoPartSuggestions(
           }
 
 
-          /* Kategorie */
+          /* ---------------------------------------------
+             KATEGORIE
+          --------------------------------------------- */
 
           if (
             category.includes(search) ||
@@ -2015,7 +2155,9 @@ async function fetchLegoPartSuggestions(
           }
 
 
-          /* Teilenummer */
+          /* ---------------------------------------------
+             TEILENUMMER
+          --------------------------------------------- */
 
           if (
             number.includes(search)
@@ -2033,7 +2175,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       KEINE ERGEBNISSE
+       11. KEINE ERGEBNISSE
     ===================================================== */
 
     if (
@@ -2057,7 +2199,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       SORTIEREN
+       12. SORTIEREN
     ===================================================== */
 
     sortLegoParts(
@@ -2067,7 +2209,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       MAXIMAL 20
+       13. MAXIMAL 20 ERGEBNISSE
     ===================================================== */
 
     results =
@@ -2082,7 +2224,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       ANZEIGE
+       14. ANZEIGE
     ===================================================== */
 
     suggestions.innerHTML =
