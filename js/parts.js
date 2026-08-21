@@ -448,7 +448,7 @@ async function loadCategoryImages() {
           categoryId,
           imageUrl
         ] =
-          result;
+        result;
 
 
         imageMap[
@@ -616,9 +616,10 @@ async function loadWeightsForParts() {
     );
 
   }
-   
 
 }
+
+
 /* =========================================================
    TEILE LADEN
 ========================================================= */
@@ -1090,6 +1091,8 @@ async function loadParts() {
   }
 
 }
+
+
 /* =========================================================
    TEILE ANZEIGEN
 ========================================================= */
@@ -1226,6 +1229,70 @@ function displayParts(
               : "";
 
 
+          /*
+           * =================================================
+           * TEILE NACH TEILENUMMER GRUPPIEREN
+           * =================================================
+           *
+           * Beispiel:
+           *
+           * 3001
+           *   ├─ Rot
+           *   ├─ Blau
+           *   └─ Weiß
+           *
+           * 3002
+           *   ├─ Rot
+           *   └─ Schwarz
+           *
+           */
+
+          const partGroupsMap =
+            new Map();
+
+
+          group.parts.forEach(
+            part => {
+
+              const partNumber =
+                String(
+                  part.part_number ||
+                  ""
+                );
+
+
+              if (
+                !partGroupsMap.has(
+                  partNumber
+                )
+              ) {
+
+                partGroupsMap.set(
+                  partNumber,
+                  []
+                );
+
+              }
+
+
+              partGroupsMap
+                .get(
+                  partNumber
+                )
+                .push(
+                  part
+                );
+
+            }
+          );
+
+
+          const partGroups =
+            Array.from(
+              partGroupsMap.entries()
+            );
+
+
           return `
 
             <div
@@ -1296,11 +1363,17 @@ function displayParts(
               <div class="category-content">
 
                 ${
-                  group.parts
+                  partGroups
                     .map(
-                      part =>
-                        renderPart(
-                          part
+                      (
+                        [
+                          partNumber,
+                          colorParts
+                        ]
+                      ) =>
+                        renderPartNumberGroup(
+                          partNumber,
+                          colorParts
                         )
                     )
                     .join("")
@@ -1318,6 +1391,226 @@ function displayParts(
       .join("");
 
 }
+
+
+/* =========================================================
+   TEILENUMMER-GRUPPE RENDERN
+========================================================= */
+
+function renderPartNumberGroup(
+  partNumber,
+  colorParts
+) {
+
+  /*
+   * Erstes Teil der Gruppe verwenden,
+   * um Bild und allgemeine Informationen
+   * für die Teilenummer anzuzeigen.
+   */
+
+  const firstPart =
+    colorParts[0] ||
+    {};
+
+
+  const safePartNumber =
+    escapeHTML(
+      partNumber ||
+      ""
+    );
+
+
+  const partName =
+    escapeHTML(
+      firstPart.name ||
+      ""
+    );
+
+
+  /*
+   * =====================================================
+   * TEILEBILD
+   * =====================================================
+   *
+   * Wir nehmen bevorzugt das vorhandene
+   * farbabhängige Bild.
+   *
+   * Falls das erste Teil kein Bild hat,
+   * wird nach einem anderen Bild innerhalb
+   * derselben Teilenummer gesucht.
+   */
+
+  let partImageUrl =
+    firstPart.image_url ||
+    "";
+
+
+  if (
+    !partImageUrl
+  ) {
+
+    const partWithImage =
+      colorParts.find(
+        part =>
+          part.image_url
+      );
+
+
+    if (
+      partWithImage
+    ) {
+
+      partImageUrl =
+        partWithImage.image_url;
+
+    }
+
+  }
+
+
+  const safePartImageUrl =
+    partImageUrl
+      ? escapeHTML(
+          partImageUrl
+        )
+      : "";
+
+
+  /*
+   * Anzahl der Farben.
+   */
+
+  const colorCount =
+    colorParts.length;
+
+
+  /*
+   * =====================================================
+   * FARBEN RENDERN
+   * =====================================================
+   */
+
+  const colorsHTML =
+    colorParts
+      .map(
+        part =>
+          renderPart(
+            part
+          )
+      )
+      .join("");
+
+
+  return `
+
+    <div
+      class="part-number-folder"
+      data-part-number="${safePartNumber}"
+    >
+
+      <button
+        class="part-number-header"
+        onclick="togglePartNumber(this)"
+      >
+
+        <div class="part-number-left">
+
+          <div class="part-number-image-wrapper">
+
+            ${
+              safePartImageUrl
+
+                ? `
+
+                  <img
+                    class="part-number-image"
+                    src="${safePartImageUrl}"
+                    alt="LEGO ${safePartNumber}"
+                    loading="lazy"
+                  >
+
+                `
+
+                : `
+
+                  <div class="part-number-image-placeholder">
+
+                    🧱
+
+                  </div>
+
+                `
+            }
+
+          </div>
+
+
+          <div class="part-number-info">
+
+            <div class="part-number-title">
+
+              LEGO ${safePartNumber}
+
+            </div>
+
+
+            ${
+              partName
+
+                ? `
+
+                  <div class="part-number-name">
+
+                    ${partName}
+
+                  </div>
+
+                `
+
+                : ""
+
+            }
+
+          </div>
+
+
+          <span class="part-number-count">
+
+            ${colorCount}
+
+            ${
+              colorCount === 1
+                ? " Farbe"
+                : " Farben"
+            }
+
+          </span>
+
+        </div>
+
+
+        <span class="part-number-arrow">
+
+          ▶
+
+        </span>
+
+      </button>
+
+
+      <div class="part-number-content">
+
+        ${colorsHTML}
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
 /* =========================================================
    TEIL RENDERN
 ========================================================= */
@@ -1852,6 +2145,45 @@ function toggleCategory(
 
 
 /* =========================================================
+   TEILENUMMER ÖFFNEN / SCHLIESSEN
+========================================================= */
+
+function togglePartNumber(
+  button
+) {
+
+  if (
+    !button
+  ) {
+
+    return;
+
+  }
+
+
+  const folder =
+    button.closest(
+      ".part-number-folder"
+    );
+
+
+  if (
+    !folder
+  ) {
+
+    return;
+
+  }
+
+
+  folder.classList.toggle(
+    "open"
+  );
+
+}
+
+
+/* =========================================================
    FEHLERANZEIGE
 ========================================================= */
 
@@ -1910,4 +2242,8 @@ function showError(
 window.loadParts =
   loadParts;
 
+window.toggleCategory =
+  toggleCategory;
 
+window.togglePartNumber =
+  togglePartNumber;
