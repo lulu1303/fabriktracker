@@ -473,7 +473,7 @@ button:disabled {
 
 .price-normal {
   color: #777;
-  text-decoration: line-through;
+  text-decoration: none;
 }
 
 .price-discount {
