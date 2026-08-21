@@ -37,19 +37,6 @@ function normalizeSearchText(value) {
 
 /* =========================================================
    DIMENSION NORMALISIEREN
-
-   Beispiele:
-
-   1x2
-   1 x 2
-   1×2
-   1 × 2
-   1,2
-   1 , 2
-
-   werden zu:
-
-   1x2
 ========================================================= */
 
 function normalizeDimensionQuery(value) {
@@ -242,11 +229,6 @@ function getPrimaryPartDimension(name) {
 
 /* =========================================================
    DIMENSION PASST ZUR SUCHE
-
-   1x2 findet:
-
-   1x2
-   2x1
 ========================================================= */
 
 function partHasDimension(
@@ -468,12 +450,57 @@ function isStandardPlateName(name) {
 
 /* =========================================================
    STANDARD TILE
+
+   NUR echtes "Tile 1 x 2" usw.
+   Groove-Tiles werden separat behandelt.
 ========================================================= */
 
 function isStandardTileName(name) {
 
   return /^tile\s+\d+\s*x\s*\d+$/i.test(
     normalizeDimensionQuery(name)
+  );
+
+}
+
+
+/* =========================================================
+   GROOVE TILE ERKENNEN
+
+   Beispiele:
+
+   Tile 1 x 2 with Groove
+   Tile 1 x 4 with Groove
+   Tile 2 x 2 with Groove
+========================================================= */
+
+function isGroovedTileName(name) {
+
+  const value =
+    normalizeSearchText(name);
+
+  return (
+    value.includes("tile") &&
+    value.includes("groove")
+  );
+
+}
+
+
+/* =========================================================
+   GROOVE TILE MIT NORMALER DIMENSION
+
+   Diese Teile sollen bei "Tile" ganz vorne
+   nach Größe sortiert werden.
+========================================================= */
+
+function isStandardGroovedTileName(name) {
+
+  const normalized =
+    normalizeDimensionQuery(name);
+
+  return /^tile\s+\d+\s*x\s*\d+\s+with\s+groove\b/i.test(
+    normalized
   );
 
 }
@@ -534,6 +561,22 @@ function getPartTypePriority(part) {
     normalizeSearchText(
       part.name
     );
+
+
+  /*
+     Groove-Tiles bekommen bei Tile-Suche
+     eine eigene Priorität.
+
+     Normale Größen-Groove-Tiles zuerst.
+  */
+
+  if (
+    isStandardGroovedTileName(name)
+  ) {
+
+    return 0;
+
+  }
 
 
   if (
@@ -615,8 +658,6 @@ function partNameMatchesSearch(
     );
 
 
-  /* Direkte Suche */
-
   if (
     name.includes(
       query
@@ -627,8 +668,6 @@ function partNameMatchesSearch(
 
   }
 
-
-  /* Normalisierte Dimension */
 
   if (
     normalizedName.includes(
@@ -641,8 +680,6 @@ function partNameMatchesSearch(
   }
 
 
-  /* Ohne Leerzeichen */
-
   if (
     compactName.includes(
       compactQuery
@@ -653,8 +690,6 @@ function partNameMatchesSearch(
 
   }
 
-
-  /* Suchwörter */
 
   const tokens =
     getSearchTokens(query);
@@ -681,18 +716,6 @@ function partNameMatchesSearch(
 
 /* =========================================================
    TEILWEISE DIMENSION
-
-   Beispiel:
-
-   brick 1
-
-   findet:
-
-   1x1
-   1x2
-   1x3
-   1x4
-   ...
 ========================================================= */
 
 function partMatchesPartialDimension(
@@ -787,7 +810,25 @@ function getLegoSearchPriority(
   let priority = 0;
 
 
-  /* Standardteil */
+  /* =====================================================
+     GROOVE TILE
+
+     Bei "Tile" sollen die normalen Groove-Größen
+     besonders weit nach vorne.
+  ===================================================== */
+
+  if (
+    isStandardGroovedTileName(name)
+  ) {
+
+    priority -= 30000;
+
+  }
+
+
+  /* =====================================================
+     STANDARDTEIL
+  ===================================================== */
 
   if (
     isStandardPartName(name)
@@ -798,7 +839,9 @@ function getLegoSearchPriority(
   }
 
 
-  /* Exakte Dimension */
+  /* =====================================================
+     EXAKTE DIMENSION
+  ===================================================== */
 
   if (
     dimension &&
@@ -813,7 +856,9 @@ function getLegoSearchPriority(
   }
 
 
-  /* Exakter Name */
+  /* =====================================================
+     EXAKTER NAME
+  ===================================================== */
 
   if (
     normalizeDimensionQuery(name) ===
@@ -825,7 +870,9 @@ function getLegoSearchPriority(
   }
 
 
-  /* Namen beginnt mit Suche */
+  /* =====================================================
+     NAMEN BEGINNT MIT SUCHE
+  ===================================================== */
 
   if (
     name.startsWith(
@@ -838,7 +885,9 @@ function getLegoSearchPriority(
   }
 
 
-  /* Namenstreffer */
+  /* =====================================================
+     NAMENSTREFFER
+  ===================================================== */
 
   if (
     partNameMatchesSearch(
@@ -852,7 +901,9 @@ function getLegoSearchPriority(
   }
 
 
-  /* Teilweise Dimension */
+  /* =====================================================
+     TEILWEISE DIMENSION
+  ===================================================== */
 
   if (
     partMatchesPartialDimension(
@@ -866,7 +917,9 @@ function getLegoSearchPriority(
   }
 
 
-  /* Teilenummer */
+  /* =====================================================
+     TEILENUMMER
+  ===================================================== */
 
   if (
     number === search
@@ -900,11 +953,100 @@ function sortLegoParts(
   query
 ) {
 
+  const normalizedQuery =
+    normalizeSearchText(
+      query
+    );
+
+  const isTileSearch =
+    /^(tile|tiles)$/i.test(
+      normalizedQuery
+    );
+
+
   results.sort(
     (
       a,
       b
     ) => {
+
+      /*
+         ==================================================
+         TILE-SUCHE
+
+         Für "Tile":
+
+         1x1
+         1x2
+         1x3
+         1x4
+         1x6
+         2x2
+         2x3
+         2x4
+         ...
+
+         und zwar NUR Groove-Tiles.
+         ==================================================
+      */
+
+      if (
+        isTileSearch
+      ) {
+
+        const aGroove =
+          isGroovedTileName(
+            a.name
+          );
+
+        const bGroove =
+          isGroovedTileName(
+            b.name
+          );
+
+
+        /*
+           Groove immer vor Nicht-Groove.
+
+           Der eigentliche Filter sollte Nicht-Groove
+           zwar bereits entfernt haben, aber diese
+           Absicherung bleibt drin.
+        */
+
+        if (
+          aGroove !== bGroove
+        ) {
+
+          return aGroove
+            ? -1
+            : 1;
+
+        }
+
+
+        const dimensionResult =
+          comparePartDimensions(
+            a.name,
+            b.name
+          );
+
+
+        if (
+          dimensionResult !== 0
+        ) {
+
+          return dimensionResult;
+
+        }
+
+      }
+
+
+      /*
+         ==================================================
+         NORMALE PRIORITÄT
+         ==================================================
+      */
 
       const priorityA =
         getLegoSearchPriority(
@@ -932,17 +1074,6 @@ function sortLegoParts(
       }
 
 
-      const nameA =
-        normalizeSearchText(
-          a.name
-        );
-
-      const nameB =
-        normalizeSearchText(
-          b.name
-        );
-
-
       const typePriorityA =
         getPartTypePriority(a);
 
@@ -965,8 +1096,8 @@ function sortLegoParts(
 
       const dimensionResult =
         comparePartDimensions(
-          nameA,
-          nameB
+          a.name,
+          b.name
         );
 
 
@@ -977,6 +1108,17 @@ function sortLegoParts(
         return dimensionResult;
 
       }
+
+
+      const nameA =
+        normalizeSearchText(
+          a.name
+        );
+
+      const nameB =
+        normalizeSearchText(
+          b.name
+        );
 
 
       const nameCompare =
@@ -1348,17 +1490,6 @@ function addPartResults(
 
 /* =========================================================
    KATEGORIE-ERGEBNISSE LADEN
-   ---------------------------------------------------------
-   WICHTIG:
-
-   Wir verlassen uns bei Brick / Plate / Tile nicht
-   ausschließlich auf die Kategorie-ID.
-
-   Zusätzlich wird über den Namen gesucht.
-
-   Dadurch ist die Suche robuster, falls einzelne
-   importierte Datensätze eine andere/falsche
-   category_id besitzen.
 ========================================================= */
 
 async function fetchCategoryResults(
@@ -1395,8 +1526,6 @@ async function fetchCategoryResults(
 
   /* -------------------------------------------------------
      2. Zusätzlich über Namen
-
-     z.B. Brick → alle Namen mit Brick
   ------------------------------------------------------- */
 
   const nameUrl =
@@ -1574,12 +1703,6 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        2. BRICK / BRICKS
-       -----------------------------------------------------
-       WICHTIG:
-
-       Nicht nur category_id verwenden.
-
-       Wir suchen zusätzlich im Namen.
     ===================================================== */
 
     if (
@@ -1626,25 +1749,21 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        4. TILE / TILES
-       -----------------------------------------------------
+
        WICHTIG:
 
-       KEIN "with groove"-Filter mehr.
-
-       Dadurch werden jetzt ALLE Tiles gefunden.
+       Bei der Tile-Suche werden später NUR
+       Tiles mit "Groove" zugelassen.
 
        Also z.B.:
 
-       Tile 1 x 1
-       Tile 1 x 2
-       Tile 1 x 3
-       Tile 2 x 2
-       Tile 2 x 4
-       Tile 2 x 8
-       Tiles mit Groove
-       Tiles ohne Groove
-       bedruckte Tiles
-       usw.
+       Tile 1 x 2 with Groove
+       Tile 1 x 3 with Groove
+       Tile 1 x 4 with Groove
+       Tile 2 x 2 with Groove
+       ...
+
+       Normale Tiles ohne Groove werden entfernt.
     ===================================================== */
 
     if (
@@ -1774,8 +1893,6 @@ async function fetchLegoPartSuggestions(
           numbers[1];
 
 
-        /* A x B */
-
         const dimensionUrlA =
           LEGO_PARTS_URL +
           "?name=ilike." +
@@ -1802,8 +1919,6 @@ async function fetchLegoPartSuggestions(
         );
 
 
-        /* A x B ohne Leerzeichen */
-
         const dimensionUrlACompact =
           LEGO_PARTS_URL +
           "?name=ilike." +
@@ -1829,8 +1944,6 @@ async function fetchLegoPartSuggestions(
           dimensionResultsACompact
         );
 
-
-        /* B x A */
 
         if (
           a !== b
@@ -1861,8 +1974,6 @@ async function fetchLegoPartSuggestions(
             dimensionResultsB
           );
 
-
-          /* B x A ohne Leerzeichen */
 
           const dimensionUrlBCompact =
             LEGO_PARTS_URL +
@@ -1939,13 +2050,6 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        9. KATEGORIEN FILTERN
-       -----------------------------------------------------
-       Bei reinen Kategorie-Suchen wird jetzt NICHT mehr
-       zusätzlich auf "with groove" geprüft.
-
-       Brick → Brick
-       Plate → Plate
-       Tile → Tile
     ===================================================== */
 
     if (
@@ -2018,36 +2122,35 @@ async function fetchLegoPartSuggestions(
     }
 
 
+    /* =====================================================
+       TILE FILTER
+
+       GANZ WICHTIG:
+
+       Tile-Suche = NUR "with Groove"
+
+       Damit verschwinden:
+
+       Tile 1 x 1
+       Tile 1 x 2
+       Tile 2 x 2
+       ...
+
+       ohne Groove.
+
+       Übrig bleiben nur Groove-Tiles.
+    ===================================================== */
+
     if (
       isTileSearch
     ) {
 
       results =
         results.filter(
-          part => {
-
-            const categoryId =
-              Number(
-                part.category_id
-              );
-
-            const name =
-              normalizeSearchText(
-                part.name
-              );
-
-            const category =
-              normalizeSearchText(
-                part.category
-              );
-
-            return (
-              categoryId === CATEGORY_TILE ||
-              name.startsWith("tile ") ||
-              category.includes("tile")
-            );
-
-          }
+          part =>
+            isGroovedTileName(
+              part.name
+            )
         );
 
     }
@@ -2089,7 +2192,7 @@ async function fetchLegoPartSuggestions(
 
 
           /* ---------------------------------------------
-             REINE BRICK-SUCHE
+             BRICK
           --------------------------------------------- */
 
           if (
@@ -2109,7 +2212,7 @@ async function fetchLegoPartSuggestions(
 
 
           /* ---------------------------------------------
-             REINE PLATE-SUCHE
+             PLATE
           --------------------------------------------- */
 
           if (
@@ -2129,22 +2232,17 @@ async function fetchLegoPartSuggestions(
 
 
           /* ---------------------------------------------
-             REINE TILE-SUCHE
+             TILE
 
-             KEIN GROOVE-FILTER!
+             NUR GROOVE
           --------------------------------------------- */
 
           if (
             isTileSearch
           ) {
 
-            return (
-              Number(
-                part.category_id
-              ) === CATEGORY_TILE ||
-              name.startsWith("tile ") ||
-              category.includes("tile") ||
-              categoryName.includes("tile")
+            return isGroovedTileName(
+              name
             );
 
           }
@@ -2267,12 +2365,7 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       13. MAXIMAL 20 ERGEBNISSE ANZEIGEN
-       -----------------------------------------------------
-       Die Suche selbst hat vorher alle gefundenen
-       Ergebnisse verarbeitet.
-
-       Nur die Anzeige wird auf 20 begrenzt.
+       13. MAXIMAL 20 ERGEBNISSE
     ===================================================== */
 
     const displayResults =
