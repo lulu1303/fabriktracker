@@ -211,7 +211,9 @@ async function loadCategoryImages() {
 
 async function loadWeightsForParts() {
 
-  if (!Array.isArray(parts) || !parts.length) return;
+  if (!Array.isArray(parts) || !parts.length) {
+    return;
+  }
 
   const numbers = [
     ...new Set(
@@ -221,26 +223,49 @@ async function loadWeightsForParts() {
     )
   ];
 
-  if (!numbers.length) return;
+  if (!numbers.length) {
+    return;
+  }
 
   try {
 
     const encoded = numbers
-      .map(n => `"${n.replace(/"/g, '\\"')}"`)
+      .map(
+        number =>
+          `"${number.replace(/"/g, '\\"')}"`
+      )
       .join(",");
 
     const url =
-      `${WEIGHTS_URL}` +
+      `${SUPABASE_URL}/rest/v1/lego_part_weights` +
       `?part_num=in.(${encoded})` +
       `&select=part_num,weight_grams`;
 
-    const rows = await req(url);
+    console.log(
+      "Lade Gewichte:",
+      numbers.length,
+      "Teilenummern"
+    );
+
+    const rows =
+      await supabaseRequest(url);
+
     const weightMap = {};
 
     (rows || []).forEach(row => {
 
-      weightMap[String(row.part_num)] =
+      const partNumber =
+        String(row.part_num);
+
+      const weight =
         Number(row.weight_grams);
+
+      if (Number.isFinite(weight)) {
+
+        weightMap[partNumber] =
+          weight;
+
+      }
 
     });
 
@@ -256,6 +281,11 @@ async function loadWeightsForParts() {
 
     });
 
+    console.log(
+      "Gewichte geladen:",
+      Object.keys(weightMap).length
+    );
+
   } catch (error) {
 
     console.warn(
@@ -263,11 +293,13 @@ async function loadWeightsForParts() {
       error
     );
 
-    parts.forEach(p => p.weight_grams = null);
+    parts.forEach(
+      part => {
+        part.weight_grams = null;
+      }
+    );
   }
 }
-
-
 /* =========================================================
    TEILE LADEN
 ========================================================= */
