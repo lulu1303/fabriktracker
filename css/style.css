@@ -1,20 +1,20 @@
+/* =========================================================
+   FABRIKTRACKER – PARTS
+========================================================= */
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #f5f5f5;
   color: #171717;
 }
 
 header {
-  background: white;
+  background: #fff;
   border-bottom: 1px solid #ddd;
   padding: 18px 20px;
   position: sticky;
@@ -44,10 +44,11 @@ header {
   color: #666;
 }
 
-
-/* =========================================================
-   ADMIN HEADER
-========================================================= */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
 .admin-header-button {
   background: #fff;
@@ -70,15 +71,9 @@ header {
   border-color: #a8d8b5;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 
 /* =========================================================
-   MAIN
+   MAIN / HERO
 ========================================================= */
 
 main {
@@ -87,17 +82,11 @@ main {
   padding: 30px 20px 60px;
 }
 
-
-/* =========================================================
-   HERO / SUCHE
-========================================================= */
-
 .hero {
-  background: white;
+  background: #fff;
   border-radius: 20px;
   padding: 30px;
-  box-shadow:
-    0 3px 15px rgba(0,0,0,0.06);
+  box-shadow: 0 3px 15px rgba(0,0,0,.06);
   margin-bottom: 25px;
 }
 
@@ -118,11 +107,11 @@ h1 {
 
 .search input {
   flex: 1;
+  min-width: 0;
   padding: 15px;
   border: 1px solid #ccc;
   border-radius: 12px;
   font-size: 16px;
-  min-width: 0;
 }
 
 
@@ -140,518 +129,45 @@ button {
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: .6;
   cursor: default;
 }
 
 .primary {
   background: #d71920;
-  color: white;
+  color: #fff;
 }
 
 .secondary {
-  background: #eeeeee;
+  background: #eee;
   color: #222;
 }
 
 .success {
   background: #148a36;
-  color: white;
+  color: #fff;
 }
 
 .danger {
-  background: #eeeeee;
+  background: #eee;
   color: #a40000;
 }
 
 
 /* =========================================================
-   SECTION
+   CARDS / STATUS
 ========================================================= */
 
-.section-title {
-  font-size: 21px;
-  font-weight: 800;
-  margin: 30px 0 15px;
-}
-
 .card {
-  background: white;
+  background: #fff;
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 12px;
-  box-shadow:
-    0 2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
 }
 
-
-/* =========================================================
-   KATEGORIEN
-========================================================= */
-
-.category-folder {
-  background: white;
-  border-radius: 16px;
-  margin-bottom: 14px;
-  box-shadow:
-    0 2px 10px rgba(0,0,0,0.05);
-  overflow: hidden;
-}
-
-.category-header {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: white;
-  color: #171717;
-  padding: 18px 20px;
-  border-radius: 0;
-  text-align: left;
-}
-
-.category-header:hover {
-  background: #f8f8f8;
-}
-
-.category-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-
-/* =========================================================
-   KATEGORIE-BILDER
-========================================================= */
-
-.category-icon {
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  overflow: hidden;
-}
-
-.category-image {
-  width: 100%;
-  height: 100%;
-
-  object-fit: contain;
-  display: block;
-}
-
-.category-name {
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.category-count {
-  color: #777;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.category-arrow {
-  font-size: 18px;
-  transition: transform 0.2s;
-}
-
-.category-folder.open .category-arrow {
-  transform: rotate(90deg);
-}
-
-.category-content {
-  display: none;
-  padding: 0 12px 12px;
-}
-
-.category-folder.open .category-content {
-  display: block;
-}
-
-/* =========================================================
-   TEILE
-========================================================= */
-
-.part-card {
-  background: #fafafa;
-  border: 1px solid #eee;
-  border-radius: 14px;
-
-  padding: 14px;
-  margin-bottom: 10px;
-
-  transition:
-    opacity 0.2s,
-    filter 0.2s;
-}
-
-.part-card.unavailable {
-  opacity: 0.58;
-  filter: grayscale(20%);
-}
-
-
-/* =========================================================
-   TEIL HAUPTBEREICH
-========================================================= */
-
-.part-main {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-
-/* =========================================================
-   TEIL-BILD
-========================================================= */
-
-.part-image-wrapper {
-  width: 95px;
-  min-width: 95px;
-
-  height: 95px;
-
-  background: white;
-
-  border-radius: 12px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  overflow: hidden;
-
-  border: 1px solid #eee;
-}
-
-.part-image {
-  width: 100%;
-  height: 100%;
-
-  object-fit: contain;
-
-  padding: 6px;
-
-  display: block;
-}
-
-.part-image-placeholder {
-  width: 100%;
-  height: 100%;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  background: #f5f5f5;
-
-  color: #aaa;
-
-  font-size: 28px;
-}
-
-
-/* =========================================================
-   TEIL INFORMATIONEN
-========================================================= */
-
-.part-info {
-  flex: 1;
-
-  min-width: 0;
-}
-
-.part-number {
-  font-weight: 800;
-  font-size: 18px;
-
-  line-height: 1.2;
-}
-
-.part-name {
-  color: #666;
-
-  margin-top: 4px;
-
-  line-height: 1.35;
-
-  font-size: 14px;
-}
-
-
-/* =========================================================
-   FARBE
-========================================================= */
-
-.part-color {
-  display: inline-block;
-
-  margin-top: 8px;
-
-  padding: 5px 9px;
-
-  background: #f0f0f0;
-
-  border-radius: 8px;
-
-  font-size: 13px;
-
-  font-weight: 700;
-
-  color: #444;
-}
-
-
-/* =========================================================
-   KATEGORIE
-========================================================= */
-
-.part-category {
-  margin-top: 7px;
-
-  color: #888;
-
-  font-size: 12px;
-}
-
-
-/* =========================================================
-   GEWICHT
-========================================================= */
-
-.part-weight {
-  margin-top: 6px;
-
-  font-size: 13px;
-
-  color: #666;
-}
-
-
-/* =========================================================
-   ZULETZT GESEHEN
-========================================================= */
-
-.part-last-seen {
-  margin-top: 5px;
-
-  font-size: 12px;
-
-  color: #999;
-}
-
-
-/* =========================================================
-   PREIS
-========================================================= */
-
-.part-price {
-  margin-top: 8px;
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 8px;
-
-  flex-wrap: wrap;
-}
-
-.price-normal {
-  color: #888;
-
-  text-decoration: line-through;
-
-  font-size: 13px;
-}
-
-.price-discount {
-  color: #d71920;
-
-  font-weight: 800;
-
-  font-size: 15px;
-}
-
-
-/* =========================================================
-   TEIL STATUS
-========================================================= */
-
-.part-status {
-  margin-top: 10px;
-
-  padding-top: 10px;
-
-  border-top: 1px solid #eee;
-}
-
-.status-available {
-  color: #148a36;
-
-  font-weight: 800;
-
-  font-size: 13px;
-}
-
-.status-unavailable {
-  color: #888;
-
-  font-weight: 800;
-
-  font-size: 13px;
-}
-
-
-/* =========================================================
-   ADMIN AKTIONEN
-========================================================= */
-
-.part-admin-actions {
-  margin-top: 8px;
-}
-
-.admin-delete-button {
-  padding: 6px 10px;
-
-  font-size: 11px;
-
-  font-weight: 600;
-
-  background: transparent;
-
-  color: #999;
-
-  border: 1px solid #e5e5e5;
-
-  border-radius: 8px;
-
-  opacity: 0.55;
-}
-
-.admin-delete-button:hover {
-  opacity: 1;
-
-  background: #fff5f5;
-
-  color: #a40000;
-
-  border-color: #e3a0a0;
-}
-
-
-/* =========================================================
-   NICHT MEHR DA / WIEDER VERFÜGBAR
-========================================================= */
-
-.report-button,
-.confirm-button {
-  width: 100%;
-
-  margin-top: 9px;
-
-  padding: 10px;
-
-  font-size: 13px;
-}
-
-.report-button {
-  background: #eeeeee;
-
-  color: #555;
-}
-
-.confirm-button {
-  background: #eaf8ee;
-
-  color: #148a36;
-}
-
-
-/* =========================================================
-   MOBILE TEILE
-========================================================= */
-
-@media (max-width: 600px) {
-
-  .part-main {
-    flex-direction: row;
-
-    gap: 12px;
-  }
-
-  .part-image-wrapper {
-    width: 85px;
-    min-width: 85px;
-
-    height: 85px;
-  }
-
-  .part-number {
-    font-size: 17px;
-  }
-
-  .part-name {
-    font-size: 13px;
-  }
-
-  .part-color {
-    font-size: 12px;
-
-    padding: 4px 8px;
-  }
-
-  .part-category {
-    font-size: 11px;
-  }
-
-}
-
-/* =========================================================
-   ADMIN DELETE
-========================================================= */
-
-.admin-delete {
-  display: block;
-  width: fit-content;
-
-  margin-top: 10px;
-  margin-left: auto;
-
-  padding: 6px 10px;
-
-  font-size: 11px;
-  font-weight: 600;
-
-  background: transparent;
-  color: #999;
-
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-
-  opacity: 0.45;
-}
-
-.admin-delete:hover {
-  opacity: 1;
-  background: #fff5f5;
-  color: #a40000;
-  border-color: #e3a0a0;
-}
-
-
-/* =========================================================
-   STATUS / FEHLER
-========================================================= */
-
-.empty {
+.empty,
+.loading {
   text-align: center;
   color: #777;
   padding: 25px;
@@ -671,27 +187,367 @@ button:disabled {
 
 
 /* =========================================================
+   KATEGORIEN
+========================================================= */
+
+.category-folder {
+  background: #fff;
+  border-radius: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+  overflow: hidden;
+}
+
+.category-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #fff;
+  color: #171717;
+  border-radius: 0;
+  text-align: left;
+}
+
+.category-header:hover {
+  background: #f8f8f8;
+}
+
+.category-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.category-icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.category-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.category-name {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.category-count {
+  color: #777;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.category-arrow {
+  font-size: 17px;
+  transition: transform .2s;
+}
+
+.category-folder.open .category-arrow {
+  transform: rotate(90deg);
+}
+
+.category-content {
+  display: none;
+  padding: 0 12px 12px;
+}
+
+.category-folder.open .category-content {
+  display: block;
+}
+
+
+/* =========================================================
+   TEILENUMMER – AUF-/ZUKLAPPBAR
+========================================================= */
+
+.part-number-folder {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 14px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.part-number-header {
+  width: 100%;
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 10px 12px;
+
+  background: #fff;
+  color: #171717;
+  border-radius: 0;
+
+  text-align: left;
+}
+
+.part-number-header:hover {
+  background: #f8f8f8;
+}
+
+.part-number-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.part-number-image-wrapper {
+  width: 70px;
+  height: 70px;
+  min-width: 70px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.part-number-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 6px;
+  display: block;
+}
+
+.part-number-image-placeholder {
+  font-size: 25px;
+}
+
+.part-number-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.part-number-title {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.part-number-name {
+  color: #666;
+  font-size: 13px;
+  margin-top: 3px;
+  line-height: 1.3;
+}
+
+.part-number-count {
+  color: #777;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.part-number-arrow {
+  font-size: 16px;
+  transition: transform .2s;
+}
+
+.part-number-folder.open .part-number-arrow {
+  transform: rotate(90deg);
+}
+
+.part-number-content {
+  display: none;
+  padding: 0 10px 10px;
+}
+
+.part-number-folder.open .part-number-content {
+  display: block;
+}
+
+
+/* =========================================================
+   TEILE
+========================================================= */
+
+.part-card {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  transition: opacity .2s, filter .2s;
+}
+
+.part-card.unavailable {
+  opacity: .58;
+  filter: grayscale(20%);
+}
+
+.part-main {
+  display: flex;
+  gap: 14px;
+}
+
+.part-image-wrapper {
+  width: 125px;
+  height: 125px;
+  min-width: 125px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.part-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+  display: block;
+}
+
+.part-image-placeholder {
+  color: #aaa;
+  font-size: 25px;
+}
+
+.part-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.part-number {
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.part-name {
+  color: #666;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.part-color {
+  display: inline-block;
+  margin-top: 9px;
+  padding: 5px 9px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #444;
+}
+
+.part-category,
+.part-weight,
+.part-last-seen {
+  margin-top: 7px;
+  font-size: 13px;
+  color: #777;
+}
+
+.part-price {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.price-normal {
+  color: #777;
+  text-decoration: line-through;
+}
+
+.price-discount {
+  color: #d71920;
+}
+
+.part-status {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+  font-weight: 800;
+}
+
+.status-available {
+  color: #148a36;
+}
+
+.status-unavailable {
+  color: #888;
+}
+
+.report-button,
+.confirm-button {
+  width: 100%;
+  margin-top: 9px;
+  padding: 11px;
+  font-size: 13px;
+}
+
+.report-button {
+  background: #eee;
+  color: #555;
+}
+
+.confirm-button {
+  background: #e9fff0;
+  color: #148a36;
+}
+
+
+/* =========================================================
+   ADMIN
+========================================================= */
+
+.part-admin-actions {
+  margin-top: 8px;
+  text-align: right;
+}
+
+.admin-delete-button {
+  padding: 6px 10px;
+  font-size: 11px;
+  background: transparent;
+  color: #999;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+}
+
+.admin-delete-button:hover {
+  background: #fff5f5;
+  color: #a40000;
+}
+
+
+/* =========================================================
    TEIL MELDEN
 ========================================================= */
 
 .report-box {
   background: #171717;
-  color: white;
-
+  color: #fff;
   border-radius: 18px;
-
-  margin-top: 0;
   margin-bottom: 25px;
-
   overflow: hidden;
-
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
-}
-
-.report-box.report-collapsed {
-  padding: 0;
 }
 
 .report-box.report-open {
@@ -700,39 +556,20 @@ button:disabled {
 
 .report-toggle {
   width: 100%;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  gap: 15px;
-
-  background: transparent;
-  color: white;
-
-  border: none;
-  border-radius: 18px;
-
   padding: 18px 22px;
-
+  background: transparent;
+  color: #fff;
+  border-radius: 18px;
+  text-align: left;
   font-size: 18px;
   font-weight: 800;
-
-  cursor: pointer;
-  text-align: left;
 }
 
 .report-toggle:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.report-toggle:focus {
-  outline: none;
-}
-
-.report-toggle:focus-visible {
-  box-shadow:
-    inset 0 0 0 2px rgba(255,255,255,0.5);
+  background: rgba(255,255,255,.06);
 }
 
 .report-toggle-title {
@@ -742,70 +579,20 @@ button:disabled {
 }
 
 .report-toggle-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 30px;
-  height: 30px;
-
   font-size: 25px;
-  font-weight: 400;
-  line-height: 1;
-
-  transition:
-    transform 0.2s ease;
-}
-
-.report-open .report-toggle-icon {
-  transform: rotate(0deg);
-}
-
-.report-content {
-  padding-top: 0;
+  transition: transform .2s;
 }
 
 .report-content > p {
-  margin-top: 0;
-  margin-bottom: 18px;
-
+  margin: 0 0 18px;
   color: #d0d0d0;
-
   line-height: 1.5;
 }
 
-.report-box h2 {
-  margin-top: 0;
-}
-
-.status {
-  font-size: 13px;
-  margin-top: 10px;
-  color: #aaa;
-}
-
-
-/* =========================================================
-   LOADING
-========================================================= */
-
-.loading {
-  text-align: center;
-  padding: 25px;
-  color: #777;
-}
-
-
-/* =========================================================
-   REPORT FORM
-========================================================= */
-
 .report-form {
   margin-top: 20px;
-
-  background: white;
+  background: #fff;
   color: #171717;
-
   border-radius: 16px;
   padding: 18px;
 }
@@ -817,34 +604,26 @@ button:disabled {
 
 .field label {
   display: block;
-
   font-weight: 700;
   font-size: 14px;
-
   margin-bottom: 7px;
 }
 
 .field input,
 .field select {
   width: 100%;
-
   padding: 14px;
-
   border: 1px solid #ccc;
   border-radius: 12px;
-
   font-size: 16px;
-  background: white;
+  background: #fff;
 }
 
 .field input:focus,
 .field select:focus {
   outline: none;
-
   border-color: #1683ff;
-
-  box-shadow:
-    0 0 0 3px rgba(22,131,255,0.15);
+  box-shadow: 0 0 0 3px rgba(22,131,255,.15);
 }
 
 
@@ -854,34 +633,26 @@ button:disabled {
 
 .suggestions {
   position: absolute;
-
   left: 0;
   right: 0;
   top: 100%;
-
-  background: white;
-
-  border: 1px solid #ddd;
-  border-radius: 12px;
-
-  margin-top: 5px;
+  z-index: 100;
 
   max-height: 300px;
   overflow-y: auto;
 
-  z-index: 100;
+  margin-top: 5px;
 
-  box-shadow:
-    0 8px 25px rgba(0,0,0,0.15);
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0,0,0,.15);
 }
 
 .suggestion {
   padding: 13px 14px;
-
   border-bottom: 1px solid #eee;
-
   cursor: pointer;
-  user-select: none;
 }
 
 .suggestion:last-child {
@@ -890,10 +661,6 @@ button:disabled {
 
 .suggestion:hover {
   background: #f5f5f5;
-}
-
-.suggestion:active {
-  background: #e9e9e9;
 }
 
 .suggestion-number {
@@ -908,15 +675,11 @@ button:disabled {
 
 .selected-part {
   margin-top: 8px;
-
   padding: 10px 12px;
-
   background: #f0fff3;
   border: 1px solid #b7e4c0;
   border-radius: 10px;
-
   color: #148a36;
-
   font-size: 14px;
   font-weight: 700;
 }
@@ -926,11 +689,6 @@ button:disabled {
   font-size: 13px;
   margin-top: 7px;
 }
-
-
-/* =========================================================
-   FORM BUTTONS
-========================================================= */
 
 .form-buttons {
   display: flex;
@@ -947,6 +705,10 @@ button:disabled {
 ========================================================= */
 
 @media (max-width: 600px) {
+
+  main {
+    padding: 20px 12px 40px;
+  }
 
   h1 {
     font-size: 27px;
@@ -969,13 +731,14 @@ button:disabled {
     height: 180px;
   }
 
-  .part-header {
-    flex-direction: column;
+  .part-number-image-wrapper {
+    width: 65px;
+    height: 65px;
+    min-width: 65px;
   }
 
-  .available,
-  .not-available {
-    white-space: normal;
+  .part-number-count {
+    display: none;
   }
 
   .location {
@@ -986,16 +749,6 @@ button:disabled {
     flex-direction: column;
   }
 
-  .price-row {
-    flex-direction: column;
-    gap: 4px;
-  }
-}
-
-  /* =======================================================
-     TEIL MELDEN AUF KLEINEN BILDSCHIRMEN
-  ======================================================= */
-
   .report-box.report-open {
     padding: 0 16px 18px;
   }
@@ -1004,5 +757,4 @@ button:disabled {
     padding: 17px 16px;
     font-size: 17px;
   }
-
-
+}
