@@ -203,87 +203,202 @@ async function loadCategoryImages() {
     categoryImagesLoaded = false;
   }
 }
-
-
 /* =========================================================
    GEWICHTE
 ========================================================= */
 
 async function loadWeightsForParts() {
 
-  if (!Array.isArray(parts) || !parts.length) {
-    return;
-  }
+  if (!Array.isArray(parts) || !parts.length) return;
 
   const numbers = [
     ...new Set(
       parts
-        .map(p => String(p.part_number || ""))
+        .map(p => String(p.part_number || "").trim())
         .filter(Boolean)
     )
   ];
 
-  if (!numbers.length) {
-    return;
-  }
+  if (!numbers.length) return;
 
   try {
 
+    /* =====================================================
+       1. EXAKTE TEILENUMMERN LADEN
+    ===================================================== */
+
     const encoded = numbers
-      .map(
-        number =>
-          `"${number.replace(/"/g, '\\"')}"`
-      )
+      .map(n => `"${n.replace(/"/g, '\\"')}"`)
       .join(",");
 
-    const url =
-      `${SUPABASE_URL}/rest/v1/lego_part_weights` +
+    const exactUrl =
+      `${WEIGHTS_URL}` +
       `?part_num=in.(${encoded})` +
       `&select=part_num,weight_grams`;
 
-    console.log(
-      "Lade Gewichte:",
-      numbers.length,
-      "Teilenummern"
-    );
-
-    const rows =
-      await supabaseRequest(url);
+    const exactRows =
+      await req(exactUrl);
 
     const weightMap = {};
 
-    (rows || []).forEach(row => {
+    (exactRows || []).forEach(row => {
 
-      const partNumber =
-        String(row.part_num);
+      if (
+        row.part_num &&
+        row.weight_grams !== null &&
+        row.weight_grams !== undefined
+      ) {
 
-      const weight =
-        Number(row.weight_grams);
-
-      if (Number.isFinite(weight)) {
-
-        weightMap[partNumber] =
-          weight;
+        weightMap[String(row.part_num)] =
+          Number(row.weight_grams);
 
       }
 
     });
 
+
+    /* =====================================================
+       2. FEHLENDE TEILE → BASISNUMMER ERMITTELN
+    ===================================================== */
+
+    const missingNumbers =
+      numbers.filter(
+        number =>
+          weightMap[number] === undefined
+      );
+
+    const fallbackNumbers = [
+      ...new Set(
+        missingNumbers
+          .map(number => {
+
+            /*
+             * Beispiele:
+             *
+             * 3069b       → 3069
+             * 2431pr0232  → 2431
+             * 25977pr0001 → 25977
+             *
+             * Alles nach der ersten
+             * Buchstaben-/Varianten-Endung
+             * wird entfernt.
+             */
+
+            const match =
+              number.match(/^(\d+)/);
+
+            return match
+              ? match[1]
+              : null;
+
+          })
+          .filter(Boolean)
+          .filter(
+            number =>
+              weightMap[number] === undefined
+          )
+      )
+    ];
+
+
+    /* =====================================================
+       3. BASISNUMMERN LADEN
+    ===================================================== */
+
+    if (fallbackNumbers.length) {
+
+      const fallbackEncoded =
+        fallbackNumbers
+          .map(
+            n =>
+              `"${n.replace(
+                /"/g,
+                '\\"'
+              )}"`
+          )
+          .join(",");
+
+      const fallbackUrl =
+        `${WEIGHTS_URL}` +
+        `?part_num=in.(${fallbackEncoded})` +
+        `&select=part_num,weight_grams`;
+
+      const fallbackRows =
+        await req(fallbackUrl);
+
+      (fallbackRows || []).forEach(row => {
+
+        if (
+          row.part_num &&
+          row.weight_grams !== null &&
+          row.weight_grams !== undefined
+        ) {
+
+          weightMap[String(row.part_num)] =
+            Number(row.weight_grams);
+
+        }
+
+      });
+
+    }
+
+
+    /* =====================================================
+       4. GEWICHTE DEN TEILEN ZUWEISEN
+    ===================================================== */
+
     parts.forEach(part => {
 
       const number =
-        String(part.part_number || "");
+        String(
+          part.part_number || ""
+        ).trim();
+
+      /* Exakte Nummer bevorzugen */
+      if (
+        weightMap[number] !== undefined
+      ) {
+
+        part.weight_grams =
+          weightMap[number];
+
+        return;
+
+      }
+
+
+      /* Basisnummer als Fallback */
+      const match =
+        number.match(/^(\d+)/);
+
+      const baseNumber =
+        match
+          ? match[1]
+          : null;
 
       part.weight_grams =
-        weightMap[number] !== undefined
-          ? weightMap[number]
+        baseNumber &&
+        weightMap[baseNumber] !== undefined
+
+          ? weightMap[baseNumber]
+
           : null;
 
     });
 
+
     console.log(
       "Gewichte geladen:",
-      Object.keys(weightMap).length
+      parts.filter(
+        p =>
+          Number.isFinite(
+            Number(p.weight_grams)
+          ) &&
+          Number(p.weight_grams) > 0
+      ).length,
+      "/",
+      parts.length
     );
 
   } catch (error) {
@@ -294,12 +409,12 @@ async function loadWeightsForParts() {
     );
 
     parts.forEach(
-      part => {
-        part.weight_grams = null;
-      }
+      p => p.weight_grams = null
     );
+
   }
 }
+
 /* =========================================================
    TEILE LADEN
 ========================================================= */
