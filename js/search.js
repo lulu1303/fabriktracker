@@ -825,7 +825,7 @@ function getLegoSearchPriority(
   }
 
 
-  /* Name beginnt mit Suche */
+  /* Namen beginnt mit Suche */
 
   if (
     name.startsWith(
@@ -906,8 +906,6 @@ function sortLegoParts(
       b
     ) => {
 
-      /* Suchrelevanz */
-
       const priorityA =
         getLegoSearchPriority(
           a,
@@ -945,8 +943,6 @@ function sortLegoParts(
         );
 
 
-      /* Standard / Normal / Sonder */
-
       const typePriorityA =
         getPartTypePriority(a);
 
@@ -967,8 +963,6 @@ function sortLegoParts(
       }
 
 
-      /* Dimension */
-
       const dimensionResult =
         comparePartDimensions(
           nameA,
@@ -984,8 +978,6 @@ function sortLegoParts(
 
       }
 
-
-      /* Name */
 
       const nameCompare =
         nameA.localeCompare(
@@ -1006,8 +998,6 @@ function sortLegoParts(
 
       }
 
-
-      /* Teilenummer */
 
       return normalizeSearchText(
         a.part_num
@@ -1110,8 +1100,6 @@ function searchParts() {
           );
 
 
-        /* Exakte Dimension */
-
         if (
           dimension &&
           !partHasDimension(
@@ -1125,8 +1113,6 @@ function searchParts() {
         }
 
 
-        /* Name */
-
         if (
           partNameMatchesSearch(
             part,
@@ -1138,8 +1124,6 @@ function searchParts() {
 
         }
 
-
-        /* Teilweise Dimension */
 
         if (
           partMatchesPartialDimension(
@@ -1153,8 +1137,6 @@ function searchParts() {
         }
 
 
-        /* Kategorie */
-
         if (
           category.includes(query) ||
           categoryName.includes(query)
@@ -1165,8 +1147,6 @@ function searchParts() {
         }
 
 
-        /* Farbe */
-
         if (
           color.includes(query)
         ) {
@@ -1175,8 +1155,6 @@ function searchParts() {
 
         }
 
-
-        /* Teilenummer */
 
         if (
           number.includes(query)
@@ -1353,33 +1331,105 @@ function addPartResults(
     const part of results
   ) {
 
-    target.push(
+    if (
       part
-    );
+    ) {
+
+      target.push(
+        part
+      );
+
+    }
 
   }
 
 }
 
 
+/* =========================================================
+   KATEGORIE-ERGEBNISSE LADEN
+   ---------------------------------------------------------
+   WICHTIG:
+
+   Wir verlassen uns bei Brick / Plate / Tile nicht
+   ausschließlich auf die Kategorie-ID.
+
+   Zusätzlich wird über den Namen gesucht.
+
+   Dadurch ist die Suche robuster, falls einzelne
+   importierte Datensätze eine andere/falsche
+   category_id besitzen.
+========================================================= */
+
+async function fetchCategoryResults(
+  categoryId,
+  categoryWord
+) {
+
+  const results = [];
+
+
+  /* -------------------------------------------------------
+     1. Kategorie-ID
+  ------------------------------------------------------- */
+
+  const categoryUrl =
+    LEGO_PARTS_URL +
+    "?category_id=eq." +
+    categoryId +
+    "&select=part_num,name,category_id,category" +
+    "&limit=1000";
+
+
+  const categoryResults =
+    await supabaseRequest(
+      categoryUrl
+    );
+
+
+  addPartResults(
+    results,
+    categoryResults
+  );
+
+
+  /* -------------------------------------------------------
+     2. Zusätzlich über Namen
+
+     z.B. Brick → alle Namen mit Brick
+  ------------------------------------------------------- */
+
+  const nameUrl =
+    LEGO_PARTS_URL +
+    "?name=ilike." +
+    encodeURIComponent(
+      "%" +
+      categoryWord +
+      "%"
+    ) +
+    "&select=part_num,name,category_id,category" +
+    "&limit=1000";
+
+
+  const nameResults =
+    await supabaseRequest(
+      nameUrl
+    );
+
+
+  addPartResults(
+    results,
+    nameResults
+  );
+
+
+  return results;
+
+}
 
 
 /* =========================================================
    LEGO TEILE SUCHEN
-   ---------------------------------------------------------
-   KORRIGIERT:
-
-   Die Datenbank-Suche verwendet NICHT mehr compactSearchText()
-   für die Namenssuche.
-
-   Dadurch funktionieren z.B.:
-
-   Brick 1 x 4
-   Brick 1x4
-   Brick 1 × 4
-   Brick 1,4
-
-   Die Feinfilterung erfolgt anschließend lokal.
 ========================================================= */
 
 async function fetchLegoPartSuggestions(
@@ -1523,24 +1573,23 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       2. REINE BRICK-SUCHE
+       2. BRICK / BRICKS
+       -----------------------------------------------------
+       WICHTIG:
+
+       Nicht nur category_id verwenden.
+
+       Wir suchen zusätzlich im Namen.
     ===================================================== */
 
     if (
       isBrickSearch
     ) {
 
-      const brickUrl =
-        LEGO_PARTS_URL +
-        "?category_id=eq." +
-        CATEGORY_BRICK +
-        "&select=part_num,name,category_id,category" +
-        "&limit=1000";
-
-
       const brickResults =
-        await supabaseRequest(
-          brickUrl
+        await fetchCategoryResults(
+          CATEGORY_BRICK,
+          "brick"
         );
 
 
@@ -1553,24 +1602,17 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       3. REINE PLATE-SUCHE
+       3. PLATE / PLATES
     ===================================================== */
 
     if (
       isPlateSearch
     ) {
 
-      const plateUrl =
-        LEGO_PARTS_URL +
-        "?category_id=eq." +
-        CATEGORY_PLATE +
-        "&select=part_num,name,category_id,category" +
-        "&limit=1000";
-
-
       const plateResults =
-        await supabaseRequest(
-          plateUrl
+        await fetchCategoryResults(
+          CATEGORY_PLATE,
+          "plate"
         );
 
 
@@ -1583,24 +1625,36 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       4. REINE TILE-SUCHE
+       4. TILE / TILES
+       -----------------------------------------------------
+       WICHTIG:
+
+       KEIN "with groove"-Filter mehr.
+
+       Dadurch werden jetzt ALLE Tiles gefunden.
+
+       Also z.B.:
+
+       Tile 1 x 1
+       Tile 1 x 2
+       Tile 1 x 3
+       Tile 2 x 2
+       Tile 2 x 4
+       Tile 2 x 8
+       Tiles mit Groove
+       Tiles ohne Groove
+       bedruckte Tiles
+       usw.
     ===================================================== */
 
     if (
       isTileSearch
     ) {
 
-      const tileUrl =
-        LEGO_PARTS_URL +
-        "?category_id=eq." +
-        CATEGORY_TILE +
-        "&select=part_num,name,category_id,category" +
-        "&limit=1000";
-
-
       const tileResults =
-        await supabaseRequest(
-          tileUrl
+        await fetchCategoryResults(
+          CATEGORY_TILE,
+          "tile"
         );
 
 
@@ -1614,9 +1668,6 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        5. TEILENUMMER TEILWEISE
-       -----------------------------------------------------
-       Nur wenn die Eingabe tatsächlich wie eine
-       Teilenummer aussieht.
     ===================================================== */
 
     const looksLikePartNumber =
@@ -1658,25 +1709,6 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        6. NAMENSSUCHE
-       -----------------------------------------------------
-       WICHTIG:
-
-       NICHT mehr:
-
-       compactSearchText()
-
-       Denn daraus würde:
-
-       Brick 1 x 4
-       ↓
-       brick1x4
-
-       Unsere Datenbank enthält aber:
-
-       Brick 1 x 4
-
-       Deshalb verwenden wir hier die normale,
-       normalisierte Schreibweise.
     ===================================================== */
 
     const nameSearch =
@@ -1715,16 +1747,6 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        7. ZUSÄTZLICHE NAMENSSUCHE FÜR DIMENSIONEN
-       -----------------------------------------------------
-       Dadurch funktionieren auch:
-
-       Brick 1x4
-       Brick 1 x 4
-       Brick 1×4
-       Brick 1,4
-
-       unabhängig davon, wie die Dimension
-       in der Datenbank geschrieben ist.
     ===================================================== */
 
     if (
@@ -1752,9 +1774,7 @@ async function fetchLegoPartSuggestions(
           numbers[1];
 
 
-        /* ---------------------------------------------
-           A → B
-        --------------------------------------------- */
+        /* A x B */
 
         const dimensionUrlA =
           LEGO_PARTS_URL +
@@ -1782,9 +1802,7 @@ async function fetchLegoPartSuggestions(
         );
 
 
-        /* ---------------------------------------------
-           A → B ohne Leerzeichen
-        --------------------------------------------- */
+        /* A x B ohne Leerzeichen */
 
         const dimensionUrlACompact =
           LEGO_PARTS_URL +
@@ -1812,10 +1830,7 @@ async function fetchLegoPartSuggestions(
         );
 
 
-        /* ---------------------------------------------
-           B → A
-           Nur bei unterschiedlichen Dimensionen
-        --------------------------------------------- */
+        /* B x A */
 
         if (
           a !== b
@@ -1847,9 +1862,7 @@ async function fetchLegoPartSuggestions(
           );
 
 
-          /* -------------------------------------------
-             B → A ohne Leerzeichen
-          ------------------------------------------- */
+          /* B x A ohne Leerzeichen */
 
           const dimensionUrlBCompact =
             LEGO_PARTS_URL +
@@ -1926,6 +1939,13 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        9. KATEGORIEN FILTERN
+       -----------------------------------------------------
+       Bei reinen Kategorie-Suchen wird jetzt NICHT mehr
+       zusätzlich auf "with groove" geprüft.
+
+       Brick → Brick
+       Plate → Plate
+       Tile → Tile
     ===================================================== */
 
     if (
@@ -1934,10 +1954,30 @@ async function fetchLegoPartSuggestions(
 
       results =
         results.filter(
-          part =>
-            Number(
-              part.category_id
-            ) === CATEGORY_BRICK
+          part => {
+
+            const categoryId =
+              Number(
+                part.category_id
+              );
+
+            const name =
+              normalizeSearchText(
+                part.name
+              );
+
+            const category =
+              normalizeSearchText(
+                part.category
+              );
+
+            return (
+              categoryId === CATEGORY_BRICK ||
+              name.startsWith("brick ") ||
+              category.includes("brick")
+            );
+
+          }
         );
 
     }
@@ -1949,10 +1989,30 @@ async function fetchLegoPartSuggestions(
 
       results =
         results.filter(
-          part =>
-            Number(
-              part.category_id
-            ) === CATEGORY_PLATE
+          part => {
+
+            const categoryId =
+              Number(
+                part.category_id
+              );
+
+            const name =
+              normalizeSearchText(
+                part.name
+              );
+
+            const category =
+              normalizeSearchText(
+                part.category
+              );
+
+            return (
+              categoryId === CATEGORY_PLATE ||
+              name.startsWith("plate ") ||
+              category.includes("plate")
+            );
+
+          }
         );
 
     }
@@ -1964,29 +2024,27 @@ async function fetchLegoPartSuggestions(
 
       results =
         results.filter(
-          part =>
-            Number(
-              part.category_id
-            ) === CATEGORY_TILE
-        );
-
-
-      /* Nur Tiles mit Groove */
-
-      results =
-        results.filter(
           part => {
+
+            const categoryId =
+              Number(
+                part.category_id
+              );
 
             const name =
               normalizeSearchText(
                 part.name
               );
 
+            const category =
+              normalizeSearchText(
+                part.category
+              );
 
             return (
-              name.includes(
-                "with groove"
-              )
+              categoryId === CATEGORY_TILE ||
+              name.startsWith("tile ") ||
+              category.includes("tile")
             );
 
           }
@@ -1997,8 +2055,6 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        10. LOKALER FEINFILTER
-       -----------------------------------------------------
-       Hier entscheidet die eigentliche Suchlogik.
     ===================================================== */
 
     results =
@@ -2043,7 +2099,10 @@ async function fetchLegoPartSuggestions(
             return (
               Number(
                 part.category_id
-              ) === CATEGORY_BRICK
+              ) === CATEGORY_BRICK ||
+              name.startsWith("brick ") ||
+              category.includes("brick") ||
+              categoryName.includes("brick")
             );
 
           }
@@ -2060,7 +2119,10 @@ async function fetchLegoPartSuggestions(
             return (
               Number(
                 part.category_id
-              ) === CATEGORY_PLATE
+              ) === CATEGORY_PLATE ||
+              name.startsWith("plate ") ||
+              category.includes("plate") ||
+              categoryName.includes("plate")
             );
 
           }
@@ -2068,6 +2130,8 @@ async function fetchLegoPartSuggestions(
 
           /* ---------------------------------------------
              REINE TILE-SUCHE
+
+             KEIN GROOVE-FILTER!
           --------------------------------------------- */
 
           if (
@@ -2077,10 +2141,10 @@ async function fetchLegoPartSuggestions(
             return (
               Number(
                 part.category_id
-              ) === CATEGORY_TILE &&
-              name.includes(
-                "with groove"
-              )
+              ) === CATEGORY_TILE ||
+              name.startsWith("tile ") ||
+              category.includes("tile") ||
+              categoryName.includes("tile")
             );
 
           }
@@ -2121,12 +2185,6 @@ async function fetchLegoPartSuggestions(
 
           /* ---------------------------------------------
              TEILWEISE DIMENSION
-
-             z.B.
-
-             brick 1
-             plate 2
-             tile 4
           --------------------------------------------- */
 
           if (
@@ -2209,10 +2267,15 @@ async function fetchLegoPartSuggestions(
 
 
     /* =====================================================
-       13. MAXIMAL 20 ERGEBNISSE
+       13. MAXIMAL 20 ERGEBNISSE ANZEIGEN
+       -----------------------------------------------------
+       Die Suche selbst hat vorher alle gefundenen
+       Ergebnisse verarbeitet.
+
+       Nur die Anzeige wird auf 20 begrenzt.
     ===================================================== */
 
-    results =
+    const displayResults =
       results.slice(
         0,
         20
@@ -2220,7 +2283,7 @@ async function fetchLegoPartSuggestions(
 
 
     legoSearchResults =
-      results;
+      displayResults;
 
 
     /* =====================================================
@@ -2228,7 +2291,7 @@ async function fetchLegoPartSuggestions(
     ===================================================== */
 
     suggestions.innerHTML =
-      results
+      displayResults
         .map(
           (
             part,
