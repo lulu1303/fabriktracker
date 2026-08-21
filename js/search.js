@@ -887,7 +887,7 @@ function getLegoSearchPriority(
 
   /* =====================================================
      NAMENSTREFFER
-  ===================================================== */
+===================================================== */
 
   if (
     partNameMatchesSearch(
@@ -903,7 +903,7 @@ function getLegoSearchPriority(
 
   /* =====================================================
      TEILWEISE DIMENSION
-  ===================================================== */
+===================================================== */
 
   if (
     partMatchesPartialDimension(
@@ -919,7 +919,7 @@ function getLegoSearchPriority(
 
   /* =====================================================
      TEILENUMMER
-  ===================================================== */
+===================================================== */
 
   if (
     number === search
@@ -1445,7 +1445,7 @@ function buildPartSearchUrl(
     "?" +
     filter +
     "&select=part_num,name,category_id,category" +
-    "&limit=1000"
+    "&limit=5000"
   );
 
 }
@@ -1509,7 +1509,7 @@ async function fetchCategoryResults(
     "?category_id=eq." +
     categoryId +
     "&select=part_num,name,category_id,category" +
-    "&limit=1000";
+    "&limit=5000";
 
 
   const categoryResults =
@@ -1537,7 +1537,7 @@ async function fetchCategoryResults(
       "%"
     ) +
     "&select=part_num,name,category_id,category" +
-    "&limit=1000";
+    "&limit=5000";
 
 
   const nameResults =
@@ -1847,7 +1847,7 @@ async function fetchLegoPartSuggestions(
           "%"
         ) +
         "&select=part_num,name,category_id,category" +
-        "&limit=1000";
+        "&limit=5000";
 
 
       const nameResults =
@@ -1904,7 +1904,7 @@ async function fetchLegoPartSuggestions(
             "%"
           ) +
           "&select=part_num,name,category_id,category" +
-          "&limit=1000";
+          "&limit=5000";
 
 
         const dimensionResultsA =
@@ -1930,7 +1930,7 @@ async function fetchLegoPartSuggestions(
             "%"
           ) +
           "&select=part_num,name,category_id,category" +
-          "&limit=1000";
+          "&limit=5000";
 
 
         const dimensionResultsACompact =
@@ -1960,7 +1960,7 @@ async function fetchLegoPartSuggestions(
               "%"
             ) +
             "&select=part_num,name,category_id,category" +
-            "&limit=1000";
+            "&limit=5000";
 
 
           const dimensionResultsB =
@@ -1986,7 +1986,7 @@ async function fetchLegoPartSuggestions(
               "%"
             ) +
             "&select=part_num,name,category_id,category" +
-            "&limit=1000";
+            "&limit=5000";
 
 
           const dimensionResultsBCompact =
