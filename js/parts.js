@@ -928,11 +928,11 @@ function renderPart(part) {
 
         <button
           class="admin-delete-button"
-          onclick="adminDeletePart(
-  ${JSON.stringify(String(part.id))},
-  ${JSON.stringify(String(part.part_number || ""))},
-  ${JSON.stringify(String(part.name || ""))}
-)"
+          onclick='adminDeletePart(
+  ${JSON.stringify(String(part.id)).replace(/'/g, "&#39;")},
+  ${JSON.stringify(String(part.part_number || "")).replace(/'/g, "&#39;")},
+  ${JSON.stringify(String(part.name || "")).replace(/'/g, "&#39;")}
+)'
         >
           🗑️ Löschen
         </button>
