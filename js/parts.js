@@ -828,36 +828,41 @@ function renderPart(part) {
 
   let priceHTML = "";
 
-  if (
-    hasWeight &&
-    normalPrice !== null
-  ) {
+if (
+  hasWeight &&
+  normalPrice !== null
+) {
 
-    priceHTML = `
-      <div class="part-price">
+  const normalCents =
+    normalPrice * 100;
 
-        ${
-          discountPrice !== null
-            ? `
-              <span class="price-normal">
-                ${normalPrice.toFixed(2)} €
-              </span>
+  const discountCents =
+    discountPrice !== null
+      ? discountPrice * 100
+      : null;
 
-              <span class="price-discount">
-                ${discountPrice.toFixed(2)} €
-              </span>
-            `
-            : `
-              <span>
-                ${normalPrice.toFixed(2)} €
-              </span>
-            `
-        }
+  priceHTML = `
+    <div class="part-price">
 
+      <div class="price-normal">
+        Normal:
+        ${normalCents.toFixed(1)} ct
       </div>
-    `;
-  }
 
+      ${
+        discountCents !== null
+          ? `
+            <div class="price-discount">
+              20%:
+              ${discountCents.toFixed(1)} ct
+            </div>
+          `
+          : ""
+      }
+
+    </div>
+  `;
+}
   return `
     <div class="part-card ${available ? "" : "unavailable"}">
 
