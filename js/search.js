@@ -6,6 +6,10 @@
    1. Hauptsuche
    2. „Teil melden“-Suche
 
+   WICHTIG:
+   Die Supabase-Abfragen werden automatisch paginiert.
+   Dadurch sind auch mehr als 1000 Treffer möglich.
+
    Abhängigkeiten aus der Hauptanwendung:
    - parts
    - displayParts()
@@ -450,9 +454,6 @@ function isStandardPlateName(name) {
 
 /* =========================================================
    STANDARD TILE
-
-   NUR echtes "Tile 1 x 2" usw.
-   Groove-Tiles werden separat behandelt.
 ========================================================= */
 
 function isStandardTileName(name) {
@@ -466,12 +467,6 @@ function isStandardTileName(name) {
 
 /* =========================================================
    GROOVE TILE ERKENNEN
-
-   Beispiele:
-
-   Tile 1 x 2 with Groove
-   Tile 1 x 4 with Groove
-   Tile 2 x 2 with Groove
 ========================================================= */
 
 function isGroovedTileName(name) {
@@ -489,9 +484,6 @@ function isGroovedTileName(name) {
 
 /* =========================================================
    GROOVE TILE MIT NORMALER DIMENSION
-
-   Diese Teile sollen bei "Tile" ganz vorne
-   nach Größe sortiert werden.
 ========================================================= */
 
 function isStandardGroovedTileName(name) {
@@ -562,13 +554,6 @@ function getPartTypePriority(part) {
       part.name
     );
 
-
-  /*
-     Groove-Tiles bekommen bei Tile-Suche
-     eine eigene Priorität.
-
-     Normale Größen-Groove-Tiles zuerst.
-  */
 
   if (
     isStandardGroovedTileName(name)
@@ -810,10 +795,6 @@ function getLegoSearchPriority(
   let priority = 0;
 
 
-  /* =====================================================
-     GROOVE TILE
-  ===================================================== */
-
   if (
     isStandardGroovedTileName(name)
   ) {
@@ -823,10 +804,6 @@ function getLegoSearchPriority(
   }
 
 
-  /* =====================================================
-     STANDARDTEIL
-  ===================================================== */
-
   if (
     isStandardPartName(name)
   ) {
@@ -835,10 +812,6 @@ function getLegoSearchPriority(
 
   }
 
-
-  /* =====================================================
-     EXAKTE DIMENSION
-  ===================================================== */
 
   if (
     dimension &&
@@ -853,10 +826,6 @@ function getLegoSearchPriority(
   }
 
 
-  /* =====================================================
-     EXAKTER NAME
-  ===================================================== */
-
   if (
     normalizeDimensionQuery(name) ===
     normalizedSearch
@@ -866,10 +835,6 @@ function getLegoSearchPriority(
 
   }
 
-
-  /* =====================================================
-     NAMEN BEGINNT MIT SUCHE
-  ===================================================== */
 
   if (
     name.startsWith(
@@ -881,10 +846,6 @@ function getLegoSearchPriority(
 
   }
 
-
-  /* =====================================================
-     NAMENSTREFFER
-  ===================================================== */
 
   if (
     partNameMatchesSearch(
@@ -898,10 +859,6 @@ function getLegoSearchPriority(
   }
 
 
-  /* =====================================================
-     TEILWEISE DIMENSION
-  ===================================================== */
-
   if (
     partMatchesPartialDimension(
       part,
@@ -913,10 +870,6 @@ function getLegoSearchPriority(
 
   }
 
-
-  /* =====================================================
-     TEILENUMMER
-  ===================================================== */
 
   if (
     number === search
@@ -943,6 +896,25 @@ function getLegoSearchPriority(
 
 /* =========================================================
    ALLGEMEINE TEILE SORTIERUNG
+
+   WICHTIG:
+   Die Sortierung für Brick / Plate / Tile wird
+   explizit nach der tatsächlichen Dimension durchgeführt.
+
+   Dadurch ist z.B.:
+
+   Brick 1 x 1
+   Brick 1 x 2
+   Brick 1 x 3
+   Brick 1 x 4
+   Brick 1 x 6
+   Brick 1 x 8
+   Brick 1 x 10
+   Brick 1 x 14
+   Brick 2 x 2
+
+   garantiert in dieser Reihenfolge, sofern
+   diese Teile tatsächlich aus der Datenbank geladen wurden.
 ========================================================= */
 
 function sortLegoParts(
@@ -953,6 +925,16 @@ function sortLegoParts(
   const normalizedQuery =
     normalizeSearchText(
       query
+    );
+
+  const isBrickSearch =
+    /^(brick|bricks)$/i.test(
+      normalizedQuery
+    );
+
+  const isPlateSearch =
+    /^(plate|plates)$/i.test(
+      normalizedQuery
     );
 
   const isTileSearch =
@@ -967,28 +949,68 @@ function sortLegoParts(
       b
     ) => {
 
+      /* ===================================================
+         KATEGORIENSUCHE
+
+         Bei Brick / Plate / Tile zählt zuerst:
+
+         1. Dimension
+         2. Standardteil
+         3. Sonderteil
+         4. Name
+         5. Teilenummer
+      =================================================== */
+
       if (
+        isBrickSearch ||
+        isPlateSearch ||
         isTileSearch
       ) {
 
-        const aGroove =
-          isGroovedTileName(
-            a.name
-          );
+        if (
+          isTileSearch
+        ) {
 
-        const bGroove =
-          isGroovedTileName(
-            b.name
-          );
+          const aGroove =
+            isGroovedTileName(
+              a.name
+            );
+
+          const bGroove =
+            isGroovedTileName(
+              b.name
+            );
+
+
+          if (
+            aGroove !== bGroove
+          ) {
+
+            return aGroove
+              ? -1
+              : 1;
+
+          }
+
+        }
+
+
+        const typePriorityA =
+          getPartTypePriority(a);
+
+        const typePriorityB =
+          getPartTypePriority(b);
 
 
         if (
-          aGroove !== bGroove
+          typePriorityA !==
+          typePriorityB
         ) {
 
-          return aGroove
-            ? -1
-            : 1;
+          return (
+            typePriorityA -
+            typePriorityB
+          );
 
         }
 
@@ -1010,6 +1032,10 @@ function sortLegoParts(
 
       }
 
+
+      /* ===================================================
+         NORMALE SUCHPRIORITÄT
+      =================================================== */
 
       const priorityA =
         getLegoSearchPriority(
@@ -1396,7 +1422,149 @@ function searchLegoParts() {
 
 
 /* =========================================================
+   PAGINIERTE SUPABASE-SUCHE
+
+   DAS IST DER WICHTIGE TEIL.
+
+   Supabase/PostgREST kann trotz eines hohen "limit"
+   serverseitig auf z.B. 1000 Ergebnisse begrenzen.
+
+   Deshalb:
+
+   Seite 1 -> offset 0
+   Seite 2 -> offset 1000
+   Seite 3 -> offset 2000
+   usw.
+
+   Wir stoppen erst dann, wenn weniger als 1000
+   Ergebnisse zurückkommen.
+
+   Dadurch werden auch Datensätze hinter dem ersten
+   1000er-Block gefunden.
+========================================================= */
+
+async function fetchPaginatedPartResults(
+  filter,
+  options = {}
+) {
+
+  const PAGE_SIZE =
+    1000;
+
+  const MAX_PAGES =
+    Number.isFinite(
+      options.maxPages
+    )
+      ? options.maxPages
+      : 100;
+
+  const select =
+    options.select ||
+    "part_num,name,category_id,category";
+
+
+  const allResults = [];
+
+  let offset = 0;
+
+
+  for (
+    let page = 0;
+    page < MAX_PAGES;
+    page++
+  ) {
+
+    const separator =
+      filter
+        ? "&"
+        : "";
+
+
+    const url =
+      LEGO_PARTS_URL +
+      "?" +
+      filter +
+      separator +
+      "select=" +
+      encodeURIComponent(
+        select
+      ) +
+      "&limit=" +
+      PAGE_SIZE +
+      "&offset=" +
+      offset;
+
+
+    console.log(
+      "LEGO Suche – Seite:",
+      page + 1,
+      "Offset:",
+      offset
+    );
+
+
+    const pageResults =
+      await supabaseRequest(
+        url
+      );
+
+
+    if (
+      !Array.isArray(
+        pageResults
+      )
+    ) {
+
+      break;
+
+    }
+
+
+    addPartResults(
+      allResults,
+      pageResults
+    );
+
+
+    /*
+       Weniger als PAGE_SIZE bedeutet:
+       Es gibt keine weitere vollständige Seite.
+    */
+
+    if (
+      pageResults.length <
+      PAGE_SIZE
+    ) {
+
+      break;
+
+    }
+
+
+    offset +=
+      PAGE_SIZE;
+
+  }
+
+
+  console.log(
+    "LEGO Suche – insgesamt geladen:",
+    allResults.length
+  );
+
+
+  return allResults;
+
+}
+
+
+/* =========================================================
    URL BUILDER
+
+   Wird weiterhin bereitgestellt.
+
+   Die eigentlichen großen Suchabfragen benutzen
+   inzwischen fetchPaginatedPartResults().
 ========================================================= */
 
 function buildPartSearchUrl(
@@ -1408,7 +1576,7 @@ function buildPartSearchUrl(
     "?" +
     filter +
     "&select=part_num,name,category_id,category" +
-    "&limit=5000"
+    "&limit=1000"
   );
 
 }
@@ -1453,6 +1621,8 @@ function addPartResults(
 
 /* =========================================================
    KATEGORIE-ERGEBNISSE LADEN
+
+   Jetzt PAGINIERT.
 ========================================================= */
 
 async function fetchCategoryResults(
@@ -1467,17 +1637,10 @@ async function fetchCategoryResults(
      1. Kategorie-ID
   ------------------------------------------------------- */
 
-  const categoryUrl =
-    LEGO_PARTS_URL +
-    "?category_id=eq." +
-    categoryId +
-    "&select=part_num,name,category_id,category" +
-    "&limit=5000";
-
-
   const categoryResults =
-    await supabaseRequest(
-      categoryUrl
+    await fetchPaginatedPartResults(
+      "category_id=eq." +
+      categoryId
     );
 
 
@@ -1491,21 +1654,14 @@ async function fetchCategoryResults(
      2. Zusätzlich über Namen
   ------------------------------------------------------- */
 
-  const nameUrl =
-    LEGO_PARTS_URL +
-    "?name=ilike." +
-    encodeURIComponent(
-      "%" +
-      categoryWord +
-      "%"
-    ) +
-    "&select=part_num,name,category_id,category" +
-    "&limit=5000";
-
-
   const nameResults =
-    await supabaseRequest(
-      nameUrl
+    await fetchPaginatedPartResults(
+      "name=ilike." +
+      encodeURIComponent(
+        "%" +
+        categoryWord +
+        "%"
+      )
     );
 
 
@@ -1735,6 +1891,12 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        5. TEILENUMMER TEILWEISE
+
+       Diese Suche bleibt absichtlich auf 200.
+
+       Das betrifft NUR Teilnummern-Suchen und hat
+       nichts mit der Kategorie-Suche Brick/Plate/Tile
+       zu tun.
     ===================================================== */
 
     const looksLikePartNumber =
@@ -1748,21 +1910,14 @@ async function fetchLegoPartSuggestions(
       !search.includes(" ")
     ) {
 
-      const numberUrl =
-        LEGO_PARTS_URL +
-        "?part_num=ilike." +
-        encodeURIComponent(
-          "%" +
-          search +
-          "%"
-        ) +
-        "&select=part_num,name,category_id,category" +
-        "&limit=200";
-
-
       const numberResults =
-        await supabaseRequest(
-          numberUrl
+        await fetchPaginatedPartResults(
+          "part_num=ilike." +
+          encodeURIComponent(
+            "%" +
+            search +
+            "%"
+          )
         );
 
 
@@ -1776,6 +1931,8 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        6. NAMENSSUCHE
+
+       PAGINIERT
     ===================================================== */
 
     const nameSearch =
@@ -1786,21 +1943,14 @@ async function fetchLegoPartSuggestions(
       nameSearch
     ) {
 
-      const nameUrl =
-        LEGO_PARTS_URL +
-        "?name=ilike." +
-        encodeURIComponent(
-          "%" +
-          nameSearch +
-          "%"
-        ) +
-        "&select=part_num,name,category_id,category" +
-        "&limit=5000";
-
-
       const nameResults =
-        await supabaseRequest(
-          nameUrl
+        await fetchPaginatedPartResults(
+          "name=ilike." +
+          encodeURIComponent(
+            "%" +
+            nameSearch +
+            "%"
+          )
         );
 
 
@@ -1814,6 +1964,8 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        7. ZUSÄTZLICHE NAMENSSUCHE FÜR DIMENSIONEN
+
+       Ebenfalls PAGINIERT.
     ===================================================== */
 
     if (
@@ -1841,23 +1993,16 @@ async function fetchLegoPartSuggestions(
           numbers[1];
 
 
-        const dimensionUrlA =
-          LEGO_PARTS_URL +
-          "?name=ilike." +
-          encodeURIComponent(
-            "%" +
-            a +
-            " x " +
-            b +
-            "%"
-          ) +
-          "&select=part_num,name,category_id,category" +
-          "&limit=5000";
-
-
         const dimensionResultsA =
-          await supabaseRequest(
-            dimensionUrlA
+          await fetchPaginatedPartResults(
+            "name=ilike." +
+            encodeURIComponent(
+              "%" +
+              a +
+              " x " +
+              b +
+              "%"
+            )
           );
 
 
@@ -1867,23 +2012,16 @@ async function fetchLegoPartSuggestions(
         );
 
 
-        const dimensionUrlACompact =
-          LEGO_PARTS_URL +
-          "?name=ilike." +
-          encodeURIComponent(
-            "%" +
-            a +
-            "x" +
-            b +
-            "%"
-          ) +
-          "&select=part_num,name,category_id,category" +
-          "&limit=5000";
-
-
         const dimensionResultsACompact =
-          await supabaseRequest(
-            dimensionUrlACompact
+          await fetchPaginatedPartResults(
+            "name=ilike." +
+            encodeURIComponent(
+              "%" +
+              a +
+              "x" +
+              b +
+              "%"
+            )
           );
 
 
@@ -1897,23 +2035,16 @@ async function fetchLegoPartSuggestions(
           a !== b
         ) {
 
-          const dimensionUrlB =
-            LEGO_PARTS_URL +
-            "?name=ilike." +
-            encodeURIComponent(
-              "%" +
-              b +
-              " x " +
-              a +
-              "%"
-            ) +
-            "&select=part_num,name,category_id,category" +
-            "&limit=5000";
-
-
           const dimensionResultsB =
-            await supabaseRequest(
-              dimensionUrlB
+            await fetchPaginatedPartResults(
+              "name=ilike." +
+              encodeURIComponent(
+                "%" +
+                b +
+                " x " +
+                a +
+                "%"
+              )
             );
 
 
@@ -1923,23 +2054,16 @@ async function fetchLegoPartSuggestions(
           );
 
 
-          const dimensionUrlBCompact =
-            LEGO_PARTS_URL +
-            "?name=ilike." +
-            encodeURIComponent(
-              "%" +
-              b +
-              "x" +
-              a +
-              "%"
-            ) +
-            "&select=part_num,name,category_id,category" +
-            "&limit=5000";
-
-
           const dimensionResultsBCompact =
-            await supabaseRequest(
-              dimensionUrlBCompact
+            await fetchPaginatedPartResults(
+              "name=ilike." +
+              encodeURIComponent(
+                "%" +
+                b +
+                "x" +
+                a +
+                "%"
+              )
             );
 
 
@@ -2072,6 +2196,8 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        TILE FILTER
+
+       NUR GROOVE-TILES
     ===================================================== */
 
     if (
@@ -2297,6 +2423,15 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        13. MAXIMAL 20 ERGEBNISSE
+
+       WICHTIG:
+
+       ERST nachdem ALLE Daten geladen und sortiert
+       wurden, wird auf 20 Ergebnisse gekürzt.
+
+       Dadurch kann z.B. Brick 1 x 4 nicht mehr
+       einfach durch die ersten 1000 Datenbanktreffer
+       abgeschnitten werden.
     ===================================================== */
 
     const displayResults =
