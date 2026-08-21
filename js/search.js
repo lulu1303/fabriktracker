@@ -812,9 +812,6 @@ function getLegoSearchPriority(
 
   /* =====================================================
      GROOVE TILE
-
-     Bei "Tile" sollen die normalen Groove-Größen
-     besonders weit nach vorne.
   ===================================================== */
 
   if (
@@ -887,7 +884,7 @@ function getLegoSearchPriority(
 
   /* =====================================================
      NAMENSTREFFER
-===================================================== */
+  ===================================================== */
 
   if (
     partNameMatchesSearch(
@@ -903,7 +900,7 @@ function getLegoSearchPriority(
 
   /* =====================================================
      TEILWEISE DIMENSION
-===================================================== */
+  ===================================================== */
 
   if (
     partMatchesPartialDimension(
@@ -919,7 +916,7 @@ function getLegoSearchPriority(
 
   /* =====================================================
      TEILENUMMER
-===================================================== */
+  ===================================================== */
 
   if (
     number === search
@@ -970,26 +967,6 @@ function sortLegoParts(
       b
     ) => {
 
-      /*
-         ==================================================
-         TILE-SUCHE
-
-         Für "Tile":
-
-         1x1
-         1x2
-         1x3
-         1x4
-         1x6
-         2x2
-         2x3
-         2x4
-         ...
-
-         und zwar NUR Groove-Tiles.
-         ==================================================
-      */
-
       if (
         isTileSearch
       ) {
@@ -1004,14 +981,6 @@ function sortLegoParts(
             b.name
           );
 
-
-        /*
-           Groove immer vor Nicht-Groove.
-
-           Der eigentliche Filter sollte Nicht-Groove
-           zwar bereits entfernt haben, aber diese
-           Absicherung bleibt drin.
-        */
 
         if (
           aGroove !== bGroove
@@ -1041,12 +1010,6 @@ function sortLegoParts(
 
       }
 
-
-      /*
-         ==================================================
-         NORMALE PRIORITÄT
-         ==================================================
-      */
 
       const priorityA =
         getLegoSearchPriority(
@@ -1749,21 +1712,6 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        4. TILE / TILES
-
-       WICHTIG:
-
-       Bei der Tile-Suche werden später NUR
-       Tiles mit "Groove" zugelassen.
-
-       Also z.B.:
-
-       Tile 1 x 2 with Groove
-       Tile 1 x 3 with Groove
-       Tile 1 x 4 with Groove
-       Tile 2 x 2 with Groove
-       ...
-
-       Normale Tiles ohne Groove werden entfernt.
     ===================================================== */
 
     if (
@@ -2124,21 +2072,6 @@ async function fetchLegoPartSuggestions(
 
     /* =====================================================
        TILE FILTER
-
-       GANZ WICHTIG:
-
-       Tile-Suche = NUR "with Groove"
-
-       Damit verschwinden:
-
-       Tile 1 x 1
-       Tile 1 x 2
-       Tile 2 x 2
-       ...
-
-       ohne Groove.
-
-       Übrig bleiben nur Groove-Tiles.
     ===================================================== */
 
     if (
@@ -2233,8 +2166,6 @@ async function fetchLegoPartSuggestions(
 
           /* ---------------------------------------------
              TILE
-
-             NUR GROOVE
           --------------------------------------------- */
 
           if (
