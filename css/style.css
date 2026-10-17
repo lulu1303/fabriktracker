@@ -1509,10 +1509,10 @@ body.cart-open {
 .cart-qty-input {
   -webkit-appearance: none;
   appearance: none;
-  width: 54px;
+  width: 72px;
   height: 40px;
   box-sizing: border-box;
-  padding: 0 4px;
+  padding: 0 2px;
   border: 2px solid #ddd;
   border-radius: 10px;
   background: #fff;
