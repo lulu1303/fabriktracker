@@ -96,7 +96,7 @@
        nur die ganze Liste wird nach Größe sortiert. */
     if (options.onlyFavorites && typeof isFavorite === "function") {
       result = result.filter(function (part) {
-        return isFavorite(part.part_number);
+        return isFavorite(part.part_number, part.color_id);
       });
     }
 

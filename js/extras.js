@@ -58,6 +58,8 @@
 
   /* -------------------------------------------------------
      FAVORITEN (nur auf diesem Gerät)
+     Ein Favorit ist ein Teil in einer bestimmten Farbe.
+     Schlüssel: "Teilenummer|Farb-ID", z.B. "3010|5"
   ------------------------------------------------------- */
 
   var FAV_KEY = "fabriktracker_favorites";
@@ -76,30 +78,61 @@
     } catch (error) { /* egal */ }
   }
 
-  window.isFavorite = function (partNumber) {
-    return favorites[String(partNumber)] === true;
+  function favKey(partNumber, colorId) {
+    return String(partNumber) + "|" + (Number(colorId) || 0);
+  }
+
+  /* Alte Favoriten (nur Teilenummer, ohne Farbe) gelten für alle
+     Farben dieses Teils, bis sie einzeln geändert werden. */
+  window.isFavorite = function (partNumber, colorId) {
+    return favorites[favKey(partNumber, colorId)] === true ||
+      favorites[String(partNumber)] === true;
   };
 
   window.getFavoriteCount = function () {
     return Object.keys(favorites).length;
   };
 
-  function toggleFavorite(partNumber) {
+  /* Alten Favoriten (ohne Farbe) in einzelne Farben aufteilen */
+  function expandLegacy(partNumber) {
 
-    var key = String(partNumber);
+    var num = String(partNumber);
 
-    if (favorites[key]) {
-      delete favorites[key];
+    if (favorites[num] !== true) return;
+
+    delete favorites[num];
+
+    if (typeof parts !== "undefined" && Array.isArray(parts)) {
+      parts.forEach(function (p) {
+        if (String(p.part_number) === num) {
+          favorites[favKey(num, p.color_id)] = true;
+        }
+      });
+    }
+  }
+
+  function toggleFavorite(key) {
+
+    var pair = String(key).split("|");
+    var num = pair[0];
+    var colorId = pair[1];
+
+    expandLegacy(num);
+
+    var id = favKey(num, colorId);
+
+    if (favorites[id]) {
+      delete favorites[id];
     } else {
-      favorites[key] = true;
+      favorites[id] = true;
     }
 
     saveFavorites();
 
-    var now = favorites[key] === true;
+    var now = favorites[id] === true;
 
     document
-      .querySelectorAll('.fav-star[data-fav="' + key.replace(/"/g, "") + '"]')
+      .querySelectorAll('.fav-star[data-fav="' + id.replace(/"/g, "") + '"]')
       .forEach(function (star) {
         star.textContent = now ? "★" : "☆";
         star.classList.toggle("active", now);
@@ -108,6 +141,14 @@
           now ? "Favorit entfernen" : "Als Favorit merken"
         );
       });
+
+    /* Andere Farben desselben Teils nach dem Aufteilen auffrischen */
+    document.querySelectorAll(".fav-star[data-fav]").forEach(function (star) {
+      var p = star.dataset.fav.split("|");
+      var on = window.isFavorite(p[0], p[1]);
+      star.textContent = on ? "★" : "☆";
+      star.classList.toggle("active", on);
+    });
 
     if (typeof window.onFavoritesChanged === "function") {
       window.onFavoritesChanged();

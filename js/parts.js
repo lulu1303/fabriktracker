@@ -897,30 +897,6 @@ function renderPartNumberGroup(
 
             <div class="part-number-title">
               LEGO ${safeNumber}
-              <span
-                class="fav-star${
-                  typeof isFavorite === "function" && isFavorite(partNumber)
-                    ? " active"
-                    : ""
-                }"
-                data-fav="${safeNumber}"
-                role="button"
-                aria-label="Als Favorit merken"
-              >${
-                typeof isFavorite === "function" && isFavorite(partNumber)
-                  ? "★"
-                  : "☆"
-              }</span>
-              <span
-                class="watch-bell${
-                  typeof isWatched === "function" && isWatched(partNumber)
-                    ? " active"
-                    : ""
-                }"
-                data-watch="${safeNumber}"
-                role="button"
-                aria-label="Benachrichtigen, sobald gemeldet"
-              >🔔</span>
             </div>
 
             ${
@@ -957,6 +933,37 @@ function renderPartNumberGroup(
       </div>
 
     </div>
+  `;
+}
+
+
+/* Stern (Favorit) und Glocke (Benachrichtigung) gelten
+   für genau ein Teil in genau einer Farbe */
+function actionIconsHTML(part) {
+
+  const num = String(part.part_number || "");
+  const col = Number(part.color_id) || 0;
+  const key = escapeHTML(num + "|" + col);
+
+  const fav =
+    typeof isFavorite === "function" && isFavorite(num, col);
+
+  const watched =
+    typeof isWatched === "function" && isWatched(num, col);
+
+  return `
+    <span
+      class="fav-star${fav ? " active" : ""}"
+      data-fav="${key}"
+      role="button"
+      aria-label="${fav ? "Favorit entfernen" : "Als Favorit merken"}"
+    >${fav ? "★" : "☆"}</span>
+    <span
+      class="watch-bell${watched ? " active" : ""}"
+      data-watch="${key}"
+      role="button"
+      aria-label="${watched ? "Benachrichtigung ausschalten" : "Benachrichtigen, wenn wieder gemeldet"}"
+    >🔔</span>
   `;
 }
 
@@ -1140,6 +1147,7 @@ if (
 
           <div class="part-number">
             LEGO ${number}
+            ${actionIconsHTML(part)}
           </div>
 
           <div class="part-name">

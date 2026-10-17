@@ -19,13 +19,24 @@
   var KEY = "fabriktracker_watches";
   var MAX_WATCHES = 100;
 
-  /* { "3010": "Brick 1 x 4", ... } */
+  /* { "3010|5": { name: "Brick 1 x 4", color: "Red" }, ... }
+     Farb-ID 0 bedeutet "jede Farbe". */
   var watches = {};
 
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || "{}");
     if (saved && typeof saved === "object" && !Array.isArray(saved)) {
-      watches = saved;
+      Object.keys(saved).forEach(function (k) {
+
+        /* Alte Einträge ohne Farbe gelten für jede Farbe */
+        var key = k.indexOf("|") === -1 ? k + "|0" : k;
+        var v = saved[k];
+
+        watches[key] =
+          v && typeof v === "object"
+            ? { name: v.name || "", color: v.color || "" }
+            : { name: String(v || ""), color: "" };
+      });
     }
   } catch (error) { /* Storage nicht verfügbar – egal */ }
 
@@ -33,6 +44,10 @@
     try {
       localStorage.setItem(KEY, JSON.stringify(watches));
     } catch (error) { /* egal */ }
+  }
+
+  function watchKey(partNumber, colorId) {
+    return String(partNumber) + "|" + (Number(colorId) || 0);
   }
 
   function toast(message) {
@@ -121,35 +136,44 @@
      BEOBACHTEN / NICHT MEHR BEOBACHTEN
   ------------------------------------------------------- */
 
-  window.isWatched = function (partNumber) {
-    return Object.prototype.hasOwnProperty.call(watches, String(partNumber));
+  window.isWatched = function (partNumber, colorId) {
+    return Object.prototype.hasOwnProperty.call(
+      watches,
+      watchKey(partNumber, colorId)
+    );
   };
 
   function refreshBells() {
 
     document.querySelectorAll(".watch-bell[data-watch]").forEach(function (bell) {
 
-      var on = window.isWatched(bell.dataset.watch);
+      var on = Object.prototype.hasOwnProperty.call(watches, bell.dataset.watch);
 
       bell.classList.toggle("active", on);
       bell.setAttribute(
         "aria-label",
-        on ? "Benachrichtigung ausschalten" : "Benachrichtigen, sobald gemeldet"
+        on
+          ? "Benachrichtigung ausschalten"
+          : "Benachrichtigen, wenn wieder gemeldet"
       );
     });
   }
 
   window.refreshWatchBells = refreshBells;
 
-  async function setWatch(partNumber, name, on) {
+  function describe(partNumber, colorName) {
+    return "LEGO " + partNumber + (colorName ? " in " + colorName : "");
+  }
 
-    var num = String(partNumber);
+  async function setWatch(partNumber, colorId, name, colorName, on) {
+
+    var key = watchKey(partNumber, colorId);
     var before = JSON.stringify(watches);
 
     if (on) {
 
-      if (Object.keys(watches).length >= MAX_WATCHES && !watches[num]) {
-        toast("Du kannst höchstens " + MAX_WATCHES + " Teile beobachten.");
+      if (Object.keys(watches).length >= MAX_WATCHES && !watches[key]) {
+        toast("Du kannst höchstens " + MAX_WATCHES + " Beobachtungen anlegen.");
         return false;
       }
 
@@ -175,11 +199,11 @@
         return false;
       }
 
-      watches[num] = name || "";
+      watches[key] = { name: name || "", color: colorName || "" };
 
     } else {
 
-      delete watches[num];
+      delete watches[key];
     }
 
     try {
@@ -216,20 +240,21 @@
     }
   }
 
-  async function toggleWatch(partNumber, name) {
+  async function toggleWatch(partNumber, colorId, name, colorName) {
 
-    var num = String(partNumber);
+    var key = watchKey(partNumber, colorId);
 
-    if (window.isWatched(num)) {
+    if (watches[key]) {
 
-      if (await setWatch(num, name, false)) {
-        toast("🔕 Benachrichtigung für LEGO " + num + " ausgeschaltet.");
+      if (await setWatch(partNumber, colorId, name, colorName, false)) {
+        toast("🔕 Benachrichtigung für " + describe(partNumber, colorName) + " aus.");
       }
 
-    } else if (await setWatch(num, name, true)) {
+    } else if (await setWatch(partNumber, colorId, name, colorName, true)) {
 
       toast(
-        "🔔 Ich sage Bescheid, sobald LEGO " + num + " gemeldet wird."
+        "🔔 Ich sage Bescheid, sobald " +
+        describe(partNumber, colorName) + " gemeldet wird."
       );
     }
   }
@@ -244,20 +269,30 @@
     var list = document.getElementById("watchList");
     if (!list) return;
 
-    var nums = Object.keys(watches);
+    var keys = Object.keys(watches).sort(function (x, y) {
+      var px = x.split("|"), py = y.split("|");
+      return px[0] === py[0]
+        ? Number(px[1]) - Number(py[1])
+        : px[0] < py[0] ? -1 : 1;
+    });
 
     list.textContent = "";
 
-    if (!nums.length) {
+    if (!keys.length) {
 
       var empty = document.createElement("div");
       empty.className = "watch-empty";
-      empty.textContent = "Noch keine Teile beobachtet.";
+      empty.textContent = "Noch nichts beobachtet.";
       list.appendChild(empty);
       return;
     }
 
-    nums.forEach(function (num) {
+    keys.forEach(function (key) {
+
+      var pair = key.split("|");
+      var num = pair[0];
+      var colorId = Number(pair[1]) || 0;
+      var info = watches[key] || {};
 
       var row = document.createElement("div");
       row.className = "watch-row";
@@ -267,13 +302,15 @@
 
       var title = document.createElement("div");
       title.className = "watch-num";
-      title.textContent = "🔔 LEGO " + num;
+      title.textContent =
+        "🔔 LEGO " + num + " · " +
+        (colorId ? info.color || "Farbe " + colorId : "Alle Farben");
       text.appendChild(title);
 
-      if (watches[num]) {
+      if (info.name) {
         var sub = document.createElement("div");
         sub.className = "watch-name";
-        sub.textContent = watches[num];
+        sub.textContent = info.name;
         text.appendChild(sub);
       }
 
@@ -282,7 +319,7 @@
       remove.className = "secondary watch-remove";
       remove.textContent = "Entfernen";
       remove.addEventListener("click", function () {
-        setWatch(num, "", false);
+        setWatch(num, colorId, info.name, info.color, false);
       });
 
       row.appendChild(text);
@@ -331,18 +368,8 @@
       text.appendChild(name);
       item.appendChild(text);
 
-      var choose = async function () {
-
-        var input = document.getElementById("watchSearchInput");
-
-        if (await setWatch(row.part_num, row.name, true)) {
-          box.textContent = "";
-          if (input) input.value = "";
-          toast(
-            "🔔 Ich sage Bescheid, sobald LEGO " + row.part_num +
-            " gemeldet wird."
-          );
-        }
+      var choose = function () {
+        showColorStep(row);
       };
 
       item.addEventListener("click", choose);
@@ -357,6 +384,128 @@
     });
   }
 
+  /* Schritt 2: Farbe wählen (oder "Alle Farben") */
+  async function showColorStep(row) {
+
+    var step = document.getElementById("watchColorStep");
+    var box = document.getElementById("watchSuggestions");
+
+    if (!step) return;
+
+    if (box) box.textContent = "";
+
+    step.hidden = false;
+    step.textContent = "";
+
+    var heading = document.createElement("div");
+    heading.className = "watch-step-title";
+    heading.textContent =
+      "LEGO " + row.part_num + (row.name ? " · " + row.name : "");
+    step.appendChild(heading);
+
+    var select = document.createElement("select");
+    select.id = "watchColorSelect";
+    select.disabled = true;
+
+    var loading = document.createElement("option");
+    loading.textContent = "Farben werden geladen...";
+    select.appendChild(loading);
+    step.appendChild(select);
+
+    var actions = document.createElement("div");
+    actions.className = "watch-step-actions";
+
+    var confirm = document.createElement("button");
+    confirm.type = "button";
+    confirm.className = "primary";
+    confirm.textContent = "🔔 Beobachten";
+    confirm.disabled = true;
+
+    var cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "secondary";
+    cancel.textContent = "Abbrechen";
+    cancel.addEventListener("click", function () {
+      step.hidden = true;
+      step.textContent = "";
+    });
+
+    actions.appendChild(confirm);
+    actions.appendChild(cancel);
+    step.appendChild(actions);
+
+    var colors = [];
+
+    try {
+
+      var pc = await supabaseRequest(
+        SUPABASE_URL + "/rest/v1/lego_part_colors" +
+        "?select=color_id&part_num=eq." + encodeURIComponent(row.part_num) +
+        "&limit=1000"
+      ) || [];
+
+      var ids = Array.from(new Set(
+        pc.map(function (x) { return x.color_id; })
+          .filter(function (x) { return x != null; })
+      ));
+
+      if (ids.length) {
+        colors = await supabaseRequest(
+          SUPABASE_URL + "/rest/v1/lego_colors" +
+          "?id=in.(" + ids.join(",") + ")&select=id,name&order=name.asc"
+        ) || [];
+      }
+
+    } catch (error) {
+      colors = [];
+    }
+
+    select.textContent = "";
+
+    var all = document.createElement("option");
+    all.value = "0";
+    all.textContent = "Alle Farben";
+    select.appendChild(all);
+
+    colors.forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = String(c.id);
+      o.textContent = c.name;
+      select.appendChild(o);
+    });
+
+    select.disabled = false;
+    confirm.disabled = false;
+
+    confirm.addEventListener("click", async function () {
+
+      var colorId = Number(select.value) || 0;
+      var colorName = colorId
+        ? select.options[select.selectedIndex].textContent
+        : "";
+
+      confirm.disabled = true;
+
+      if (await setWatch(row.part_num, colorId, row.name, colorName, true)) {
+
+        step.hidden = true;
+        step.textContent = "";
+
+        var input = document.getElementById("watchSearchInput");
+        if (input) input.value = "";
+
+        toast(
+          "🔔 Ich sage Bescheid, sobald " +
+          describe(row.part_num, colorName) + " gemeldet wird."
+        );
+
+      } else {
+
+        confirm.disabled = false;
+      }
+    });
+  }
+
   function onWatchInput() {
 
     var input = document.getElementById("watchSearchInput");
@@ -365,6 +514,12 @@
     if (!input || !box) return;
 
     clearTimeout(searchTimer);
+
+    var stepBox = document.getElementById("watchColorStep");
+    if (stepBox && !stepBox.hidden) {
+      stepBox.hidden = true;
+      stepBox.textContent = "";
+    }
 
     var query = input.value.trim();
 
@@ -411,6 +566,14 @@
 
     renderWatchList();
 
+    if (form && !document.getElementById("watchColorStep")) {
+      var step = document.createElement("div");
+      step.id = "watchColorStep";
+      step.className = "watch-step";
+      step.hidden = true;
+      form.appendChild(step);
+    }
+
     if (input) input.addEventListener("input", onWatchInput);
 
     if (openButton && form) {
@@ -445,14 +608,17 @@
       event.stopPropagation();
       event.preventDefault();
 
-      var folder = bell.closest(".part-number-folder");
-      var nameEl = folder
-        ? folder.querySelector(".part-number-name")
-        : null;
+      var pair = String(bell.dataset.watch).split("|");
+      var card = bell.closest(".part-card");
+
+      var nameEl = card ? card.querySelector(".part-name") : null;
+      var colorEl = card ? card.querySelector(".part-color") : null;
 
       toggleWatch(
-        bell.dataset.watch,
-        nameEl ? nameEl.textContent.trim() : ""
+        pair[0],
+        pair[1],
+        nameEl ? nameEl.textContent.trim() : "",
+        colorEl ? colorEl.textContent.trim() : ""
       );
     },
     true
