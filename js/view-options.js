@@ -39,6 +39,46 @@
     return isFinite(t) ? t : 0;
   }
 
+  /* Größe aus dem Namen lesen: "Brick 1 x 4" -> [1, 4, 0] */
+  function sizeKey(name) {
+
+    var m = /(\d+)\s*x\s*(\d+)(?:\s*x\s*(\d+))?/i.exec(String(name || ""));
+
+    if (!m) return null;
+
+    var a = Number(m[1]), b = Number(m[2]), c = m[3] ? Number(m[3]) : 0;
+
+    return [Math.min(a, b), Math.max(a, b), c];
+  }
+
+  /* Standard: nach Größe (1x1, 1x2, 1x3 ... 2x2, 2x3 ...) statt
+     nach Meldedatum. Teile ohne Größe kommen danach, nach Name. */
+  function compareBySize(x, y) {
+
+    var kx = sizeKey(x.name), ky = sizeKey(y.name);
+
+    if (kx && !ky) return -1;
+    if (!kx && ky) return 1;
+
+    if (kx && ky) {
+      for (var i = 0; i < 3; i++) {
+        if (kx[i] !== ky[i]) return kx[i] - ky[i];
+      }
+    }
+
+    var nx = String(x.name || ""), ny = String(y.name || "");
+
+    if (nx.length !== ny.length) return nx.length - ny.length;
+
+    if (nx !== ny) return nx < ny ? -1 : 1;
+
+    var px = String(x.part_number || ""), py = String(y.part_number || "");
+
+    if (px !== py) return px < py ? -1 : 1;
+
+    return Number(x.color_id || 0) - Number(y.color_id || 0);
+  }
+
   function apply(list) {
 
     if (!Array.isArray(list)) return list;
@@ -49,6 +89,12 @@
       result = result.filter(function (part) {
         return part.is_available !== false;
       });
+    }
+
+    /* Suchergebnisse behalten die Reihenfolge der Suche (Wichtigkeit);
+       nur die ganze Liste wird nach Größe sortiert. */
+    if (options.sort !== "recent" && typeof parts !== "undefined" && list === parts) {
+      result = result.slice().sort(compareBySize);
     }
 
     if (options.sort === "recent") {
