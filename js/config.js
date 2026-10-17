@@ -24,6 +24,12 @@ const PRICE_PER_GRAM =
   0.11;
 
 /*
+ * Standard-Rabatte (Fallback).
+ * Die echten Rabatte werden aus Supabase geladen und im
+ * Admin-Bereich über den Button "Rabatte" bearbeitet
+ * (js/discounts.js). Diese Liste gilt nur, wenn Supabase
+ * nicht erreichbar ist.
+ *
  * Rabatte, die bei jedem Teil angezeigt werden.
  * Jeder Rabatt wird vom normalen Preis berechnet
  * (die Rabatte werden NICHT miteinander verrechnet).
@@ -32,9 +38,8 @@ const PRICE_PER_GRAM =
  * emoji = Symbol vor dem Prozentwert
  * title = Erklärung (Tooltip am Computer)
  *
- * Halloween-Sale beenden: den Eintrag "Halloween-Sale" löschen.
  */
-const DISCOUNTS = [
+let DISCOUNTS = [
 
   {
     rate: 0.2,

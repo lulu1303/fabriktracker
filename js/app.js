@@ -28,6 +28,21 @@ async function initializeApp() {
      * Die eigentliche Funktion befindet sich in parts.js.
      */
 
+    /*
+     * Rabatte zuerst laden, damit die Preise
+     * von Anfang an korrekt angezeigt werden.
+     * Bei einem Fehler bleiben die Standardwerte aktiv.
+     */
+    if (
+      typeof window.loadDiscounts ===
+      "function"
+    ) {
+
+      await window.loadDiscounts();
+
+    }
+
+
     if (
       typeof window.loadParts ===
       "function"

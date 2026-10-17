@@ -182,15 +182,33 @@ function adminLogout() {
 
 function updateAdminUI() {
 
+  /*
+   * Der Button in index.html heißt "adminLoginButton".
+   * Der alte Name "adminHeaderButton" bleibt als Fallback.
+   */
   const button =
     document.getElementById(
       "adminHeaderButton"
+    ) ||
+    document.getElementById(
+      "adminLoginButton"
     );
 
 
   if (!button) {
 
     return;
+
+  }
+
+
+  /* Button "Rabatte" nur für angemeldete Admins */
+  if (
+    typeof updateDiscountAdminButton ===
+    "function"
+  ) {
+
+    updateDiscountAdminButton();
 
   }
 
