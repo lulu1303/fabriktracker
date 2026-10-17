@@ -199,6 +199,21 @@
         return false;
       }
 
+      /* Eine bestimmte Farbe ersetzt "Alle Farben" desselben Teils,
+         und "Alle Farben" ersetzt einzelne Farben (sonst doppelt). */
+      var numPart = String(partNumber);
+
+      Object.keys(watches).forEach(function (k) {
+
+        var pair = k.split("|");
+
+        if (pair[0] !== numPart || k === key) return;
+
+        if (Number(colorId) ? pair[1] === "0" : true) {
+          delete watches[k];
+        }
+      });
+
       watches[key] = { name: name || "", color: colorName || "" };
 
     } else {
@@ -794,6 +809,34 @@
     /* Geöffnet über eine Benachrichtigung (?q=3010) */
     if (location.search.indexOf("q=") !== -1) {
       showPartFromUrl(location.href);
+    }
+
+    /* Aufräumen: "Alle Farben" neben einzelnen Farben desselben Teils
+       stammt aus der alten Version (Teil ohne Farbe) und ist doppelt. */
+    var cleaned = false;
+
+    Object.keys(watches).forEach(function (k) {
+
+      var pair = k.split("|");
+
+      if (pair[1] !== "0") return;
+
+      var hasSpecific = Object.keys(watches).some(function (other) {
+        var o = other.split("|");
+        return o[0] === pair[0] && o[1] !== "0";
+      });
+
+      if (hasSpecific) {
+        delete watches[k];
+        cleaned = true;
+      }
+    });
+
+    if (cleaned) {
+      saveWatches();
+      refreshBells();
+      renderWatchList();
+      renderWatchHits();
     }
 
     /* Abo und Liste still abgleichen (z.B. nach erneuertem Abo) */
