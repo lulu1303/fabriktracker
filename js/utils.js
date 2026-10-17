@@ -331,3 +331,34 @@ function formatRelativeTime(value) {
     : "vor " + diffDays + " Tagen";
 
 }
+
+
+/* =========================================================
+   FEHLERTEXT FÜR NUTZER
+========================================================= */
+
+function friendlyError(error) {
+
+  const code =
+    String((error && error.code) || "");
+
+  const message =
+    String((error && error.message) || "");
+
+  /* Bot-Schutz: zu viele Meldungen in kurzer Zeit */
+  if (
+    code === "P0429" ||
+    /rate_limit/i.test(message)
+  ) {
+
+    return (
+      "Du hast gerade sehr viele Meldungen gesendet. " +
+      "Bitte warte etwa eine Minute und versuche es dann erneut."
+    );
+
+  }
+
+  return message || "Unbekannter Fehler";
+}
+
+window.friendlyError = friendlyError;

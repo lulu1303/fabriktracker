@@ -513,7 +513,7 @@ async function submitReport() {
 
     alert(
       "Das Teil konnte leider nicht gespeichert werden.\n\n" +
-      e.message
+      friendlyError(e)
     );
 
   } finally {
@@ -589,7 +589,7 @@ async function reportUnavailable(id) {
 
     alert(
       "Der Status konnte leider nicht geändert werden.\n\n" +
-      e.message
+      friendlyError(e)
     );
 
   }
@@ -661,7 +661,7 @@ async function confirmPart(
 
     alert(
       "Die Bestätigung konnte leider nicht gespeichert werden.\n\n" +
-      e.message
+      friendlyError(e)
     );
 
   }
