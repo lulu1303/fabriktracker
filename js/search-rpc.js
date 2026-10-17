@@ -123,3 +123,153 @@ async function fetchLegoPartSuggestions(query) {
     }
   }
 }
+
+
+/* =========================================================
+   HAUPTSUCHE (oben auf der Seite)
+
+   Nutzt dieselbe Supabase-Funktion search_lego_parts wie
+   die "Teil melden"-Suche und filtert damit die bereits
+   gemeldeten Teile. Reihenfolge = Wichtigkeit:
+   Standardteile zuerst, Duplo/Primo, Prints und Sticker
+   nur bei ausdrücklicher Eingabe.
+
+   Zusätzlich werden Farbe und Kategorie durchsucht.
+========================================================= */
+
+var mainSearchTimer = null;
+var mainSearchRequestId = 0;
+
+const searchPartsLocalFallback = window.searchParts;
+
+window.searchParts = function () {
+
+  clearTimeout(mainSearchTimer);
+
+  const input =
+    document.getElementById("searchInput");
+
+  if (!input) return;
+
+  const query = input.value.trim();
+
+  if (!query) {
+    mainSearchRequestId++;
+    displayParts(parts);
+    return;
+  }
+
+  mainSearchTimer = setTimeout(
+    () => runMainSearch(query),
+    200
+  );
+};
+
+async function runMainSearch(query) {
+
+  const requestId = ++mainSearchRequestId;
+
+  try {
+
+    const rows = await supabaseRequest(
+      SUPABASE_URL + "/rest/v1/rpc/search_lego_parts",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          q: query,
+          max_results: 1000
+        })
+      }
+    );
+
+    /* Veraltete Antwort einer früheren Eingabe ignorieren */
+    if (requestId !== mainSearchRequestId) return;
+
+    const rank = new Map();
+
+    (rows || []).forEach((row, index) => {
+
+      const key =
+        String(row.part_num || "").toLowerCase();
+
+      if (!rank.has(key)) rank.set(key, index);
+    });
+
+    const q = query.toLowerCase();
+
+    const wantDuplo   = /duplo|primo|quatro/.test(q);
+    const wantPrint   = /print|pattern|decorat|(pr|pb)\d/.test(q);
+    const wantSticker = /sticker/.test(q);
+
+    const matched = [];
+    const extra = [];
+
+    (parts || []).forEach(part => {
+
+      const key =
+        String(part.part_number || "").toLowerCase();
+
+      if (rank.has(key)) {
+        matched.push({ part, rank: rank.get(key) });
+        return;
+      }
+
+      /* Zusätzlich: Farbe oder Kategorie */
+      const name =
+        String(part.name || "");
+
+      const isDuplo =
+        /duplo|primo|quatro/i.test(name) ||
+        Number(part.category_id) === 4;
+
+      const isSticker =
+        /sticker/i.test(name) ||
+        Number(part.category_id) === 58;
+
+      const isPrint =
+        /(pr|pb)\d/i.test(part.part_number || "") ||
+        /print|pattern|decorat/i.test(name);
+
+      if (
+        (isDuplo && !wantDuplo) ||
+        (isSticker && !wantSticker) ||
+        (isPrint && !wantPrint)
+      ) {
+        return;
+      }
+
+      const color =
+        String(part.color_name || "").toLowerCase();
+
+      const categoryName =
+        String(
+          getCategoryName(
+            part.category_id,
+            part.category || ""
+          )
+        ).toLowerCase();
+
+      if (color.includes(q) || categoryName.includes(q)) {
+        extra.push(part);
+      }
+    });
+
+    matched.sort((a, b) => a.rank - b.rank);
+
+    displayParts([
+      ...matched.map(item => item.part),
+      ...extra
+    ]);
+
+  } catch (error) {
+
+    console.warn(
+      "Serversuche fehlgeschlagen, nutze lokale Suche:",
+      error
+    );
+
+    if (requestId !== mainSearchRequestId) return;
+
+    searchPartsLocalFallback();
+  }
+}
