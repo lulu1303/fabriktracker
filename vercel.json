@@ -1,0 +1,4 @@
+{
+  "buildCommand": "sed -i \"s/?v=[A-Za-z0-9]*/?v=$(echo ${VERCEL_GIT_COMMIT_SHA:-dev} | cut -c1-8)/g\" index.html",
+  "outputDirectory": "."
+}

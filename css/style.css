@@ -956,3 +956,23 @@ button:disabled {
   background: #fff;
   font-size: 14px;
 }
+
+
+/* =========================================================
+   HINWEIS "NEUE VERSION"
+========================================================= */
+
+.update-banner {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #171717;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 8px 25px rgba(0,0,0,.3);
+}
