@@ -465,7 +465,8 @@ button:disabled {
 
 .part-price {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 4px 14px;
   margin-top: 10px;
   font-size: 14px;
   font-weight: 700;

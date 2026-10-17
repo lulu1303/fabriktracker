@@ -24,14 +24,28 @@ const PRICE_PER_GRAM =
   0.11;
 
 /*
- * Aktueller Rabatt (0.4 = 40 %).
+ * Rabatte, die bei jedem Teil angezeigt werden.
+ * Jeder Rabatt wird vom normalen Preis berechnet
+ * (die Rabatte werden NICHT miteinander verrechnet).
  *
- * Aktion: Halloween-Sale.
- * Nach der Aktion einfach DISCOUNT auf den normalen Wert
- * (z.B. 0.2) und DISCOUNT_EMOJI auf "" stellen.
+ * rate  = 0.2 bedeutet 20 %
+ * emoji = Symbol vor dem Prozentwert
+ * title = Erklärung (Tooltip am Computer)
+ *
+ * Halloween-Sale beenden: den Eintrag "Halloween-Sale" löschen.
  */
-const DISCOUNT =
-  0.4;
+const DISCOUNTS = [
 
-const DISCOUNT_EMOJI =
-  "🎃";
+  {
+    rate: 0.2,
+    emoji: "🎟️",
+    title: "Jahreskarten-Rabatt"
+  },
+
+  {
+    rate: 0.4,
+    emoji: "🎃",
+    title: "Halloween-Sale"
+  }
+
+];

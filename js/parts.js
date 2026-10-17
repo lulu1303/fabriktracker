@@ -884,7 +884,6 @@ function renderPart(part) {
     weight > 0;
 
   let normalPrice = null;
-  let discountPrice = null;
 
   if (
     hasWeight &&
@@ -893,11 +892,6 @@ function renderPart(part) {
 
     normalPrice =
       weight * PRICE_PER_GRAM;
-
-    if (typeof DISCOUNT !== "undefined") {
-      discountPrice =
-        normalPrice * (1 - DISCOUNT);
-    }
   }
 
   const available =
@@ -958,10 +952,38 @@ if (
   const normalCents =
     normalPrice * 100;
 
-  const discountCents =
-    discountPrice !== null
-      ? discountPrice * 100
-      : null;
+  const discountList =
+    typeof DISCOUNTS !== "undefined" &&
+    Array.isArray(DISCOUNTS)
+      ? DISCOUNTS
+      : [];
+
+  const discountHTML =
+    discountList
+      .map(discount => {
+
+        const percent =
+          Math.round(
+            discount.rate * 100
+          );
+
+        const cents =
+          normalCents *
+          (1 - discount.rate);
+
+        return `
+          <div
+            class="price-discount"
+            title="${escapeHTML(discount.title || "")}"
+          >
+            ${escapeHTML(discount.emoji || "")}
+            -${percent}%:
+            ${cents.toFixed(1)} ct
+          </div>
+        `;
+
+      })
+      .join("");
 
   priceHTML = `
     <div class="part-price">
@@ -971,20 +993,7 @@ if (
         ${normalCents.toFixed(1)} ct
       </div>
 
-      ${
-        discountCents !== null
-          ? `
-            <div class="price-discount">
-              ${
-                typeof DISCOUNT_EMOJI !== "undefined" && DISCOUNT_EMOJI
-                  ? DISCOUNT_EMOJI + " "
-                  : ""
-              }-${Math.round(DISCOUNT * 100)}%:
-              ${discountCents.toFixed(1)} ct
-            </div>
-          `
-          : ""
-      }
+      ${discountHTML}
 
     </div>
   `;
