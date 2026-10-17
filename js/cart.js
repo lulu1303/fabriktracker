@@ -379,6 +379,11 @@
     if (!target) return;
 
     var act = target.dataset.act;
+
+    /* Tipp ins Mengenfeld: nichts neu zeichnen, sonst verliert das
+       Feld sofort den Fokus und die Tastatur verschwindet. */
+    if (act === "qty") return;
+
     var row = target.closest(".cart-row");
     var key = row ? row.dataset.key : "";
 
