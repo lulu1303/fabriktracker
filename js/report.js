@@ -569,47 +569,182 @@ async function submitReport() {
 
   try {
 
-    await req(
-      PARTS_URL,
-      {
-        method: "POST",
+    const partNumber =
+      selectedPart.part_num;
 
-        headers: {
-          Prefer:
-            "return=representation"
-        },
+    const colorId =
+      Number(
+        sel.value
+      );
 
-        body:
-          JSON.stringify(
-            {
-              part_number:
-                selectedPart.part_num,
+    const now =
+      new Date()
+        .toISOString();
 
-              name:
-                selectedPart.name,
+    /*
+     * Gibt es dieses Teil in dieser Farbe schon?
+     * (Die Datenbank erlaubt pro Teilenummer + Farbe
+     * nur einen Eintrag.)
+     */
+    const findExisting =
+      async () => {
 
-              category:
-                selectedPart.category ||
-                "",
+        const rows =
+          await req(
+            PARTS_URL +
+            "?part_number=eq." +
+            encodeURIComponent(
+              partNumber
+            ) +
+            "&color_id=eq." +
+            colorId +
+            "&select=id,is_available" +
+            "&limit=1"
+          );
 
-              color_id:
-                Number(
-                  sel.value
-                ),
+        return (
+          Array.isArray(rows) &&
+          rows.length
+        )
+          ? rows[0]
+          : null;
 
-              is_available:
-                true,
+      };
 
-              last_seen_at:
-                new Date()
-                  .toISOString()
-            }
-          )
+    /*
+     * Vorhandenen Eintrag bestätigen:
+     * wieder verfügbar + gerade gesehen.
+     */
+    const confirmExisting =
+      async existing => {
+
+        await req(
+          PARTS_URL +
+          "?id=eq." +
+          encodeURIComponent(
+            existing.id
+          ),
+          {
+            method: "PATCH",
+
+            headers: {
+              Prefer:
+                "return=minimal"
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  is_available:
+                    true,
+
+                  last_seen_at:
+                    now
+                }
+              )
+          }
+        );
+
+        return (
+          existing.is_available === false
+            ? "Dieses Teil war schon gemeldet, aber als nicht mehr da markiert. Ich habe es wieder als verfügbar eingetragen. 🧱"
+            : "Dieses Teil war schon gemeldet. Ich habe es als gerade gesehen bestätigt. 🧱"
+        );
+
+      };
+
+    let message;
+
+    const existing =
+      await findExisting();
+
+    if (existing) {
+
+      message =
+        await confirmExisting(
+          existing
+        );
+
+    } else {
+
+      try {
+
+        await req(
+          PARTS_URL,
+          {
+            method: "POST",
+
+            headers: {
+              Prefer:
+                "return=representation"
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  part_number:
+                    partNumber,
+
+                  name:
+                    selectedPart.name,
+
+                  category:
+                    selectedPart.category ||
+                    "",
+
+                  color_id:
+                    colorId,
+
+                  is_available:
+                    true,
+
+                  last_seen_at:
+                    now
+                }
+              )
+          }
+        );
+
+        message =
+          "Danke! Das Teil wurde erfolgreich gemeldet. 🧱";
+
+      } catch (insertError) {
+
+        /*
+         * 23505 = Eintrag existiert bereits.
+         * Zwischenzeitlich hat jemand anderes
+         * dasselbe Teil gemeldet.
+         */
+        if (
+          String(
+            insertError.code
+          ) !== "23505"
+        ) {
+
+          throw insertError;
+
+        }
+
+        const again =
+          await findExisting();
+
+        if (!again) {
+
+          throw insertError;
+
+        }
+
+        message =
+          await confirmExisting(
+            again
+          );
+
       }
-    );
+
+    }
 
     alert(
-      "Danke! Das Teil wurde erfolgreich gemeldet. 🧱"
+      message
     );
 
     document.getElementById(
