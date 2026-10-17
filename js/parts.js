@@ -35,47 +35,97 @@ async function loadImagesForParts() {
   if (!combinations.length) return;
 
   const imageMap = {};
-  const batchSize = 100;
+  const genericMap = {};
+
+  const quote = value =>
+    `"${String(value).replace(/"/g, "")}"`;
 
   try {
 
-    const numbers = [
-      ...new Set(
-        combinations.map(x => x.part_num)
-      )
-    ];
+    /*
+     * 1) Bild der genauen Farbe.
+     *
+     * Es werden nur die gemeldeten Teil/Farbe-Paare abgefragt.
+     * (Alle Farben aller Teile zu laden würde das Zeilenlimit
+     * von Supabase sprengen, dann fehlen Bilder.)
+     */
+    const pairBatch = 40;
+    const tasks = [];
 
-    for (let i = 0; i < numbers.length; i += batchSize) {
+    for (let i = 0; i < combinations.length; i += pairBatch) {
 
-      const batch = numbers.slice(i, i + batchSize);
-
-      const encoded = batch
-        .map(n => `"${String(n).replace(/"/g, '\\"')}"`)
+      const filter = combinations
+        .slice(i, i + pairBatch)
+        .map(c =>
+          `and(part_num.eq.${quote(c.part_num)},` +
+          `color_id.eq.${c.color_id})`
+        )
         .join(",");
 
-      const url =
-        `${SUPABASE_URL}/rest/v1/lego_part_colors` +
-        `?part_num=in.(${encoded})` +
-        `&select=part_num,color_id,image_url`;
+      tasks.push(
+        req(
+          `${SUPABASE_URL}/rest/v1/lego_part_colors` +
+          `?select=part_num,color_id,image_url` +
+          `&or=(${encodeURIComponent(filter)})`
+        ).then(rows => {
 
-      const rows = await req(url);
+          (rows || []).forEach(row => {
+            imageMap[`${row.part_num}_${row.color_id}`] =
+              row.image_url || null;
+          });
 
-      (rows || []).forEach(row => {
-
-        imageMap[
-          `${row.part_num}_${row.color_id}`
-        ] = row.image_url || null;
-
-      });
+        })
+      );
     }
+
+    /* 2) Allgemeines Teilebild als Reserve */
+    const numbers = [
+      ...new Set(combinations.map(x => x.part_num))
+    ];
+
+    for (let i = 0; i < numbers.length; i += 100) {
+
+      const list = numbers
+        .slice(i, i + 100)
+        .map(quote)
+        .join(",");
+
+      tasks.push(
+        req(
+          `${SUPABASE_URL}/rest/v1/lego_parts` +
+          `?select=part_num,image_url` +
+          `&part_num=in.(${encodeURIComponent(list)})`
+        ).then(rows => {
+
+          (rows || []).forEach(row => {
+            genericMap[row.part_num] = row.image_url || null;
+          });
+
+        })
+      );
+    }
+
+    await Promise.all(tasks);
 
     parts.forEach(part => {
 
       const key =
         `${part.part_number || ""}_${part.color_id ?? ""}`;
 
-      part.image_url =
+      const own =
         imageMap[key] || null;
+
+      const generic =
+        genericMap[part.part_number] || null;
+
+      part.image_url =
+        own || generic || null;
+
+      /* Wird benutzt, falls das Farbbild nicht lädt */
+      part.image_fallback =
+        generic && generic !== part.image_url
+          ? generic
+          : null;
 
     });
 
@@ -86,9 +136,43 @@ async function loadImagesForParts() {
       error
     );
 
-    parts.forEach(p => p.image_url = null);
+    parts.forEach(p => {
+      p.image_url = null;
+      p.image_fallback = null;
+    });
   }
 }
+
+
+/*
+ * Wenn ein Bild nicht lädt: erst Reserve-Bild versuchen,
+ * danach den Stein als Platzhalter anzeigen.
+ */
+function imageFallback(img) {
+
+  const fallback = img.dataset.fallback;
+
+  if (fallback) {
+
+    img.dataset.fallback = "";
+    img.src = fallback;
+
+    return;
+  }
+
+  const placeholder = document.createElement("div");
+
+  placeholder.className =
+    img.classList.contains("part-number-image")
+      ? "part-number-image-placeholder"
+      : "part-image-placeholder";
+
+  placeholder.textContent = "🧱";
+
+  img.replaceWith(placeholder);
+}
+
+window.imageFallback = imageFallback;
 
 
 /* =========================================================
@@ -794,6 +878,8 @@ function renderPartNumberGroup(
                   <img
                     class="part-number-image"
                     src="${escapeHTML(imageUrl)}"
+                    data-fallback="${escapeHTML(imagePart.image_fallback || "")}"
+                    onerror="imageFallback(this)"
                     alt="LEGO ${safeNumber}"
                     loading="lazy"
                   >
@@ -1011,6 +1097,8 @@ if (
                 <img
                   class="part-image"
                   src="${escapeHTML(imageUrl)}"
+                  data-fallback="${escapeHTML(part.image_fallback || "")}"
+                  onerror="imageFallback(this)"
                   alt="LEGO ${number}"
                   loading="lazy"
                 >
