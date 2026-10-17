@@ -1190,6 +1190,16 @@ if (
         available
           ? `
             <button
+              class="confirm-button"
+              onclick="confirmPart(
+                '${escapeHTML(String(part.part_number || ""))}',
+                '${escapeHTML(String(part.id))}'
+              )"
+            >
+              ✅ Gerade gesehen
+            </button>
+
+            <button
               class="report-button"
               onclick="reportUnavailable(
                 '${escapeHTML(String(part.id))}'

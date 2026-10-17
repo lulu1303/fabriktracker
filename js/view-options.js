@@ -61,6 +61,37 @@
     return result;
   }
 
+  /* Offene Kategorien/Teile merken, damit sie nach einer Aktion
+     (z.B. "Gerade gesehen") offen bleiben */
+  var pendingOpenState = null;
+
+  function captureOpenState() {
+    return {
+      cats: Array.prototype.map.call(
+        document.querySelectorAll(".category-folder.open"),
+        function (el) { return el.dataset.categoryId; }
+      ),
+      nums: Array.prototype.map.call(
+        document.querySelectorAll(".part-number-folder.open"),
+        function (el) { return el.dataset.partNumber; }
+      )
+    };
+  }
+
+  function restoreOpenState(state) {
+    if (!state) return;
+    document.querySelectorAll(".category-folder").forEach(function (el) {
+      if (state.cats.indexOf(el.dataset.categoryId) !== -1) {
+        el.classList.add("open");
+      }
+    });
+    document.querySelectorAll(".part-number-folder").forEach(function (el) {
+      if (state.nums.indexOf(el.dataset.partNumber) !== -1) {
+        el.classList.add("open");
+      }
+    });
+  }
+
   var originalDisplayParts = window.displayParts;
 
   if (typeof originalDisplayParts === "function") {
@@ -72,6 +103,11 @@
       var shown = apply(list);
 
       originalDisplayParts(shown);
+
+      if (pendingOpenState) {
+        restoreOpenState(pendingOpenState);
+        pendingOpenState = null;
+      }
 
       /* Hinweis, falls der Filter alles ausblendet */
       if (
@@ -93,6 +129,23 @@
     /* displayParts() wird anderswo direkt aufgerufen (globale Funktion) */
     try { displayParts = window.displayParts; } catch (error) { /* egal */ }
   }
+
+  /* Liste neu zeichnen, aktive Suche und offene Ordner beibehalten */
+  window.refreshPartList = function () {
+
+    pendingOpenState = captureOpenState();
+
+    var input = document.getElementById("searchInput");
+
+    if (
+      input && input.value.trim() &&
+      typeof window.searchParts === "function"
+    ) {
+      window.searchParts();
+    } else {
+      window.displayParts(parts);
+    }
+  };
 
   function refresh() {
     if (typeof window.displayParts === "function" && lastList) {

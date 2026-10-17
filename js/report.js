@@ -581,9 +581,7 @@ async function reportUnavailable(id) {
     p.is_available =
       false;
 
-    displayParts(
-      parts
-    );
+    window.refreshPartList();
 
   } catch (e) {
 
@@ -653,9 +651,7 @@ async function confirmPart(
     p.last_seen_at =
       now;
 
-    displayParts(
-      parts
-    );
+    window.refreshPartList();
 
   } catch (e) {
 
