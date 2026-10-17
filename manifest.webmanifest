@@ -1,0 +1,16 @@
+{
+  "name": "FabrikTracker – LEGO Fabrik Günzburg",
+  "short_name": "FabrikTracker",
+  "description": "Welche LEGO Teile sind aktuell in der LEGO Fabrik Günzburg verfügbar?",
+  "lang": "de",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#171717",
+  "theme_color": "#d71920",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
