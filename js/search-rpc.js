@@ -96,16 +96,21 @@ async function fetchLegoPartSuggestions(query) {
                 }
               "
             >
-              <div class="suggestion-number">
-                LEGO ${number}
-              </div>
-              <div class="suggestion-name">
-                ${name} · ${category}
+              <div class="suggestion-thumb" data-part-num="${number}">🧱</div>
+              <div class="suggestion-text">
+                <div class="suggestion-number">
+                  LEGO ${number}
+                </div>
+                <div class="suggestion-name">
+                  ${name} · ${category}
+                </div>
               </div>
             </div>
           `;
         })
         .join("");
+
+    loadSuggestionThumbs(requestId);
 
   } catch (error) {
 
@@ -121,6 +126,59 @@ async function fetchLegoPartSuggestions(query) {
         "❌ Fehler bei der Teilesuche: " +
         (error.message || "Unbekannter Fehler");
     }
+  }
+}
+
+
+/* Kleine Teilebilder in den Vorschlägen von "Teil melden" */
+async function loadSuggestionThumbs(requestId) {
+
+  const nums = legoSearchResults
+    .map(part => String(part.part_num || ""))
+    .filter(Boolean);
+
+  if (!nums.length) return;
+
+  try {
+
+    const list = nums
+      .map(n => '"' + n.replace(/"/g, "") + '"')
+      .join(",");
+
+    const rows = await supabaseRequest(
+      SUPABASE_URL + "/rest/v1/lego_parts" +
+      "?select=part_num,image_url" +
+      "&part_num=in.(" + encodeURIComponent(list) + ")"
+    );
+
+    if (requestId !== legoSearchRequestId) return;
+
+    const images = new Map();
+
+    (rows || []).forEach(row => {
+      if (row.image_url) images.set(row.part_num, row.image_url);
+    });
+
+    document
+      .querySelectorAll("#partSuggestions .suggestion-thumb")
+      .forEach(box => {
+
+        const url = images.get(box.dataset.partNum);
+        if (!url) return;
+
+        const img = document.createElement("img");
+        img.loading = "lazy";
+        img.alt = "";
+        img.src = url;
+        img.onload = () => { box.textContent = ""; box.appendChild(img); };
+
+      });
+
+  } catch (error) {
+
+    /* Bilder sind nur Zusatz – Fehler ignorieren */
+    console.warn("Vorschaubilder konnten nicht geladen werden:", error);
+
   }
 }
 
