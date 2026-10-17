@@ -911,6 +911,16 @@ function renderPartNumberGroup(
                   ? "★"
                   : "☆"
               }</span>
+              <span
+                class="watch-bell${
+                  typeof isWatched === "function" && isWatched(partNumber)
+                    ? " active"
+                    : ""
+                }"
+                data-watch="${safeNumber}"
+                role="button"
+                aria-label="Benachrichtigen, sobald gemeldet"
+              >🔔</span>
             </div>
 
             ${

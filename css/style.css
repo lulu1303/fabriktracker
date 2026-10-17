@@ -1130,3 +1130,93 @@ button:disabled {
   width: 32px;
   height: 32px;
 }
+
+
+/* =========================================================
+   BENACHRICHTIGUNGEN
+========================================================= */
+
+.watch-bell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  opacity: .3;
+  filter: grayscale(1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.watch-bell.active {
+  opacity: 1;
+  filter: none;
+}
+
+.watch-box > p {
+  margin: 0 0 18px;
+  color: #d0d0d0;
+  line-height: 1.5;
+}
+
+#watchForm {
+  margin-top: 16px;
+  position: relative;
+}
+
+#watchSearchInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  font-size: 16px;
+}
+
+.watch-suggestions {
+  display: block;
+  position: static;
+  margin-top: 8px;
+  max-height: min(320px, 50vh);
+  overflow-y: auto;
+}
+
+.watch-suggestions:empty {
+  display: none;
+}
+
+.watch-list {
+  margin-top: 16px;
+}
+
+.watch-empty {
+  color: #aaa;
+  font-size: 14px;
+}
+
+.watch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255,255,255,.14);
+}
+
+.watch-num {
+  font-weight: 800;
+}
+
+.watch-name {
+  color: #bbb;
+  font-size: 14px;
+}
+
+.watch-remove {
+  padding: 8px 12px;
+  font-size: 14px;
+  white-space: nowrap;
+}

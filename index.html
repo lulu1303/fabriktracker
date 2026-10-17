@@ -170,6 +170,48 @@
 
 
   <!-- =====================================================
+       BENACHRICHTIGUNGEN
+  ====================================================== -->
+
+  <section class="report-box report-open watch-box" id="watchBox">
+
+    <h2 class="report-title">
+      🔔 Benachrichtigungen
+    </h2>
+
+    <p>
+      Du suchst ein bestimmtes Teil? Wir sagen dir Bescheid,
+      sobald es in der Fabrik gemeldet wird. Du kannst auch
+      Teile beobachten, die noch nie gemeldet wurden.
+      Tipp auf die 🔔 bei einem Teil funktioniert genauso.
+    </p>
+
+    <button
+      id="watchOpenButton"
+      class="primary"
+      type="button"
+    >
+      + Teil beobachten
+    </button>
+
+    <div id="watchForm" hidden>
+      <input
+        id="watchSearchInput"
+        type="text"
+        placeholder="Teilenummer oder z.B. 1x4 brick"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+      >
+      <div id="watchSuggestions" class="suggestions watch-suggestions"></div>
+    </div>
+
+    <div id="watchList" class="watch-list"></div>
+
+  </section>
+
+
+  <!-- =====================================================
        GEMELDETE TEILE
   ====================================================== -->
 
@@ -259,6 +301,7 @@
 <script src="js/parts.js?v=20261017f"></script>
 <script src="js/view-options.js?v=20261017f"></script>
 <script src="js/extras.js?v=20261017f"></script>
+<script src="js/push.js?v=20261017f"></script>
 <script src="js/search.js?v=20261017f"></script>
 <script src="js/search-rpc.js?v=20261017f"></script>
 <script src="js/report.js?v=20261017f"></script>
