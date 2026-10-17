@@ -17,10 +17,13 @@
     "BPBo74mp31ari3qp-QJRe6T0h4gUasrgcaMGj_tsISY6p1UYWRXEBtDGXuKjoOeGE1UMNzb07uDaDp2TOnaRK7s";
 
   var KEY = "fabriktracker_watches";
+  var KEY_VERSION = "fabriktracker_watches_v2";
   var MAX_WATCHES = 100;
 
-  /* { "3010|5": { name: "Brick 1 x 4", color: "Red" }, ... }
-     Farb-ID 0 bedeutet "jede Farbe". */
+  /* Farb-ID -1 bedeutet "jede Farbe". Die Farb-ID 0 ist "Black"! */
+  var ANY_COLOR = -1;
+
+  /* { "3010|5": { name: "Brick 1 x 4", color: "Red" }, ... } */
   var watches = {};
 
   try {
@@ -29,7 +32,7 @@
       Object.keys(saved).forEach(function (k) {
 
         /* Alte Einträge ohne Farbe gelten für jede Farbe */
-        var key = k.indexOf("|") === -1 ? k + "|0" : k;
+        var key = k.indexOf("|") === -1 ? k + "|" + ANY_COLOR : k;
         var v = saved[k];
 
         watches[key] =
@@ -37,6 +40,22 @@
             ? { name: v.name || "", color: v.color || "" }
             : { name: String(v || ""), color: "" };
       });
+    }
+
+    /* Einmalig: Früher stand "|0" für "jede Farbe". Eintrag ohne
+       Farbname war "jede Farbe", mit Farbname ("Black") war es Schwarz. */
+    if (!localStorage.getItem(KEY_VERSION)) {
+
+      Object.keys(watches).forEach(function (k) {
+
+        if (!/\|0$/.test(k) || watches[k].color) return;
+
+        watches[k.replace(/\|0$/, "|" + ANY_COLOR)] = watches[k];
+        delete watches[k];
+      });
+
+      localStorage.setItem(KEY, JSON.stringify(watches));
+      localStorage.setItem(KEY_VERSION, "1");
     }
   } catch (error) { /* Storage nicht verfügbar – egal */ }
 
@@ -47,7 +66,13 @@
   }
 
   function watchKey(partNumber, colorId) {
-    return String(partNumber) + "|" + (Number(colorId) || 0);
+    var color =
+      colorId === null || colorId === undefined || colorId === "" ||
+      !Number.isFinite(Number(colorId))
+        ? ANY_COLOR
+        : Number(colorId);
+
+    return String(partNumber) + "|" + color;
   }
 
   function toast(message) {
@@ -209,7 +234,9 @@
 
         if (pair[0] !== numPart || k === key) return;
 
-        if (Number(colorId) ? pair[1] === "0" : true) {
+        if (watchKey(numPart, colorId) === numPart + "|" + ANY_COLOR
+              ? true
+              : pair[1] === String(ANY_COLOR)) {
           delete watches[k];
         }
       });
@@ -307,7 +334,7 @@
 
       var pair = key.split("|");
       var num = pair[0];
-      var colorId = Number(pair[1]) || 0;
+      var colorId = Number(pair[1]);
       var info = watches[key] || {};
 
       var row = document.createElement("div");
@@ -320,7 +347,7 @@
       title.className = "watch-num";
       title.textContent =
         "🔔 LEGO " + num + " · " +
-        (colorId ? info.color || "Farbe " + colorId : "Alle Farben");
+        (colorId === ANY_COLOR ? "Alle Farben" : info.color || "Farbe " + colorId);
       text.appendChild(title);
 
       if (info.name) {
@@ -479,7 +506,7 @@
     select.textContent = "";
 
     var all = document.createElement("option");
-    all.value = "0";
+    all.value = String(ANY_COLOR);
     all.textContent = "Alle Farben";
     select.appendChild(all);
 
@@ -495,8 +522,8 @@
 
     confirm.addEventListener("click", async function () {
 
-      var colorId = Number(select.value) || 0;
-      var colorName = colorId
+      var colorId = Number(select.value);
+      var colorName = colorId !== ANY_COLOR
         ? select.options[select.selectedIndex].textContent
         : "";
 
@@ -632,7 +659,7 @@
       if (p.is_available === false) return;
 
       var exact = watchKey(p.part_number, p.color_id);
-      var any = watchKey(p.part_number, 0);
+      var any = watchKey(p.part_number, ANY_COLOR);
 
       if (watches[exact]) keys[exact] = true;
       else if (watches[any]) keys[any] = true;
@@ -819,11 +846,11 @@
 
       var pair = k.split("|");
 
-      if (pair[1] !== "0") return;
+      if (pair[1] !== String(ANY_COLOR)) return;
 
       var hasSpecific = Object.keys(watches).some(function (other) {
         var o = other.split("|");
-        return o[0] === pair[0] && o[1] !== "0";
+        return o[0] === pair[0] && o[1] !== String(ANY_COLOR);
       });
 
       if (hasSpecific) {
