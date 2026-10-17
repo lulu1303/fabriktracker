@@ -6,7 +6,7 @@
 
   <title>FabrikTracker – LEGO Fabrik Günzburg</title>
 
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20261017a">
 </head>
 
 <body>
@@ -149,6 +149,23 @@
     🟢 Aktuell gemeldete Teile
   </div>
 
+  <div class="view-options">
+
+    <label class="view-option-check">
+      <input id="optOnlyAvailable" type="checkbox">
+      Nur verfügbare
+    </label>
+
+    <label class="view-option-sort">
+      Sortierung
+      <select id="optSort">
+        <option value="default">Standard</option>
+        <option value="recent">Zuletzt gesehen</option>
+      </select>
+    </label>
+
+  </div>
+
 
   <div id="results">
 
@@ -264,18 +281,19 @@ function toggleReportForm() {
      JAVASCRIPT
 ======================================================== -->
 
-<script src="js/config.js"></script>
-<script src="js/state.js"></script>
-<script src="js/supabase.js"></script>
-<script src="js/categories.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/parts.js"></script>
-<script src="js/search.js"></script>
-<script src="js/search-rpc.js"></script>
-<script src="js/report.js"></script>
-<script src="js/discounts.js"></script>
-<script src="js/admin.js"></script>
-<script src="js/app.js"></script>
+<script src="js/config.js?v=20261017a"></script>
+<script src="js/state.js?v=20261017a"></script>
+<script src="js/supabase.js?v=20261017a"></script>
+<script src="js/categories.js?v=20261017a"></script>
+<script src="js/utils.js?v=20261017a"></script>
+<script src="js/parts.js?v=20261017a"></script>
+<script src="js/view-options.js?v=20261017a"></script>
+<script src="js/search.js?v=20261017a"></script>
+<script src="js/search-rpc.js?v=20261017a"></script>
+<script src="js/report.js?v=20261017a"></script>
+<script src="js/discounts.js?v=20261017a"></script>
+<script src="js/admin.js?v=20261017a"></script>
+<script src="js/app.js?v=20261017a"></script>
 
 </body>
 </html>
