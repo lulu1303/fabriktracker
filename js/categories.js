@@ -1219,46 +1219,7 @@ const CATEGORY_IMAGES = {
    KATEGORIE-BILD KONFIGURATION
 ========================================================= */
 
-function getCategoryImageConfig(
-  categoryId
-) {
 
-  const id =
-    Number(
-      categoryId
-    );
-
-
-  if (
-    !Number.isFinite(id)
-  ) {
-
-    return null;
-
-  }
-
-
-  const config =
-    CATEGORY_IMAGES[id];
-
-
-  /*
-   * Keine Konfiguration vorhanden.
-   */
-
-  if (
-    !config ||
-    !config.part
-  ) {
-
-    return null;
-
-  }
-
-
-  return config;
-
-}
 /* =========================================================
    CACHE
 ========================================================= */
@@ -1286,12 +1247,6 @@ let categoriesLoaded = true;
  * Die Kategorien sind bereits vorhanden und
  * müssen nicht extra aus Supabase geladen werden.
  */
-
-async function loadPartCategories() {
-
-  return rebrickableCategories;
-
-}
 
 
 /* =========================================================
@@ -1377,141 +1332,10 @@ function getCategoryName(
    KATEGORIE-INFORMATION
 ========================================================= */
 
-function getRebrickableCategoryInfo(
-  categoryId
-) {
-
-  const category =
-    getCategoryById(
-      categoryId
-    );
-
-
-  if (
-    category
-  ) {
-
-    return {
-
-      id:
-        Number(
-          category.id
-        ),
-
-      name:
-        category.name
-
-    };
-
-  }
-
-
-  return {
-
-    id:
-      null,
-
-    name:
-      "Sonstige"
-
-  };
-
-}
-
 
 /* =========================================================
    KATEGORIEN SORTIEREN
 ========================================================= */
-
-function sortByRebrickableCategory(
-  parts
-) {
-
-  if (
-    !Array.isArray(
-      parts
-    )
-  ) {
-
-    return [];
-
-  }
-
-
-  return [
-    ...parts
-  ].sort(
-    (
-      a,
-      b
-    ) => {
-
-      const categoryA =
-        Number(
-          a.category_id
-        );
-
-
-      const categoryB =
-        Number(
-          b.category_id
-        );
-
-
-      /*
-       * Teile ohne Kategorie
-       * kommen ans Ende.
-       */
-
-      const validA =
-        Number.isFinite(
-          categoryA
-        );
-
-
-      const validB =
-        Number.isFinite(
-          categoryB
-        );
-
-
-      if (
-        !validA &&
-        !validB
-      ) {
-
-        return 0;
-
-      }
-
-
-      if (
-        !validA
-      ) {
-
-        return 1;
-
-      }
-
-
-      if (
-        !validB
-      ) {
-
-        return -1;
-
-      }
-
-
-      return (
-        categoryA -
-        categoryB
-      );
-
-    }
-  );
-
-}
 
 
 /* =========================================================
@@ -1670,37 +1494,9 @@ function groupPartsByRebrickableCategory(
    KATEGORIEN INITIALISIEREN
 ========================================================= */
 
-async function initializeCategories() {
-
-  /*
-   * Kategorien sind bereits geladen.
-   *
-   * Die Funktion bleibt async, damit parts.js
-   * unverändert bleiben kann.
-   */
-
-  rebrickableCategories =
-    [
-      ...REBRICKABLE_CATEGORIES
-    ];
-
-  categoriesLoaded =
-    true;
-
-
-  return rebrickableCategories;
-
-}
-
 
 /* =========================================================
    DEBUG
 ========================================================= */
 
-function getLoadedCategories() {
 
-  return [
-    ...rebrickableCategories
-  ];
-
-}

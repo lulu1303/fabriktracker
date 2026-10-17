@@ -44,30 +44,6 @@ function esc(value) {
    EURO / PREIS
 ========================================================= */
 
-function euro(value) {
-
-  if (
-    value == null ||
-    isNaN(value)
-  ) {
-
-    return "–";
-
-  }
-
-
-  return Number(value).toLocaleString(
-    "de-DE",
-    {
-      style: "currency",
-      currency: "EUR",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }
-  );
-
-}
-
 
 /* =========================================================
    DATUM
@@ -118,171 +94,6 @@ function date(value) {
  * Wird weiterhin für ältere Teile der Anwendung
  * bereitgestellt.
  */
-
-function cat(category, name) {
-
-  const text =
-    (
-      String(category || "") +
-      " " +
-      String(name || "")
-    ).toLowerCase();
-
-
-  const categoryText =
-    String(category || "")
-      .toLowerCase();
-
-
-  if (
-    categoryText === "11"
-  ) {
-
-    return {
-
-      key: "bricks",
-
-      name: "Bricks",
-
-      icon: "🧱"
-
-    };
-
-  }
-
-
-  if (
-    text.includes("plate")
-  ) {
-
-    return {
-
-      key: "plates",
-
-      name: "Plates",
-
-      icon: "▰"
-
-    };
-
-  }
-
-
-  if (
-    text.includes("tile")
-  ) {
-
-    return {
-
-      key: "tiles",
-
-      name: "Tiles",
-
-      icon: "▫️"
-
-    };
-
-  }
-
-
-  if (
-    text.includes("brick")
-  ) {
-
-    return {
-
-      key: "bricks",
-
-      name: "Bricks",
-
-      icon: "🧱"
-
-    };
-
-  }
-
-
-  if (
-    text.includes("slope") ||
-    text.includes("wedge")
-  ) {
-
-    return {
-
-      key: "slopes",
-
-      name: "Slopes",
-
-      icon: "🔺"
-
-    };
-
-  }
-
-
-  if (
-    text.includes("technic")
-  ) {
-
-    return {
-
-      key: "technic",
-
-      name: "Technic",
-
-      icon: "⚙️"
-
-    };
-
-  }
-
-
-  if (
-    text.includes("minifig")
-  ) {
-
-    return {
-
-      key: "minifigs",
-
-      name: "Minifiguren",
-
-      icon: "👤"
-
-    };
-
-  }
-
-
-  if (
-    text.includes("wheel") ||
-    text.includes("tire")
-  ) {
-
-    return {
-
-      key: "wheels",
-
-      name: "Räder & Reifen",
-
-      icon: "⚫"
-
-    };
-
-  }
-
-
-  return {
-
-    key: "other",
-
-    name: "Sonstige",
-
-    icon: "🧩"
-
-  };
-
-}
 
 
 /* =========================================================
@@ -436,40 +247,10 @@ function dims(value) {
    EXAKTE MASS-SUCHE
 ========================================================= */
 
-function exactDims(
-  part,
-  query
-) {
-
-  const queryDimensions =
-    dims(query);
-
-
-  const partDimensions =
-    dims(part.name);
-
-
-  return !!queryDimensions &&
-         !!partDimensions &&
-         queryDimensions.a ===
-           partDimensions.a &&
-         queryDimensions.b ===
-           partDimensions.b;
-
-}
-
 
 /* =========================================================
    DIMENSIONS-QUERY
 ========================================================= */
-
-function dimensionQuery(
-  query
-) {
-
-  return !!dims(query);
-
-}
 
 
 /* =========================================================
