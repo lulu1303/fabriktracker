@@ -678,7 +678,8 @@ button:disabled {
   color: #fff;
   border-radius: 18px;
   margin-bottom: 25px;
-  overflow: hidden;
+  /* sichtbar lassen, damit die Vorschlagsliste nicht abgeschnitten wird */
+  overflow: visible;
 }
 
 .report-box.report-open {
@@ -769,8 +770,9 @@ button:disabled {
   top: 100%;
   z-index: 100;
 
-  max-height: 300px;
+  max-height: min(380px, 55vh);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 
   margin-top: 5px;
 
