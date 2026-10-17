@@ -89,37 +89,18 @@
   ====================================================== -->
 
   <section
-    class="report-box report-collapsed"
+    class="report-box report-open"
     id="reportBox"
   >
 
-    <button
-      id="reportToggleButton"
-      class="report-toggle"
-      type="button"
-      onclick="toggleReportForm()"
-      aria-expanded="false"
-      aria-controls="reportContent"
-    >
-
-      <span class="report-toggle-title">
-        🧱 Teil gesehen?
-      </span>
-
-      <span
-        id="reportToggleIcon"
-        class="report-toggle-icon"
-      >
-        ＋
-      </span>
-
-    </button>
+    <h2 class="report-title">
+      🧱 Teil gesehen?
+    </h2>
 
 
     <div
       id="reportContent"
       class="report-content"
-      hidden
     >
 
       <p>
@@ -192,117 +173,6 @@
 
 
 </main>
-
-
-<!-- =======================================================
-     TEIL MELDEN – AUSKLAPPLOGIK
-======================================================== -->
-
-<script>
-
-function toggleReportForm() {
-
-  const box =
-    document.getElementById("reportBox");
-
-  const content =
-    document.getElementById("reportContent");
-
-  const button =
-    document.getElementById("reportToggleButton");
-
-  const icon =
-    document.getElementById("reportToggleIcon");
-
-
-  if (
-    !box ||
-    !content
-  ) {
-    return;
-  }
-
-
-  const isOpen =
-    !content.hidden;
-
-
-  if (isOpen) {
-
-    content.hidden = true;
-
-    box.classList.remove(
-      "report-open"
-    );
-
-    box.classList.add(
-      "report-collapsed"
-    );
-
-
-    if (button) {
-
-      button.setAttribute(
-        "aria-expanded",
-        "false"
-      );
-
-    }
-
-
-    if (icon) {
-
-      icon.textContent = "＋";
-
-    }
-
-    return;
-  }
-
-
-  content.hidden = false;
-
-  box.classList.remove(
-    "report-collapsed"
-  );
-
-  box.classList.add(
-    "report-open"
-  );
-
-
-  if (button) {
-
-    button.setAttribute(
-      "aria-expanded",
-      "true"
-    );
-
-  }
-
-
-  if (icon) {
-
-    icon.textContent = "−";
-
-  }
-
-
-  /* Formular gleich öffnen (spart einen Tipp) und ins Suchfeld springen */
-  var area = document.getElementById("reportArea");
-
-  if (
-    area && !area.innerHTML.trim() &&
-    typeof openReportForm === "function"
-  ) {
-
-    openReportForm();
-
-  }
-
-}
-
-</script>
 
 
 <!-- =======================================================

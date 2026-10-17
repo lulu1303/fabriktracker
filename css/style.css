@@ -683,36 +683,18 @@ button:disabled {
 }
 
 .report-box.report-open {
-  padding: 0 25px 25px;
+  padding: 22px 25px 25px;
 }
 
-.report-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 22px;
-  background: transparent;
-  color: #fff;
-  border-radius: 18px;
-  text-align: left;
+.report-title {
+  margin: 0 0 12px;
   font-size: 18px;
   font-weight: 800;
 }
 
-.report-toggle:hover {
-  background: rgba(255,255,255,.06);
-}
-
-.report-toggle-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.report-toggle-icon {
-  font-size: 25px;
-  transition: transform .2s;
+/* "+ Teil melden" ausblenden, solange das Formular offen ist */
+.report-content:has(.report-form) #reportButton {
+  display: none;
 }
 
 .report-content > p {
@@ -909,11 +891,10 @@ button:disabled {
   }
 
   .report-box.report-open {
-    padding: 0 16px 18px;
+    padding: 18px 16px 18px;
   }
 
-  .report-toggle {
-    padding: 17px 16px;
+  .report-title {
     font-size: 17px;
   }
 }
