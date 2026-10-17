@@ -1254,3 +1254,21 @@ button:disabled {
   gap: 10px;
   margin-top: 12px;
 }
+
+.watch-hits {
+  background: #fff8e1;
+  border: 2px solid #f5a400;
+  border-radius: 18px;
+  padding: 16px 16px 4px;
+  margin-bottom: 25px;
+}
+
+.watch-hits-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.watch-hits-list .part-card {
+  margin-bottom: 12px;
+}

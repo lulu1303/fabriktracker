@@ -219,6 +219,7 @@
       saveWatches();
       refreshBells();
       renderWatchList();
+      renderWatchHits();
 
       return true;
 
@@ -590,6 +591,118 @@
         if (!form.hidden && input) input.focus();
       });
     }
+  }
+
+
+  /* -------------------------------------------------------
+     BEOBACHTETE TEILE, DIE JETZT VERFÜGBAR SIND
+     Stehen ganz oben auf der Seite. Sobald sie angezeigt
+     werden, gilt die Benachrichtigung als gesehen und ist
+     für das nächste Mal wieder scharf.
+  ------------------------------------------------------- */
+
+  var ackedKeys = {};
+
+  function findWatchHits() {
+
+    var items = [];
+    var keys = {};
+
+    if (typeof parts === "undefined" || !Array.isArray(parts)) {
+      return { items: items, keys: keys };
+    }
+
+    parts.forEach(function (p) {
+
+      if (p.is_available === false) return;
+
+      var exact = watchKey(p.part_number, p.color_id);
+      var any = watchKey(p.part_number, 0);
+
+      if (watches[exact]) keys[exact] = true;
+      else if (watches[any]) keys[any] = true;
+      else return;
+
+      items.push(p);
+    });
+
+    return { items: items.slice(0, 30), keys: keys };
+  }
+
+  function renderWatchHits() {
+
+    var box = document.getElementById("watchHits");
+    if (!box) return;
+
+    var hits = findWatchHits();
+
+    if (!hits.items.length || typeof renderPart !== "function") {
+      box.textContent = "";
+      return;
+    }
+
+    box.innerHTML =
+      '<section class="watch-hits">' +
+        '<h2 class="watch-hits-title">🔔 Deine beobachteten Teile – jetzt verfügbar</h2>' +
+        '<div class="watch-hits-list">' +
+          hits.items.map(renderPart).join("") +
+        "</div>" +
+      "</section>";
+
+    acknowledge(Object.keys(hits.keys));
+  }
+
+  async function acknowledge(keys) {
+
+    var fresh = keys.filter(function (k) { return !ackedKeys[k]; });
+
+    if (
+      !fresh.length ||
+      !pushSupported() ||
+      Notification.permission !== "granted"
+    ) {
+      return;
+    }
+
+    fresh.forEach(function (k) { ackedKeys[k] = true; });
+
+    try {
+
+      var sub = await getSubscription(false);
+      if (!sub) return;
+
+      await supabaseRequest(
+        SUPABASE_URL + "/rest/v1/rpc/push_ack",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            p_endpoint: sub.endpoint,
+            p_parts: fresh
+          })
+        }
+      );
+
+    } catch (error) {
+
+      fresh.forEach(function (k) { delete ackedKeys[k]; });
+      console.warn("Bestätigung fehlgeschlagen:", error);
+    }
+  }
+
+  var displayPartsBefore = window.displayParts;
+
+  if (typeof displayPartsBefore === "function") {
+
+    window.displayParts = function (list) {
+
+      displayPartsBefore(list);
+
+      try {
+        renderWatchHits();
+      } catch (error) {
+        console.warn("Beobachtete Teile konnten nicht angezeigt werden:", error);
+      }
+    };
   }
 
 
