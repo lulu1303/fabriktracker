@@ -278,8 +278,10 @@
         return;
       }
 
+      /* Nur das Bild des einzelnen Teils (in seiner Farbe) lässt sich
+         vergrößern; Bilder in den Ordner-Köpfen klappen nur auf/zu. */
       var image = event.target.closest &&
-        event.target.closest(".part-number-image, .part-image");
+        event.target.closest(".part-image");
 
       if (image && image.tagName === "IMG") {
         event.stopPropagation();
