@@ -13,6 +13,53 @@
 var legoSearchResults = [];
 var legoSearchRequestId = 0;
 
+/* Es werden zuerst 20 Teile gezeigt; beim Scrollen kommen
+   jeweils 20 weitere dazu (bis maximal 200). */
+var LEGO_PAGE_SIZE = 20;
+var LEGO_MAX_RESULTS = 200;
+var legoSearchQuery = "";
+var legoSearchLimit = LEGO_PAGE_SIZE;
+var legoSearchLoadingMore = false;
+
+function legoSuggestionHTML(part, index) {
+
+  const number = escapeHTML(part.part_num || "");
+  const name = escapeHTML(part.name || "");
+  const category =
+    escapeHTML(getCategoryName(part.category_id, part.category || ""));
+
+  return `
+    <div
+      class="suggestion"
+      role="button"
+      tabindex="0"
+      onclick="selectLegoPartByIndex(${index})"
+      onkeydown="
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectLegoPartByIndex(${index});
+        }
+      "
+    >
+      <div class="suggestion-thumb" data-part-num="${number}">🧱</div>
+      <div class="suggestion-text">
+        <div class="suggestion-number">LEGO ${number}</div>
+        <div class="suggestion-name">${name} · ${category}</div>
+      </div>
+    </div>
+  `;
+}
+
+function legoFetchRows(query, limit) {
+  return supabaseRequest(
+    SUPABASE_URL + "/rest/v1/rpc/search_lego_parts",
+    {
+      method: "POST",
+      body: JSON.stringify({ q: query, max_results: limit })
+    }
+  );
+}
+
 async function fetchLegoPartSuggestions(query) {
 
   const suggestions =
@@ -25,7 +72,12 @@ async function fetchLegoPartSuggestions(query) {
 
   const requestId = ++legoSearchRequestId;
 
+  legoSearchQuery = query;
+  legoSearchLimit = LEGO_PAGE_SIZE;
+  legoSearchLoadingMore = false;
+
   suggestions.style.display = "block";
+  suggestions.scrollTop = 0;
 
   suggestions.innerHTML = `
     <div class="suggestion">
@@ -37,16 +89,7 @@ async function fetchLegoPartSuggestions(query) {
 
   try {
 
-    const results = await supabaseRequest(
-      SUPABASE_URL + "/rest/v1/rpc/search_lego_parts",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          q: query,
-          max_results: 30
-        })
-      }
-    );
+    const results = await legoFetchRows(query, legoSearchLimit);
 
     /* Veraltete Antwort einer früheren Eingabe ignorieren */
     if (requestId !== legoSearchRequestId) return;
@@ -66,51 +109,21 @@ async function fetchLegoPartSuggestions(query) {
     }
 
     suggestions.innerHTML =
-      legoSearchResults
-        .map((part, index) => {
-
-          const number =
-            escapeHTML(part.part_num || "");
-
-          const name =
-            escapeHTML(part.name || "");
-
-          const category =
-            escapeHTML(
-              getCategoryName(
-                part.category_id,
-                part.category || ""
-              )
-            );
-
-          return `
-            <div
-              class="suggestion"
-              role="button"
-              tabindex="0"
-              onclick="selectLegoPartByIndex(${index})"
-              onkeydown="
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  selectLegoPartByIndex(${index});
-                }
-              "
-            >
-              <div class="suggestion-thumb" data-part-num="${number}">🧱</div>
-              <div class="suggestion-text">
-                <div class="suggestion-number">
-                  LEGO ${number}
-                </div>
-                <div class="suggestion-name">
-                  ${name} · ${category}
-                </div>
-              </div>
-            </div>
-          `;
-        })
-        .join("");
+      legoSearchResults.map(legoSuggestionHTML).join("");
 
     loadSuggestionThumbs(requestId);
+
+    if (!suggestions.dataset.scrollBound) {
+      suggestions.dataset.scrollBound = "1";
+      suggestions.addEventListener("scroll", () => {
+        if (
+          suggestions.scrollTop + suggestions.clientHeight >=
+          suggestions.scrollHeight - 60
+        ) {
+          loadMoreLegoSuggestions();
+        }
+      });
+    }
 
   } catch (error) {
 
@@ -129,6 +142,63 @@ async function fetchLegoPartSuggestions(query) {
   }
 }
 
+/* Weitere Treffer nachladen, sobald man ans Ende der Liste scrollt */
+async function loadMoreLegoSuggestions() {
+
+  const suggestions =
+    document.getElementById("partSuggestions");
+
+  if (
+    !suggestions ||
+    legoSearchLoadingMore ||
+    legoSearchResults.length < legoSearchLimit ||
+    legoSearchLimit >= LEGO_MAX_RESULTS
+  ) {
+    return;
+  }
+
+  legoSearchLoadingMore = true;
+
+  const requestId = legoSearchRequestId;
+  const query = legoSearchQuery;
+  const newLimit =
+    Math.min(legoSearchLimit + LEGO_PAGE_SIZE, LEGO_MAX_RESULTS);
+
+  try {
+
+    const results = await legoFetchRows(query, newLimit);
+
+    if (requestId !== legoSearchRequestId) return;
+
+    const rows = Array.isArray(results) ? results : [];
+    const oldCount = legoSearchResults.length;
+
+    legoSearchLimit = newLimit;
+    legoSearchResults = rows;
+
+    if (rows.length > oldCount) {
+
+      suggestions.insertAdjacentHTML(
+        "beforeend",
+        rows
+          .slice(oldCount)
+          .map((part, i) => legoSuggestionHTML(part, oldCount + i))
+          .join("")
+      );
+
+      loadSuggestionThumbs(requestId);
+    }
+
+  } catch (error) {
+
+    console.warn("Weitere Treffer konnten nicht geladen werden:", error);
+
+  } finally {
+
+    legoSearchLoadingMore = false;
+  }
+}
+
 
 /* Kleine Teilebilder in den Vorschlägen von "Teil melden".
    Pro Teil wird fest (per Teilenummer) eine der Farben genommen, in der es
@@ -136,8 +206,16 @@ async function fetchLegoPartSuggestions(query) {
    Farbbild, wird das allgemeine Bild aus lego_parts genutzt. */
 async function loadSuggestionThumbs(requestId) {
 
-  const nums = legoSearchResults
-    .map(part => String(part.part_num || ""))
+  const pending = Array.from(
+    document.querySelectorAll(
+      "#partSuggestions .suggestion-thumb:not([data-done])"
+    )
+  );
+
+  pending.forEach(box => { box.dataset.done = "1"; });
+
+  const nums = pending
+    .map(box => box.dataset.partNum)
     .filter(Boolean);
 
   if (!nums.length) return;
@@ -196,8 +274,7 @@ async function loadSuggestionThumbs(requestId) {
 
     if (requestId !== legoSearchRequestId) return;
 
-    document
-      .querySelectorAll("#partSuggestions .suggestion-thumb")
+    pending
       .forEach(box => {
 
         const num = box.dataset.partNum;
