@@ -975,7 +975,11 @@ if (
         discountCents !== null
           ? `
             <div class="price-discount">
-              20%:
+              ${
+                typeof DISCOUNT_EMOJI !== "undefined" && DISCOUNT_EMOJI
+                  ? DISCOUNT_EMOJI + " "
+                  : ""
+              }-${Math.round(DISCOUNT * 100)}%:
               ${discountCents.toFixed(1)} ct
             </div>
           `

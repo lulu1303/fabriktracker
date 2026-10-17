@@ -23,5 +23,15 @@ const WEIGHTS_URL =
 const PRICE_PER_GRAM =
   0.11;
 
+/*
+ * Aktueller Rabatt (0.4 = 40 %).
+ *
+ * Aktion: Halloween-Sale.
+ * Nach der Aktion einfach DISCOUNT auf den normalen Wert
+ * (z.B. 0.2) und DISCOUNT_EMOJI auf "" stellen.
+ */
 const DISCOUNT =
-  0.2;
+  0.4;
+
+const DISCOUNT_EMOJI =
+  "🎃";
