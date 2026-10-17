@@ -41,7 +41,7 @@ function legoSuggestionHTML(part, index) {
         }
       "
     >
-      <div class="suggestion-thumb" data-part-num="${number}">🧱</div>
+      <div class="suggestion-thumb" data-part-num="${number}"><span class="brick-logo" aria-hidden="true"></span></div>
       <div class="suggestion-text">
         <div class="suggestion-number">LEGO ${number}</div>
         <div class="suggestion-name">${name} · ${category}</div>

@@ -1098,3 +1098,35 @@ button:disabled {
   color: #777;
   font-size: 12px;
 }
+
+
+/* =========================================================
+   LOGO: ROTER STEIN (statt Emoji)
+========================================================= */
+
+.brick-logo {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+  background: url("../icons/favicon.svg") center / contain no-repeat;
+}
+
+.logo .brick-logo {
+  width: 1.3em;
+  height: 1.3em;
+  vertical-align: -0.3em;
+}
+
+.part-number-image-placeholder .brick-logo,
+.part-image-placeholder .brick-logo,
+.suggestion-thumb .brick-logo {
+  width: 1.4em;
+  height: 1.4em;
+  vertical-align: middle;
+}
+
+.category-icon .brick-logo {
+  width: 32px;
+  height: 32px;
+}

@@ -167,7 +167,7 @@ function imageFallback(img) {
       ? "part-number-image-placeholder"
       : "part-image-placeholder";
 
-  placeholder.textContent = "🧱";
+  placeholder.innerHTML = '<span class="brick-logo" aria-hidden="true"></span>';
 
   img.replaceWith(placeholder);
 }
@@ -804,7 +804,7 @@ function renderCategory(group) {
                     loading="lazy"
                   >
                 `
-                : `🧱`
+                : `<span class="brick-logo" aria-hidden="true"></span>`
             }
 
           </span>
@@ -886,7 +886,7 @@ function renderPartNumberGroup(
                 `
                 : `
                   <div class="part-number-image-placeholder">
-                    🧱
+                    <span class="brick-logo" aria-hidden="true"></span>
                   </div>
                 `
             }
@@ -1119,7 +1119,7 @@ if (
               `
               : `
                 <div class="part-image-placeholder">
-                  🧱
+                  <span class="brick-logo" aria-hidden="true"></span>
                 </div>
               `
           }
