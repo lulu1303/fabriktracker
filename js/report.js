@@ -10,9 +10,13 @@ function openReportForm() {
       "reportArea"
     );
 
-  if (a.innerHTML) {
+  /* Formular schon offen: nur ins Suchfeld springen */
+  if (a.innerHTML.trim()) {
 
-    a.innerHTML = "";
+    const existing =
+      document.getElementById("partSearchInput");
+
+    if (existing) existing.focus();
 
     return;
 
@@ -91,6 +95,16 @@ function openReportForm() {
 
     </div>
   `;
+
+  /* Tastatur direkt öffnen, damit man sofort tippen kann */
+  const searchInput =
+    document.getElementById("partSearchInput");
+
+  if (searchInput) {
+
+    searchInput.focus();
+
+  }
 
 }
 
@@ -253,6 +267,24 @@ async function loadColorsForPart(num) {
 
     sel.disabled =
       false;
+
+    /* Zuletzt gemeldete Farbe vorauswählen, falls es sie bei diesem Teil gibt */
+    try {
+
+      const lastColor =
+        localStorage.getItem("fabriktracker_last_color");
+
+      if (
+        lastColor &&
+        Array.from(sel.options).some(o => o.value === lastColor)
+      ) {
+
+        sel.value = lastColor;
+        btn.disabled = false;
+
+      }
+
+    } catch (storageError) { /* egal */ }
 
     sel.onchange =
       () =>
@@ -495,6 +527,13 @@ async function submitReport() {
 
     }
 
+    try {
+      localStorage.setItem(
+        "fabriktracker_last_color",
+        String(colorId)
+      );
+    } catch (storageError) { /* egal */ }
+
     alert(
       message
     );
@@ -542,19 +581,16 @@ async function reportUnavailable(id) {
         String(id)
     );
 
-  if (
-    !p ||
-    !confirm(
-      "Bist du sicher, dass dieses Teil nicht mehr da ist?\n\n" +
-      "LEGO " +
-      p.part_number +
-      "\n" +
-      p.name
-    )
-  )
+  if (!p)
     return;
 
-  try {
+  /* Alter Zustand für "Rückgängig" */
+  const previous = {
+    is_available: p.is_available,
+    last_seen_at: p.last_seen_at
+  };
+
+  async function setAvailability(values) {
 
     await req(
       PARTS_URL +
@@ -569,19 +605,52 @@ async function reportUnavailable(id) {
         },
 
         body:
-          JSON.stringify(
-            {
-              is_available:
-                false
-            }
-          )
+          JSON.stringify(values)
       }
     );
 
     p.is_available =
-      false;
+      values.is_available;
+
+    if ("last_seen_at" in values) {
+      p.last_seen_at =
+        values.last_seen_at;
+    }
 
     window.refreshPartList();
+  }
+
+  try {
+
+    await setAvailability({
+      is_available:
+        false
+    });
+
+    window.showToast(
+      "LEGO " + p.part_number + " als „nicht mehr da“ markiert",
+      "Rückgängig",
+      async () => {
+
+        try {
+
+          await setAvailability({
+            is_available:
+              previous.is_available !== false,
+            last_seen_at:
+              previous.last_seen_at || null
+          });
+
+        } catch (e) {
+
+          alert(
+            "Das Rückgängig machen hat leider nicht geklappt.\n\n" +
+            friendlyError(e)
+          );
+
+        }
+      }
+    );
 
   } catch (e) {
 
@@ -652,6 +721,13 @@ async function confirmPart(
       now;
 
     window.refreshPartList();
+
+    window.showToast(
+      "✅ Danke! LEGO " + p.part_number + " als gerade gesehen bestätigt",
+      null,
+      null,
+      3000
+    );
 
   } catch (e) {
 

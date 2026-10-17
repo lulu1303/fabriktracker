@@ -166,6 +166,11 @@
       Nur verfügbare
     </label>
 
+    <label class="view-option-check">
+      <input id="optOnlyFavorites" type="checkbox">
+      ⭐ Nur Favoriten
+    </label>
+
     <label class="view-option-sort">
       Sortierung
       <select id="optSort">
@@ -282,6 +287,19 @@ function toggleReportForm() {
 
   }
 
+
+  /* Formular gleich öffnen (spart einen Tipp) und ins Suchfeld springen */
+  var area = document.getElementById("reportArea");
+
+  if (
+    area && !area.innerHTML.trim() &&
+    typeof openReportForm === "function"
+  ) {
+
+    openReportForm();
+
+  }
+
 }
 
 </script>
@@ -298,6 +316,7 @@ function toggleReportForm() {
 <script src="js/utils.js?v=20261017f"></script>
 <script src="js/parts.js?v=20261017f"></script>
 <script src="js/view-options.js?v=20261017f"></script>
+<script src="js/extras.js?v=20261017f"></script>
 <script src="js/search.js?v=20261017f"></script>
 <script src="js/search-rpc.js?v=20261017f"></script>
 <script src="js/report.js?v=20261017f"></script>

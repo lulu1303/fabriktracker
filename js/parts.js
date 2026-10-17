@@ -897,6 +897,20 @@ function renderPartNumberGroup(
 
             <div class="part-number-title">
               LEGO ${safeNumber}
+              <span
+                class="fav-star${
+                  typeof isFavorite === "function" && isFavorite(partNumber)
+                    ? " active"
+                    : ""
+                }"
+                data-fav="${safeNumber}"
+                role="button"
+                aria-label="Als Favorit merken"
+              >${
+                typeof isFavorite === "function" && isFavorite(partNumber)
+                  ? "★"
+                  : "☆"
+              }</span>
             </div>
 
             ${

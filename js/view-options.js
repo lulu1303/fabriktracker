@@ -17,13 +17,14 @@
 
   var STORAGE_KEY = "fabriktracker_view_options";
 
-  var options = { onlyAvailable: false, sort: "default" };
+  var options = { onlyAvailable: false, onlyFavorites: false, sort: "default" };
   var lastList = null;
 
   try {
     var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
     if (saved && typeof saved === "object") {
       options.onlyAvailable = saved.onlyAvailable === true;
+      options.onlyFavorites = saved.onlyFavorites === true;
       options.sort = saved.sort === "recent" ? "recent" : "default";
     }
   } catch (error) { /* Storage nicht verfügbar – egal */ }
@@ -93,6 +94,12 @@
 
     /* Suchergebnisse behalten die Reihenfolge der Suche (Wichtigkeit);
        nur die ganze Liste wird nach Größe sortiert. */
+    if (options.onlyFavorites && typeof isFavorite === "function") {
+      result = result.filter(function (part) {
+        return isFavorite(part.part_number);
+      });
+    }
+
     if (options.sort !== "recent" && typeof parts !== "undefined" && list === parts) {
       result = result.slice().sort(compareBySize);
     }
@@ -155,9 +162,9 @@
         pendingOpenState = null;
       }
 
-      /* Hinweis, falls der Filter alles ausblendet */
+      /* Hinweis, falls ein Filter alles ausblendet */
       if (
-        options.onlyAvailable &&
+        (options.onlyAvailable || options.onlyFavorites) &&
         Array.isArray(list) && list.length &&
         Array.isArray(shown) && !shown.length
       ) {
@@ -165,8 +172,9 @@
         if (results) {
           results.innerHTML =
             '<div class="card"><div class="empty">' +
-            "Keine verfügbaren Teile gefunden. " +
-            "Schalte „Nur verfügbare“ aus, um alle zu sehen." +
+            (options.onlyFavorites
+              ? "Keine Favoriten in dieser Ansicht. Tippe bei einem Teil auf den Stern ☆, um es zu merken, oder schalte „Nur Favoriten“ aus."
+              : "Keine verfügbaren Teile gefunden. Schalte „Nur verfügbare“ aus, um alle zu sehen.") +
             "</div></div>";
         }
       }
@@ -199,10 +207,27 @@
     }
   }
 
+  /* Stern angetippt: bei aktivem Favoriten-Filter Liste aktualisieren */
+  window.onFavoritesChanged = function () {
+    if (options.onlyFavorites && typeof window.refreshPartList === "function") {
+      window.refreshPartList();
+    }
+  };
+
   function init() {
 
     var onlyBox = document.getElementById("optOnlyAvailable");
     var sortSelect = document.getElementById("optSort");
+    var favBox = document.getElementById("optOnlyFavorites");
+
+    if (favBox) {
+      favBox.checked = options.onlyFavorites;
+      favBox.addEventListener("change", function () {
+        options.onlyFavorites = favBox.checked;
+        save();
+        refresh();
+      });
+    }
 
     if (onlyBox) {
       onlyBox.checked = options.onlyAvailable;
