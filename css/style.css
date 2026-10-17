@@ -1402,12 +1402,21 @@ body.cart-open {
 }
 
 .cart-close {
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 40px;
   height: 40px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
   background: #eee;
+  color: #171717;
+  font-family: inherit;
   font-size: 18px;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -1478,20 +1487,46 @@ body.cart-open {
 }
 
 .cart-qty button {
-  width: 34px;
-  height: 34px;
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
   background: #eee;
-  font-size: 20px;
+  color: #171717;
+  font-family: inherit;
+  font-size: 22px;
   font-weight: 800;
+  line-height: 1;
   cursor: pointer;
 }
 
-.cart-qty span {
-  min-width: 22px;
-  text-align: center;
+.cart-qty-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 54px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 4px;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+  color: #171717;
+  font-family: inherit;
+  /* mindestens 16px, sonst zoomt iOS beim Antippen hinein */
+  font-size: 18px;
   font-weight: 800;
+  text-align: center;
+}
+
+.cart-qty-input:focus {
+  outline: none;
+  border-color: #d71920;
 }
 
 .cart-totals {
@@ -1545,4 +1580,18 @@ body.cart-open {
 
 body.cart-open .cart-fab {
   display: none;
+}
+
+/* Kein Hineinzoomen bei schnellem Doppeltippen (Pinch-Zoom bleibt möglich) */
+html,
+.cart-overlay,
+.cart-fab,
+.cart-add,
+.watch-bell,
+.fav-star {
+  touch-action: manipulation;
+}
+
+.cart-qty {
+  flex-shrink: 0;
 }

@@ -311,7 +311,8 @@
           '</div>' +
           '<div class="cart-qty">' +
             '<button type="button" data-act="minus" aria-label="Weniger">−</button>' +
-            '<span>' + n + '</span>' +
+            '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3"' +
+              ' class="cart-qty-input" data-act="qty" aria-label="Menge" value="' + n + '">' +
             '<button type="button" data-act="plus" aria-label="Mehr">+</button>' +
           '</div>' +
         '</div>'
@@ -329,6 +330,9 @@
         '</div>'
       );
     }).join("");
+
+    var oldSheet = box.querySelector(".cart-sheet");
+    var scrollTop = oldSheet ? oldSheet.scrollTop : 0;
 
     box.innerHTML =
       '<div class="cart-sheet" role="dialog" aria-label="Einkaufsliste">' +
@@ -358,6 +362,9 @@
             '</div>'
           : '<div class="cart-empty">Noch nichts auf der Liste. Tippe bei einem Teil auf 🛒.</div>') +
       '</div>';
+
+    var newSheet = box.querySelector(".cart-sheet");
+    if (newSheet) newSheet.scrollTop = scrollTop;
   }
 
   function onPanelClick(event) {
@@ -409,8 +416,51 @@
     update();
   }
 
+  /* Menge direkt eintippen */
+  function commitQuantity(input) {
+
+    var row = input.closest(".cart-row");
+    var key = row ? row.dataset.key : "";
+
+    if (!cart[key]) return;
+
+    var value = parseInt(String(input.value).replace(/[^0-9]/g, ""), 10);
+
+    if (!Number.isFinite(value) || value < 1) value = 1;
+    if (value > 999) value = 999;
+
+    cart[key].n = value;
+
+    save();
+    update();
+  }
+
+  document.addEventListener("change", function (event) {
+    var input = event.target;
+    if (input && input.matches && input.matches(".cart-qty-input")) {
+      commitQuantity(input);
+    }
+  });
+
+  document.addEventListener("focusin", function (event) {
+    var input = event.target;
+    if (input && input.matches && input.matches(".cart-qty-input")) {
+      /* Alles markieren, damit man gleich die neue Zahl tippen kann */
+      setTimeout(function () { try { input.select(); } catch (e) { /* egal */ } }, 0);
+    }
+  });
+
   document.addEventListener("keydown", function (event) {
+
     if (event.key === "Escape") closePanel();
+
+    if (
+      event.key === "Enter" &&
+      event.target && event.target.matches &&
+      event.target.matches(".cart-qty-input")
+    ) {
+      event.target.blur();
+    }
   });
 
 
