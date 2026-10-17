@@ -131,7 +131,7 @@ async function fetchLegoPartSuggestions(query) {
 
 
 /* Kleine Teilebilder in den Vorschlägen von "Teil melden".
-   Pro Teil wird zufällig eine der Farben genommen, in der es
+   Pro Teil wird fest (per Teilenummer) eine der Farben genommen, in der es
    das Teil gibt (Tabelle lego_part_colors). Hat ein Teil kein
    Farbbild, wird das allgemeine Bild aus lego_parts genutzt. */
 async function loadSuggestionThumbs(requestId) {
@@ -202,12 +202,21 @@ async function loadSuggestionThumbs(requestId) {
 
         const num = box.dataset.partNum;
 
-        /* Zufällige Farbe zuerst, danach die übrigen als Reserve */
-        const urls = (urlsByPart.get(num) || [])
-          .slice()
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 4)
-          .concat(urlsByPart.get("fallback:" + num) || []);
+        /* Pro Teil eine feste "zufällige" Farbe (aus der Teilenummer
+           berechnet, daher immer dieselbe), danach Reserve-Bilder */
+        const all = (urlsByPart.get(num) || []).slice().sort();
+
+        let hash = 0;
+        for (const ch of num) {
+          hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+        }
+
+        const urls = [];
+        for (let i = 0; i < Math.min(4, all.length); i++) {
+          urls.push(all[(hash + i) % all.length]);
+        }
+
+        urls.push(...(urlsByPart.get("fallback:" + num) || []));
 
         const tryNext = () => {
 
