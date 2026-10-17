@@ -54,3 +54,8 @@ let DISCOUNTS = [
   }
 
 ];
+
+
+/* Ab so vielen Tagen ohne Bestätigung gilt ein "verfügbares" Teil
+   als unsicher ("Evtl. nicht mehr da"). */
+const STALE_DAYS = 7;

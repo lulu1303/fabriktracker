@@ -358,6 +358,19 @@ function friendlyError(error) {
 
   }
 
+  /* Kein Netz */
+  if (
+    (typeof navigator !== "undefined" && navigator.onLine === false) ||
+    /failed to fetch|networkerror|load failed/i.test(message)
+  ) {
+
+    return (
+      "Keine Verbindung. Bitte prüfe dein Netz und versuche es " +
+      "gleich noch einmal."
+    );
+
+  }
+
   return message || "Unbekannter Fehler";
 }
 

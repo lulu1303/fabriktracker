@@ -951,6 +951,9 @@ function actionIconsHTML(part) {
   const watched =
     typeof isWatched === "function" && isWatched(num, col);
 
+  const inCart =
+    typeof isInCart === "function" && isInCart(num, col);
+
   return `
     <span
       class="fav-star${fav ? " active" : ""}"
@@ -964,6 +967,12 @@ function actionIconsHTML(part) {
       role="button"
       aria-label="${watched ? "Benachrichtigung ausschalten" : "Benachrichtigen, wenn wieder gemeldet"}"
     >🔔</span>
+    <span
+      class="cart-add${inCart ? " active" : ""}"
+      data-cart="${key}"
+      role="button"
+      aria-label="${inCart ? "Einkaufsliste öffnen" : "Auf die Einkaufsliste"}"
+    >🛒</span>
   `;
 }
 
@@ -1030,6 +1039,25 @@ function renderPart(part) {
     typeof formatRelativeTime === "function"
       ? formatRelativeTime(lastSeen)
       : "";
+
+  /* Wie verlässlich ist die Angabe? Wurde ein Teil lange nicht
+     bestätigt, ist es vielleicht nicht mehr da. */
+  const staleDays =
+    typeof STALE_DAYS !== "undefined" ? STALE_DAYS : 7;
+
+  const lastSeenTime =
+    lastSeen ? new Date(lastSeen).getTime() : NaN;
+
+  const ageDays =
+    Number.isNaN(lastSeenTime)
+      ? 0
+      : (Date.now() - lastSeenTime) / 86400000;
+
+  const stale =
+    available && ageDays >= staleDays;
+
+  const confirmCount =
+    Number(part.confirm_count) || 1;
 
   const imageUrl =
     part.image_url || "";
@@ -1116,7 +1144,7 @@ if (
   `;
 }
   return `
-    <div class="part-card ${available ? "" : "unavailable"}">
+    <div class="part-card ${available ? "" : "unavailable"}${stale ? " stale" : ""}">
 
       <div class="part-main">
 
@@ -1201,11 +1229,28 @@ if (
       <div class="part-status">
 
         ${
-          available
+          stale
+            ? `
+              <span class="status-stale">
+                🟡 Evtl. nicht mehr da
+              </span>
+              <div class="status-hint">
+                Seit ${Math.floor(ageDays)} Tagen nicht bestätigt.
+                Schon gesehen? Dann tippe „Gerade gesehen“.
+              </div>
+            `
+            : available
             ? `
               <span class="status-available">
                 🟢 Verfügbar
               </span>
+              ${
+                confirmCount >= 2
+                  ? `<span class="status-confirms">
+                      ✅ von ${confirmCount} Personen bestätigt
+                    </span>`
+                  : ""
+              }
             `
             : `
               <span class="status-unavailable">
