@@ -908,9 +908,16 @@ function renderPart(part) {
     part.created_at ||
     null;
 
+  /* Genaues Datum (wird als Tooltip angezeigt) */
   const lastSeenFormatted =
     typeof formatDate === "function"
       ? formatDate(lastSeen)
+      : "";
+
+  /* Anzeige: "vor wenigen Minuten", "vor 3 Tagen" ... */
+  const lastSeenRelative =
+    typeof formatRelativeTime === "function"
+      ? formatRelativeTime(lastSeen)
       : "";
 
   const imageUrl =
@@ -1039,11 +1046,14 @@ if (
           }
 
           ${
-            lastSeenFormatted
+            lastSeenRelative || lastSeenFormatted
               ? `
-                <div class="part-last-seen">
+                <div
+                  class="part-last-seen"
+                  title="${escapeHTML(lastSeenFormatted)}"
+                >
                   Zuletzt gesehen:
-                  ${escapeHTML(lastSeenFormatted)}
+                  ${escapeHTML(lastSeenRelative || lastSeenFormatted)}
                 </div>
               `
               : ""

@@ -470,3 +470,83 @@ function dimensionQuery(
   return !!dims(query);
 
 }
+
+
+/* =========================================================
+   RELATIVE ZEIT ("vor wenigen Minuten")
+========================================================= */
+
+/*
+ * < 1 Minute      -> gerade eben
+ * < 1 Stunde      -> vor wenigen Minuten
+ * < 24 Stunden    -> vor wenigen Stunden
+ * danach          -> vor 1 Tag / vor X Tagen
+ */
+
+function formatRelativeTime(value) {
+
+  if (!value) {
+
+    return "";
+
+  }
+
+
+  const time =
+    new Date(value).getTime();
+
+
+  if (
+    Number.isNaN(time)
+  ) {
+
+    return "";
+
+  }
+
+
+  const diffMinutes =
+    Math.floor(
+      (Date.now() - time) / 60000
+    );
+
+
+  /* Uhr-Abweichungen (Zeit in der Zukunft) */
+  if (diffMinutes < 1) {
+
+    return "gerade eben";
+
+  }
+
+
+  if (diffMinutes < 60) {
+
+    return "vor wenigen Minuten";
+
+  }
+
+
+  const diffHours =
+    Math.floor(
+      diffMinutes / 60
+    );
+
+
+  if (diffHours < 24) {
+
+    return "vor wenigen Stunden";
+
+  }
+
+
+  const diffDays =
+    Math.floor(
+      diffHours / 24
+    );
+
+
+  return diffDays === 1
+    ? "vor 1 Tag"
+    : "vor " + diffDays + " Tagen";
+
+}
