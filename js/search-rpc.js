@@ -130,7 +130,10 @@ async function fetchLegoPartSuggestions(query) {
 }
 
 
-/* Kleine Teilebilder in den Vorschlägen von "Teil melden" */
+/* Kleine Teilebilder in den Vorschlägen von "Teil melden".
+   Pro Teil wird zufällig eine der Farben genommen, in der es
+   das Teil gibt (Tabelle lego_part_colors). Hat ein Teil kein
+   Farbbild, wird das allgemeine Bild aus lego_parts genutzt. */
 async function loadSuggestionThumbs(requestId) {
 
   const nums = legoSearchResults
@@ -139,39 +142,86 @@ async function loadSuggestionThumbs(requestId) {
 
   if (!nums.length) return;
 
-  try {
+  const urlsByPart = new Map();
 
-    const list = nums
-      .map(n => '"' + n.replace(/"/g, "") + '"')
-      .join(",");
+  const addUrl = (num, url) => {
+    if (!url) return;
+    if (!urlsByPart.has(num)) urlsByPart.set(num, []);
+    urlsByPart.get(num).push(url);
+  };
 
-    const rows = await supabaseRequest(
-      SUPABASE_URL + "/rest/v1/lego_parts" +
-      "?select=part_num,image_url" +
-      "&part_num=in.(" + encodeURIComponent(list) + ")"
+  const inList = list =>
+    encodeURIComponent(
+      list.map(n => '"' + n.replace(/"/g, "") + '"').join(",")
     );
 
+  try {
+
+    /* Farbbilder in kleinen Gruppen laden (Zeilenlimit von Supabase) */
+    const batches = [];
+
+    for (let i = 0; i < nums.length; i += 8) {
+      batches.push(nums.slice(i, i + 8));
+    }
+
+    await Promise.all([
+
+      ...batches.map(async batch => {
+
+        const rows = await supabaseRequest(
+          SUPABASE_URL + "/rest/v1/lego_part_colors" +
+          "?select=part_num,image_url" +
+          "&image_url=not.is.null" +
+          "&part_num=in.(" + inList(batch) + ")" +
+          "&limit=1000"
+        );
+
+        (rows || []).forEach(row => addUrl(row.part_num, row.image_url));
+      }),
+
+      (async () => {
+
+        const rows = await supabaseRequest(
+          SUPABASE_URL + "/rest/v1/lego_parts" +
+          "?select=part_num,image_url" +
+          "&part_num=in.(" + inList(nums) + ")"
+        );
+
+        (rows || []).forEach(row => {
+          if (row.image_url) addUrl("fallback:" + row.part_num, row.image_url);
+        });
+      })()
+
+    ]);
+
     if (requestId !== legoSearchRequestId) return;
-
-    const images = new Map();
-
-    (rows || []).forEach(row => {
-      if (row.image_url) images.set(row.part_num, row.image_url);
-    });
 
     document
       .querySelectorAll("#partSuggestions .suggestion-thumb")
       .forEach(box => {
 
-        const url = images.get(box.dataset.partNum);
-        if (!url) return;
+        const num = box.dataset.partNum;
 
-        const img = document.createElement("img");
-        img.loading = "lazy";
-        img.alt = "";
-        img.src = url;
-        img.onload = () => { box.textContent = ""; box.appendChild(img); };
+        /* Zufällige Farbe zuerst, danach die übrigen als Reserve */
+        const urls = (urlsByPart.get(num) || [])
+          .slice()
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 4)
+          .concat(urlsByPart.get("fallback:" + num) || []);
 
+        const tryNext = () => {
+
+          const url = urls.shift();
+          if (!url) return;
+
+          const img = new Image();
+          img.alt = "";
+          img.onload = () => { box.textContent = ""; box.appendChild(img); };
+          img.onerror = tryNext;
+          img.src = url;
+        };
+
+        tryNext();
       });
 
   } catch (error) {
