@@ -1067,3 +1067,34 @@ button:disabled {
 .lightbox-actions button {
   flex: 1;
 }
+
+
+/* =========================================================
+   ÜBER FABRIKTRACKER
+========================================================= */
+
+.about {
+  margin: 40px 0 20px;
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: #fff;
+  color: #444;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.about h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #171717;
+}
+
+.about p {
+  margin: 0 0 10px;
+}
+
+.about .about-note {
+  margin-bottom: 0;
+  color: #777;
+  font-size: 12px;
+}
