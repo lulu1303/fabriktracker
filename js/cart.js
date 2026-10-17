@@ -311,7 +311,7 @@
           '</div>' +
           '<div class="cart-qty">' +
             '<button type="button" data-act="minus" aria-label="Weniger">−</button>' +
-            '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3"' +
+            '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4"' +
               ' class="cart-qty-input" data-act="qty" aria-label="Menge" value="' + n + '">' +
             '<button type="button" data-act="plus" aria-label="Mehr">+</button>' +
           '</div>' +
@@ -393,7 +393,7 @@
     }
 
     if (act === "plus" && cart[key]) {
-      cart[key].n = Math.min(999, (Number(cart[key].n) || 1) + 1);
+      cart[key].n = Math.min(9999, (Number(cart[key].n) || 1) + 1);
     }
 
     if (act === "minus" && cart[key]) {
@@ -432,7 +432,7 @@
     var value = parseInt(String(input.value).replace(/[^0-9]/g, ""), 10);
 
     if (!Number.isFinite(value) || value < 1) value = 1;
-    if (value > 999) value = 999;
+    if (value > 9999) value = 9999;
 
     cart[key].n = value;
 
