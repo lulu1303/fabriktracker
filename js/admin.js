@@ -2,10 +2,31 @@
    ADMIN
 ========================================================= */
 
+/*
+ * Das Passwort wird bewusst NICHT mehr im Browser gespeichert
+ * und nicht im Code geprüft. Es wird nur im Arbeitsspeicher
+ * gehalten und beim Löschen an Supabase geschickt, wo es
+ * serverseitig geprüft wird (admin_delete_part).
+ *
+ * Nach einem Neuladen der Seite ist man deshalb abgemeldet.
+ */
 let adminAuthenticated =
-  sessionStorage.getItem(
+  false;
+
+try {
+
+  /* Alten Merker aus früheren Versionen entfernen */
+  sessionStorage.removeItem(
     "fabriktracker_admin_authenticated"
-  ) === "true";
+  );
+
+} catch (
+  error
+) {
+
+  // Storage nicht verfügbar – kein Problem.
+
+}
 
 
 let adminPassword =
@@ -60,28 +81,10 @@ async function adminLogin() {
 
 
   /*
-   * TEMPORÄRE ENTWICKLUNGS-LÖSUNG
+   * Passwort nur für diese Sitzung im Arbeitsspeicher merken.
    *
-   * Das Passwort wird nur im Arbeitsspeicher
-   * gehalten und nicht gespeichert.
-   */
-  if (
-    password !==
-    "luludel13"
-  ) {
-
-    alert(
-      "❌ Falsches Admin-Passwort."
-    );
-
-    return false;
-
-  }
-
-
-  /*
-   * Passwort für weitere Admin-Aktionen
-   * dieser Sitzung merken.
+   * Die eigentliche Prüfung passiert in Supabase, sobald eine
+   * Admin-Aktion (z.B. Löschen) ausgeführt wird.
    */
   adminPassword =
     password;
@@ -89,12 +92,6 @@ async function adminLogin() {
 
   adminAuthenticated =
     true;
-
-
-  sessionStorage.setItem(
-    "fabriktracker_admin_authenticated",
-    "true"
-  );
 
 
   updateAdminUI();
@@ -342,11 +339,20 @@ async function adminDeletePart(
       result !== true
     ) {
 
+      /*
+       * Meist ist das Passwort falsch.
+       * Deshalb wieder abmelden, damit man es
+       * beim nächsten Versuch neu eingeben kann.
+       */
+      adminLogout();
+
       alert(
 
         "❌ Das Teil wurde NICHT gelöscht.\n\n" +
 
-        "Supabase hat den Löschvorgang nicht bestätigt."
+        "Wahrscheinlich ist das Admin-Passwort falsch. " +
+
+        "Bitte erneut anmelden."
 
       );
 
