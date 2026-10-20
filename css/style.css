@@ -1595,3 +1595,13 @@ html,
 .cart-qty {
   flex-shrink: 0;
 }
+
+.watch-suggestions .suggestion,
+.watch-suggestions .suggestion-number,
+.watch-suggestions .suggestion-name {
+  color: #171717;
+}
+
+.watch-suggestions .suggestion-name {
+  color: #666;
+}

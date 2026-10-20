@@ -396,6 +396,12 @@
       item.setAttribute("role", "button");
       item.tabIndex = 0;
 
+      var thumb = document.createElement("div");
+      thumb.className = "suggestion-thumb";
+      thumb.dataset.partNum = row.part_num;
+      thumb.innerHTML = '<span class="brick-logo" aria-hidden="true"></span>';
+      item.appendChild(thumb);
+
       var text = document.createElement("div");
       text.className = "suggestion-text";
 
@@ -589,6 +595,15 @@
         if (id !== searchId) return;
 
         renderSuggestions(Array.isArray(rows) ? rows : []);
+
+        /* Teilebilder nachladen (Funktion aus search-rpc.js) */
+        if (typeof loadSuggestionThumbs === "function") {
+          loadSuggestionThumbs(
+            id,
+            document.getElementById("watchSuggestions"),
+            function () { return id === searchId; }
+          );
+        }
 
       } catch (error) {
 

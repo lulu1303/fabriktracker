@@ -204,12 +204,22 @@ async function loadMoreLegoSuggestions() {
    Pro Teil wird fest (per Teilenummer) eine der Farben genommen, in der es
    das Teil gibt (Tabelle lego_part_colors). Hat ein Teil kein
    Farbbild, wird das allgemeine Bild aus lego_parts genutzt. */
-async function loadSuggestionThumbs(requestId) {
+async function loadSuggestionThumbs(requestId, root, isCurrent) {
+
+  /* Standard: Vorschläge von "Teil melden". Die Suche im Bereich
+     "Benachrichtigungen" übergibt ihre eigene Liste. */
+  const container =
+    root || document.getElementById("partSuggestions");
+
+  const stillCurrent =
+    typeof isCurrent === "function"
+      ? isCurrent
+      : () => requestId === legoSearchRequestId;
+
+  if (!container) return;
 
   const pending = Array.from(
-    document.querySelectorAll(
-      "#partSuggestions .suggestion-thumb:not([data-done])"
-    )
+    container.querySelectorAll(".suggestion-thumb:not([data-done])")
   );
 
   pending.forEach(box => { box.dataset.done = "1"; });
@@ -272,7 +282,7 @@ async function loadSuggestionThumbs(requestId) {
 
     ]);
 
-    if (requestId !== legoSearchRequestId) return;
+    if (!stillCurrent()) return;
 
     pending
       .forEach(box => {
