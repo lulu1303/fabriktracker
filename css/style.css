@@ -1612,7 +1612,8 @@ html,
 ========================================================= */
 
 .photo-button {
-  margin-left: 8px;
+  margin-left: 0;
+  margin-top: 8px;
   touch-action: manipulation;
 }
 
@@ -1779,4 +1780,69 @@ html,
 
 .photo-actions .primary {
   flex: 1;
+}
+
+.photo-progress {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.photo-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin-bottom: 12px;
+  padding-bottom: 2px;
+}
+
+.photo-strip-item {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: #eee;
+  opacity: .75;
+}
+
+.photo-strip-item.current {
+  border-color: #d71920;
+  opacity: 1;
+}
+
+.photo-strip-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-strip-empty {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.photo-strip-mark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.65);
+  font-size: 18px;
+}
+
+.photo-done-list {
+  margin: 10px 0 14px;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.photo-actions {
+  flex-wrap: wrap;
 }
